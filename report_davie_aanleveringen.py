@@ -1,5 +1,3 @@
-import json
-
 filters = {
     # "statusSubstatusCombinaties":
     #     [{"status": "IN_OPMAAK", "substatus": None},
@@ -9,13 +7,12 @@ filters = {
     "verbergElisaAanleveringen": True
 }
 
-awv_acm_cookie = '6d8f6314d46845c9a744433d9165b823'
+awv_acm_cookie = '55eb0c4eef5d41debd0d639c4db7e37c'
 voId = '6c2b7c0a-11a9-443a-a96b-a1bec249c629'  # zie https://apps.mow.vlaanderen.be/eminfra/admin/gebruikers
 
-
-import csv
 import abc
 from enum import Enum
+
 from requests import Response, Session
 
 
@@ -88,6 +85,22 @@ class SNGatewayClient:
     def get_all_asset_filters(self) -> list[dict]:
         url = f'rest/eminfra/asset-filter'
         response = self.requester.get(url=url)
+        return response.json()
+
+    def add_new_asset_filter(self, uri: str, enabled: bool = True) -> None:
+        url = f'rest/eminfra/asset-filter'
+        response = self.requester.post(url=url, json={
+          "uri": uri,
+          "enabled": enabled
+        })
+        return response.json()
+
+    def modify_asset_filter(self, id: str, uri: str, enabled: bool = True) -> None:
+        url = f'rest/eminfra/asset-filter/{id}'
+        response = self.requester.put(url=url, json={
+          "uri": uri,
+          "enabled": enabled
+        })
         return response.json()
 
 
@@ -176,19 +189,13 @@ if __name__ == '__main__':
         cookie=awv_acm_cookie, auth_type=AuthType.COOKIE, env=Environment.TEI)
     sn_client = SNGatewayClient(requester=requester_davie)
 
+    # sn_client.add_new_asset_filter(uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Motorvangplank', enabled=True)
+
     json_data = sn_client.get_all_asset_filters()
     headers = ['id', 'version', 'created', 'updated', 'uri', 'enabled']
-    rows = []
-    for row in json_data:
-        r = []
-        for h in headers:
-            r.append(row.get(h, ''))
-        rows.append(r)
+    rows = [[row.get(h, '') for h in headers] for row in sorted(json_data, key=lambda x: x['updated'], reverse=True)]
 
     from prettytable import PrettyTable
-
     table = PrettyTable(headers)
     table.add_rows(rows)
-
-
     print(table)
