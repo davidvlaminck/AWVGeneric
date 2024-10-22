@@ -7,6 +7,11 @@ if __name__ == '__main__':
 
     settings_path = Path('/home/davidlinux/Documents/AWV/resources/settings_SyncOTLDataToLegacy.json')
     requester = RequesterFactory.create_requester(settings_path=settings_path, auth_type=AuthType.JWT, env=Environment.TEI)
-    sn_client = EMInfraClient(requester=requester)
-    bestekken = sn_client.get_bestekkoppelingen_by_asset_uuid('030a47c0-bf19-434a-aa19-e33377c82f79')
-    print(bestekken)
+    eminfra_client = EMInfraClient(requester=requester)
+
+    # bestekken = eminfra_client.get_bestekkoppelingen_by_asset_uuid('030a47c0-bf19-434a-aa19-e33377c82f79')
+    # print(bestekken)
+
+    bestek_ref = eminfra_client.get_bestekref_by_eDelta_dossiernummer('INTERN-ALL-CT')
+    print(bestek_ref)
+
