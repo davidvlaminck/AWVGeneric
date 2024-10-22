@@ -230,38 +230,13 @@ class EMInfraClient:
         return [BestekKoppeling(**item) for item in response.json()['data']]
 
     def get_bestekref_by_eDelta_dossiernummer(self, eDelta_dossiernummer: str) -> [BestekRef]:
-        t_dict = {
-                                        'property':'eDeltaDossiernummer',
-                                         'value':eDelta_dossiernummer,
-                                         'operator':OperatorEnum.EQ,
-                                         'logicalOp':LogicalOpEnum.AND,
-                                         'negate':False
-        }
-        t = TermDTO(**t_dict)
-        # query_dto = QueryDTO(**{'size':10, 'from_':0, 'pagingMode':PagingModeEnum.OFFSET,
-        #                      'selection': {
-        #                          'expressions': {
-        #                              'terms': {
-        #                                 'property':'eDeltaDossiernummer',
-        #                                  'value':eDelta_dossiernummer,
-        #                                  'operator':OperatorEnum.EQ,
-        #                                  'logicalOp':LogicalOpEnum.AND,
-        #                                  'negate':False
-        # }}}})
-
         query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              selection=SelectionDTO(
                                  expressions=[ExpressionDTO(
-                                     terms=[TermDTO(
-                                         property='eDeltaDossiernummer',
-                                         value=eDelta_dossiernummer,
-                                         operator=OperatorEnum.EQ,
-                                         negate=False
-                                     )])]))
-        d = query_dto.to_dict()
-        j = json.dumps(d)
+                                     terms=[TermDTO(property='eDeltaDossiernummer', value=eDelta_dossiernummer,
+                                                    operator=OperatorEnum.EQ)])]))
 
-        response = self.requester.post('core/api/bestekrefs/search', data=j)
+        response = self.requester.post('core/api/bestekrefs/search', json=query_dto.to_dict())
         if response.status_code != 200:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
