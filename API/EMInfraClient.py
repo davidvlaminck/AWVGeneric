@@ -1,6 +1,6 @@
 from API.AbstractRequester import AbstractRequester
 from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO, PagingModeEnum, QueryDTO, BestekRef, \
-    BestekKoppeling
+    BestekKoppeling, FeedPage
 
 
 class EMInfraClient:
@@ -35,3 +35,8 @@ class EMInfraClient:
         print(response.json()['data'])
 
         return [BestekRef.from_dict(item) for item in response.json()['data']]
+
+    def get_feedproxy_page(self, feed_name: str, page_num: int, page_size: int = 1):
+        url = f"feedproxy/feed/{feed_name}/{page_num}/{page_size}"
+        json_dict = self.requester.get(url).json()
+        return FeedPage.from_dict(json_dict)

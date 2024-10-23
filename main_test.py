@@ -12,6 +12,9 @@ if __name__ == '__main__':
     # bestekken = eminfra_client.get_bestekkoppelingen_by_asset_uuid('030a47c0-bf19-434a-aa19-e33377c82f79')
     # print(bestekken)
 
-    bestek_ref = eminfra_client.get_bestekref_by_eDelta_dossiernummer('MDN/67-5')
-    print(bestek_ref)
+    # bestek_ref = eminfra_client.get_bestekref_by_eDelta_dossiernummer('MDN/67-5')
+    # print(bestek_ref)
+    #
+    feedproxy_page = eminfra_client.get_feedproxy_page('assets', 0)
+    print(feedproxy_page)
 

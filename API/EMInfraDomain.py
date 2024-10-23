@@ -222,3 +222,52 @@ class BestekKoppeling(BaseDataclass):
     def __post_init__(self):
         self._fix_enums({('categorie', CategorieEnum), ('subcategorie', SubCategorieEnum)})
         self._fix_nested_classes({('bestekRef', BestekRef)})
+
+
+@dataclass
+class Generator(BaseDataclass):
+    uri: str
+    version: str
+    text: str | None = None
+
+
+# @dataclass
+# class EntryObjectValue(BaseDataclass):
+#     event-type: str
+#     asset-type: str | None = None
+#     uuids: [str] | None = None
+#     aim-ids: [str] | None = None
+#
+
+
+@dataclass
+class EntryObjectContent(BaseDataclass):
+    value: str
+
+
+@dataclass
+class EntryObject(BaseDataclass):
+    id: str
+    updated: str
+    content: EntryObjectContent | dict
+    _type: str
+    links: list[Link] | None = None
+
+    def __post_init__(self):
+        self._fix_nested_classes({('content', EntryObjectContent)})
+        self._fix_nested_list_classes({('links', Link)})
+
+
+@dataclass
+class FeedPage(BaseDataclass):
+    id: str
+    base: str
+    title: str
+    updated: str
+    generator: Generator
+    links: list[Link] | None = None
+    entries: list[EntryObject] | None = None
+
+    def __post_init__(self):
+        self._fix_nested_classes({('generator', Generator)})
+        self._fix_nested_list_classes({('links', Link), ('entries', EntryObject)})
