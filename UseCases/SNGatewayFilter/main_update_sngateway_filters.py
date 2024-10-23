@@ -7,7 +7,7 @@ from API.Enums import AuthType, Environment
 
 
 awv_acm_cookie = '55eb0c4eef5d41debd0d639c4db7e37c'
-voId = '6c2b7c0a-11a9-443a-a96b-a1bec249c629'  # https://apps.mow.vlaanderen.be/eminfra/admin/gebruikers
+voId = '6c2b7c0a-11a9-443a-a96b-a1bec249c629'  # zie https://apps.mow.vlaanderen.be/eminfra/admin/gebruikers
 
 if __name__ == '__main__':
     #requester = RequesterFactory.create_requester(cookie=awv_acm_cookie, auth_type=AuthType.COOKIE, env=Environment.PRD)
