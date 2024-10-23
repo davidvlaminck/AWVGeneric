@@ -35,5 +35,3 @@ class EMInfraClient:
         print(response.json()['data'])
 
         return [BestekRef.from_dict(item) for item in response.json()['data']]
-
-
