@@ -17,13 +17,14 @@ class EMInfraClient:
 
         print(response.json()['data'])
 
-        return [BestekKoppeling(**item) for item in response.json()['data']]
+        return [BestekKoppeling.from_dict(item) for item in response.json()['data']]
 
     def get_bestekref_by_eDelta_dossiernummer(self, eDelta_dossiernummer: str) -> [BestekRef]:
         query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              selection=SelectionDTO(
                                  expressions=[ExpressionDTO(
-                                     terms=[TermDTO(property='eDeltaDossiernummer', value=eDelta_dossiernummer,
+                                     terms=[TermDTO(property='eDeltaDossiernummer',
+                                                    value=eDelta_dossiernummer,
                                                     operator=OperatorEnum.EQ)])]))
 
         response = self.requester.post('core/api/bestekrefs/search', data=query_dto.json())
@@ -33,6 +34,6 @@ class EMInfraClient:
 
         print(response.json()['data'])
 
-        return [BestekRef(**item) for item in response.json()['data']]
+        return [BestekRef.from_dict(item) for item in response.json()['data']]
 
 
