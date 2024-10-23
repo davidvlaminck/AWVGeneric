@@ -21,8 +21,8 @@ class TestClass(BaseDataclass):
     from_: str | None = None
 
     def __post_init__(self):
-        if self.test_enum is not None:
-            self.test_enum = TestEnum(self.test_enum)
+        self._fix_enums({('test_enum', TestEnum)})
+
 
 @dataclass
 class NestingTestClass(BaseDataclass):
@@ -30,10 +30,8 @@ class NestingTestClass(BaseDataclass):
     nested_list: list[TestClass] | None = None
 
     def __post_init__(self):
-        if self.nested is not None and isinstance(self.nested, dict):
-            self.nested = TestClass.from_dict(self.nested)
-        if self.nested_list is not None and isinstance(self.nested_list, list) and len(self.nested_list) > 0 and isinstance(self.nested_list[0], dict):
-            self.nested_list = [TestClass.from_dict(e) for e in self.nested_list]
+        self._fix_nested_classes({('nested', TestClass)})
+        self._fix_nested_list_classes({('nested_list', TestClass)})
 
 
 def test_non_nested_class():
@@ -47,6 +45,7 @@ def test_non_nested_class():
 
     t_created = TestClass.from_dict(d)
     assert t_created == t
+
 
 def test_reserved_prop():
     t = TestClass(from_='test')
@@ -65,6 +64,7 @@ def test_nested_class():
 
     n_created = NestingTestClass.from_dict(d)
     assert n_created == n
+
 
 def test_nested_class_list():
     t1 = TestClass(prop_str='test1')

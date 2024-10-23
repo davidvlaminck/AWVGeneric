@@ -74,6 +74,24 @@ class BaseDataclass:
                 del dict_[k]
         return cls(**dict_)
 
+    def _fix_enums(self, list_of_fields: set[tuple[str, type]]):
+        for field_tuple in list_of_fields:
+            attr = getattr(self, field_tuple[0])
+            if attr is not None:
+                setattr(self, field_tuple[0], field_tuple[1](attr))
+
+    def _fix_nested_classes(self, list_of_fields: set[tuple[str, type]]):
+        for field_tuple in list_of_fields:
+            attr = getattr(self, field_tuple[0])
+            if attr is not None and isinstance(attr, dict):
+                setattr(self, field_tuple[0], field_tuple[1].from_dict(attr))
+
+    def _fix_nested_list_classes(self, list_of_fields: set[tuple[str, type]]):
+        for field_tuple in list_of_fields:
+            attr = getattr(self, field_tuple[0])
+            if attr is not None and isinstance(attr, list) and len(attr) > 0 and isinstance(attr[0], dict):
+                setattr(self, field_tuple[0], [field_tuple[1].from_dict(a) for a in attr])
+
     # needs enum fix
     # needs to call from_dict for nested classes
 
@@ -112,8 +130,7 @@ class ExpressionDTO(BaseDataclass):
     logicalOp: LogicalOpEnum | None = None
 
     def __post_init__(self):
-        if self.terms is not None and isinstance(self.terms, list) and len(self.terms) > 0 and isinstance(self.terms[0], dict):
-            self.terms = [TermDTO.from_dict(t) for t in self.terms]
+        self._fix_nested_list_classes({('terms', TermDTO)})
 
 
 @dataclass
@@ -122,8 +139,7 @@ class SelectionDTO(BaseDataclass):
     settings: dict | None = None
 
     def __post_init__(self):
-        if self.expressions is not None and isinstance(self.expressions, list)  and len(self.expressions) > 0 and isinstance(self.expressions[0], dict):
-            self.expressions = [ExpressionDTO.from_dict(e) for e in self.expressions]
+        self._fix_nested_list_classes({('expressions', ExpressionDTO)})
 
 
 @dataclass
@@ -154,12 +170,8 @@ class QueryDTO(BaseDataclass):
     pagingMode: PagingModeEnum | None = None
 
     def __post_init__(self):
-        if self.selection is not None and isinstance(self.selection, dict):
-            self.selection = SelectionDTO.from_dict(self.selection)
-        if self.expansions is not None and isinstance(self.expansions, dict):
-            self.expansions = ExpansionsDTO.from_dict(self.expansions)
-        if self.pagingMode is not None:
-            self.pagingMode = PagingModeEnum(self.pagingMode)
+        self._fix_enums({('pagingMode', PagingModeEnum)})
+        self._fix_nested_classes({('selection', SelectionDTO), ('expansions', ExpansionsDTO)})
 
 
 @dataclass
@@ -183,7 +195,7 @@ class BestekRef(BaseDataclass):
     lot: str | None = None
 
     def __post_init__(self):
-        self.links = [Link.from_dict(l) for l in self.links]
+        self._fix_nested_classes({('links', Link)})
 
 
 class CategorieEnum(Enum):
@@ -198,7 +210,7 @@ class SubCategorieEnum(Enum):
 
 
 @dataclass
-class BestekKoppeling:
+class BestekKoppeling(BaseDataclass):
     startDatum: str
     eindDatum: str
     bestekRef: dict | BestekRef
@@ -208,9 +220,5 @@ class BestekKoppeling:
     bron: str | None = None
 
     def __post_init__(self):
-        if self.bestekRef is not None and isinstance(self.bestekRef, dict):
-            self.bestekRef = BestekRef.from_dict(self.bestekRef)
-        if self.categorie is not None:
-            self.categorie = CategorieEnum(self.categorie)
-        if self.subcategorie is not None:
-            self.subcategorie = SubCategorieEnum(self.subcategorie)
+        self._fix_enums({('categorie', CategorieEnum), ('subcategorie', SubCategorieEnum)})
+        self._fix_nested_classes({('bestekRef', BestekRef)})
