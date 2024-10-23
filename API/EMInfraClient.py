@@ -24,8 +24,8 @@ class EMInfraClient:
                              selection=SelectionDTO(
                                  expressions=[ExpressionDTO(
                                      terms=[TermDTO(property='eDeltaDossiernummer',
-                                                    value=eDelta_dossiernummer,
-                                                    operator=OperatorEnum.EQ)])]))
+                                                    operator=OperatorEnum.EQ,
+                                                    value=eDelta_dossiernummer)])]))
 
         response = self.requester.post('core/api/bestekrefs/search', data=query_dto.json())
         if response.status_code != 200:
