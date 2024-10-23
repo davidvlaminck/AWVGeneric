@@ -32,6 +32,8 @@ class NestingTestClass(BaseDataclass):
     def __post_init__(self):
         if self.nested is not None and isinstance(self.nested, dict):
             self.nested = TestClass.from_dict(self.nested)
+        if self.nested_list is not None and isinstance(self.nested_list, list) and len(self.nested_list) > 0 and isinstance(self.nested_list[0], dict):
+            self.nested_list = [TestClass.from_dict(e) for e in self.nested_list]
 
 
 def test_non_nested_class():
@@ -60,6 +62,24 @@ def test_nested_class():
                             'prop_bool': True, 'prop_object': None, 'test_enum': None}, 'nested_list': None}
     assert n.json() == ('{"nested": {"prop_str": "test", "prop_list_str": ["test1", "test2"], "prop_int": null, '
                         '"prop_bool": true, "prop_object": null, "test_enum": null, "from": null}, "nested_list": null}')
+
+    n_created = NestingTestClass.from_dict(d)
+    assert n_created == n
+
+def test_nested_class_list():
+    t1 = TestClass(prop_str='test1')
+    t2 = TestClass(prop_str='test2')
+    n = NestingTestClass(nested_list=[t1, t2])
+    d = n.asdict()
+    assert d == {'nested': None, 'nested_list': [
+        {'from': None, 'prop_str': 'test1',  'prop_list_str': None, 'prop_int': None,
+         'prop_bool': None, 'prop_object': None, 'test_enum': None},
+        {'from': None, 'prop_str': 'test2', 'prop_list_str': None, 'prop_int': None,
+         'prop_bool': None, 'prop_object': None, 'test_enum': None} ]}
+    assert n.json() == ('{"nested": null, "nested_list": [{"prop_str": "test1", "prop_list_str": null, '
+                        '"prop_int": null, "prop_bool": null, "prop_object": null, "test_enum": null, "from": null}, '
+                        '{"prop_str": "test2", "prop_list_str": null, "prop_int": null, "prop_bool": null, '
+                        '"prop_object": null, "test_enum": null, "from": null}]}')
 
     n_created = NestingTestClass.from_dict(d)
     assert n_created == n

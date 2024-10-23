@@ -2,12 +2,8 @@ import dataclasses
 from dataclasses import dataclass
 from enum import Enum
 from json import dumps
+from typing import Self
 
-import dataclasses
-from types import UnionType
-from typing import Union, get_origin, get_args, Self
-
-# If dataclass has __dict_factory_override__, use that instead of dict_factory
 _asdict_inner_actual = dataclasses._asdict_inner
 def _asdict_inner(obj, dict_factory):
 
@@ -17,6 +13,8 @@ def _asdict_inner(obj, dict_factory):
             user_dict = obj.__dict_factory_override__()
 
             for k, v in user_dict.items(): # in case of further nesting
+                if isinstance(v, list) and len(v) > 0 and dataclasses._is_dataclass_instance(v[0]):
+                    user_dict[k] = [_asdict_inner(vv, dict_factory) for vv in v]
                 if dataclasses._is_dataclass_instance(v):
                     user_dict[k] = _asdict_inner(v, dict_factory)
             return user_dict
@@ -44,15 +42,15 @@ class LogicalOpEnum(Enum):
     OR = 'OR'
 
 
+RESERVED_WORD_LIST = ('from_')
+
 @dataclass
 class BaseDataclass:
-    reserved_word_list = ('from_')
-
     def __dict_factory_override__(self):
         normal_dict = {k: getattr(self, k) for k in self.__dataclass_fields__}
         d = {}
         for k, v in normal_dict.items():
-            if k in self.reserved_word_list:
+            if k in RESERVED_WORD_LIST:
                 k = k[:-1]
 
             d[k] = v.value if isinstance(v, Enum) else v
@@ -65,12 +63,13 @@ class BaseDataclass:
         """
         get the json formated string
         """
+        d = self.asdict()
         return dumps(self.asdict())
 
     @classmethod
     def from_dict(cls, dict_: dict) -> Self:
         for k in list(dict_.keys()):
-            if k in cls.reserved_word_list:
+            if k in RESERVED_WORD_LIST:
                 dict_[f'{k}_'] = dict_[k]
                 del dict_[k]
         return cls(**dict_)
@@ -98,8 +97,6 @@ class BaseDataclass:
     #             delattr(self, field.name)
 
 
-
-
 @dataclass
 class TermDTO(BaseDataclass):
     property: str
@@ -116,57 +113,21 @@ class ExpressionDTO(BaseDataclass):
 
     def __post_init__(self):
         if self.terms is not None and isinstance(self.terms, list) and len(self.terms) > 0 and isinstance(self.terms[0], dict):
-            self.terms = [TermDTO(**t) for t in self.terms]
-
-    def to_dict(self):
-        dict_ = {}
-        for k, v in self.__dataclass_fields__.items():
-            if getattr(self, k) is not None:
-                value = getattr(self, k)
-                if isinstance(value, Enum):
-                    dict_[k] = value.value
-                elif dataclasses.is_dataclass(value):
-                    dict_[k] = value.to_dict()
-                elif isinstance(value, list):
-                    if dataclasses.is_dataclass(value[0]):
-                        dict_[k] = [v.to_dict() for v in value]
-                    else:
-                        dict_[k] = value
-                else:
-                    dict_[k] = value
-        return dict_
+            self.terms = [TermDTO.from_dict(t) for t in self.terms]
 
 
 @dataclass
-class SelectionDTO:
+class SelectionDTO(BaseDataclass):
     expressions: list[dict] | list[ExpressionDTO]
     settings: dict | None = None
 
     def __post_init__(self):
-        if self.expressions is not None and isinstance(self.expressions, dict)  and len(self.expressions) > 0 and isinstance(self.expressions[0], dict):
-            self.expressions = [ExpressionDTO(**e) for e in self.expressions]
-
-    def to_dict(self):
-        dict_ = {}
-        for k, v in self.__dataclass_fields__.items():
-            if getattr(self, k) is not None:
-                value = getattr(self, k)
-                if isinstance(value, Enum):
-                    dict_[k] = value.value
-                elif dataclasses.is_dataclass(value):
-                    dict_[k] = value.to_dict()
-                elif isinstance(value, list):
-                    if dataclasses.is_dataclass(value[0]):
-                        dict_[k] = [v.to_dict() for v in value]
-                    else:
-                        dict_[k] = value
-                else:
-                    dict_[k] = value
-        return dict_
+        if self.expressions is not None and isinstance(self.expressions, list)  and len(self.expressions) > 0 and isinstance(self.expressions[0], dict):
+            self.expressions = [ExpressionDTO.from_dict(e) for e in self.expressions]
 
 
 @dataclass
-class ExpansionsDTO:
+class ExpansionsDTO(BaseDataclass):
     fields: [str]
 
 
@@ -181,7 +142,7 @@ class DirectionEnum(Enum):
 
 
 @dataclass
-class QueryDTO:
+class QueryDTO(BaseDataclass):
     size: int
     from_: int
     selection: dict | SelectionDTO | None = None
@@ -194,41 +155,21 @@ class QueryDTO:
 
     def __post_init__(self):
         if self.selection is not None and isinstance(self.selection, dict):
-            self.selection = SelectionDTO(**self.selection)
+            self.selection = SelectionDTO.from_dict(self.selection)
         if self.expansions is not None and isinstance(self.expansions, dict):
-            self.expansions = ExpansionsDTO(**self.expansions)
+            self.expansions = ExpansionsDTO.from_dict(self.expansions)
         if self.pagingMode is not None:
             self.pagingMode = PagingModeEnum(self.pagingMode)
 
-    def to_dict(self):
-        dict_ = {}
-        for k, v in self.__dataclass_fields__.items():
-            if getattr(self, k) is not None:
-                value = getattr(self, k)
-                if k == 'from_':
-                    k = 'from'
-                if isinstance(value, Enum):
-                    dict_[k] = value.value
-                elif dataclasses.is_dataclass(value):
-                    dict_[k] = value.to_dict()
-                elif isinstance(value, list):
-                    if dataclasses.is_dataclass(value[0]):
-                        dict_[k] = [v.to_dict() for v in value]
-                    else:
-                        dict_[k] = value
-                else:
-                    dict_[k] = value
-        return dict_
-
 
 @dataclass
-class Link:
+class Link(BaseDataclass):
     rel: str
     href: str
 
 
 @dataclass
-class BestekRef:
+class BestekRef(BaseDataclass):
     uuid: str
     awvId: str
     eDeltaDossiernummer: str
@@ -242,7 +183,7 @@ class BestekRef:
     lot: str | None = None
 
     def __post_init__(self):
-        self.links = [Link(**l) for l in self.links]
+        self.links = [Link.from_dict(l) for l in self.links]
 
 
 class CategorieEnum(Enum):
@@ -268,7 +209,7 @@ class BestekKoppeling:
 
     def __post_init__(self):
         if self.bestekRef is not None and isinstance(self.bestekRef, dict):
-            self.bestekRef = BestekRef(**self.bestekRef)
+            self.bestekRef = BestekRef.from_dict(self.bestekRef)
         if self.categorie is not None:
             self.categorie = CategorieEnum(self.categorie)
         if self.subcategorie is not None:

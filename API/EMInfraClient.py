@@ -26,7 +26,7 @@ class EMInfraClient:
                                      terms=[TermDTO(property='eDeltaDossiernummer', value=eDelta_dossiernummer,
                                                     operator=OperatorEnum.EQ)])]))
 
-        response = self.requester.post('core/api/bestekrefs/search', json=query_dto.to_dict())
+        response = self.requester.post('core/api/bestekrefs/search', data=query_dto.json())
         if response.status_code != 200:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
