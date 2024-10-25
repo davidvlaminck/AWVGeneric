@@ -231,18 +231,9 @@ class Generator(BaseDataclass):
     text: str | None = None
 
 
-# @dataclass
-# class EntryObjectValue(BaseDataclass):
-#     event-type: str
-#     asset-type: str | None = None
-#     uuids: [str] | None = None
-#     aim-ids: [str] | None = None
-#
-
-
 @dataclass
 class EntryObjectContent(BaseDataclass):
-    value: str
+    value: dict
 
 
 @dataclass

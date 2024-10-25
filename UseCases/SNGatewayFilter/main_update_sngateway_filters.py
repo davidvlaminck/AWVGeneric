@@ -1,7 +1,6 @@
 from pathlib import Path
 from prettytable import PrettyTable
 
-from API.RequesterFactory import RequesterFactory
 from API.SNGatewayClient import SNGatewayClient
 from API.Enums import AuthType, Environment
 
@@ -12,8 +11,7 @@ voId = '6c2b7c0a-11a9-443a-a96b-a1bec249c629'  # zie https://apps.mow.vlaanderen
 if __name__ == '__main__':
     #requester = RequesterFactory.create_requester(cookie=awv_acm_cookie, auth_type=AuthType.COOKIE, env=Environment.PRD)
     settings_path = Path('/home/davidlinux/Documents/AWV/resources/settings_SyncOTLDataToLegacy.json')
-    requester = RequesterFactory.create_requester(settings_path=settings_path, auth_type=AuthType.JWT, env=Environment.TEI)
-    sn_client = SNGatewayClient(requester=requester)
+    sn_client = SNGatewayClient(settings_path=settings_path, auth_type=AuthType.JWT, env=Environment.TEI)
 
     # sn_client.add_new_asset_filter(uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Motorvangplank', enabled=True)
 
