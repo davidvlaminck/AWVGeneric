@@ -2,7 +2,6 @@ import dataclasses
 from dataclasses import dataclass
 from enum import Enum
 from json import dumps
-from typing import Self
 
 _asdict_inner_actual = dataclasses._asdict_inner
 def _asdict_inner(obj, dict_factory):
@@ -67,7 +66,7 @@ class BaseDataclass:
         return dumps(self.asdict())
 
     @classmethod
-    def from_dict(cls, dict_: dict) -> Self:
+    def from_dict(cls, dict_: dict):
         for k in list(dict_.keys()):
             if k in RESERVED_WORD_LIST:
                 dict_[f'{k}_'] = dict_[k]
