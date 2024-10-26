@@ -18,8 +18,9 @@ if __name__ == '__main__':
     # print(feedproxy_page)
 
     emson_client = EMSONClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
-    # asset = emson_client.get_asset_by_uuid('ce70a323-aa2e-4c8b-915b-7ef98338f795')
+    # asset = emson_client.get_asset_by_uuid('030a47c0-bf19-434a-aa19-e33377c82f79')
     # print(asset)
 
-    assets = emson_client.get_assets()
+    assets = emson_client.get_assets_by_filter(
+        filter={'typeUri': 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Motorvangplank'}, size=100)
     print(list(assets))

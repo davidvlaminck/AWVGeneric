@@ -28,17 +28,17 @@ class EMSONClient:
         return response.json()
 
     def get_assets(self) -> Generator[dict]:
-        first_call = True
         paging_cursor = None
-        while first_call or paging_cursor is not None:
-            first_call = False
+        while True:
             response = self.requester.get( url='api/otl/assets', headers={'em-paging-cursor': paging_cursor})
             if response.status_code != 200:
                 print(response)
                 raise ProcessLookupError(response.content.decode("utf-8"))
             print('fetched 100 results')
-            paging_cursor = response.headers.get('em-paging-next-cursor')
             yield from response.json()['@graph']
+            paging_cursor = response.headers.get('em-paging-next-cursor')
+            if paging_cursor is None:
+                break
 
     def get_assetrelatie_by_uuid(self, uuid: str) -> dict:
         response = self.requester.get(url=f'api/otl/assetrelaties/{uuid}')
@@ -68,11 +68,17 @@ class EMSONClient:
         +---------------------+----------------------------------------+------------------------------------+
         """
         query = Query(filters=filter, size=size, orderByProperty=order_by_property)
-        response = self.requester.post(url='api/otl/assets/search', data=query.json())
-        if response.status_code != 200:
-            print(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
-        return response.json()['@graph']
+        while True:
+            response = self.requester.post(url='api/otl/assets/search', data=query.json())
+            if response.status_code != 200:
+                print(response)
+                raise ProcessLookupError(response.content.decode("utf-8"))
+            print('fetched 100 results')
+            yield from response.json()['@graph']
+            paging_cursor = response.headers.get('em-paging-next-cursor')
+            if paging_cursor is None:
+                break
+            query.fromCursor = paging_cursor
 
     def get_assetrelaties_by_filter(self, filter: dict, size: int = 100, order_by_property: str = None) -> [dict]:
         """
@@ -87,8 +93,14 @@ class EMSONClient:
         +-----------+---------------------------------------------------------------------------------+--------------------+
         """
         query = Query(filters=filter, size=size, orderByProperty=order_by_property)
-        response = self.requester.post(url='api/otl/assetrelaties/search', data=query.json())
-        if response.status_code != 200:
-            print(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
-        return response.json()['@graph']
+        while True:
+            response = self.requester.post(url='api/otl/assetrelaties/search', data=query.json())
+            if response.status_code != 200:
+                print(response)
+                raise ProcessLookupError(response.content.decode("utf-8"))
+            print('fetched 100 results')
+            yield from response.json()['@graph']
+            paging_cursor = response.headers.get('em-paging-next-cursor')
+            if paging_cursor is None:
+                break
+            query.fromCursor = paging_cursor
