@@ -1,7 +1,8 @@
+from collections.abc import Generator
 from pathlib import Path
 
 from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO, PagingModeEnum, QueryDTO, BestekRef, \
-    BestekKoppeling, FeedPage
+    BestekKoppeling, FeedPage, AssettypeDTO, AssettypeDTOList, DTOList, AssetDTO
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 
@@ -44,3 +45,45 @@ class EMInfraClient:
         url = f"feedproxy/feed/{feed_name}/{page_num}/{page_size}"
         json_dict = self.requester.get(url).json()
         return FeedPage.from_dict(json_dict)
+
+    def get_assettype_by_id(self, assettype_id: str) -> AssettypeDTO:
+        url = f"core/api/assettypes/{assettype_id}"
+        json_dict = self.requester.get(url).json()
+        return AssettypeDTO.from_dict(json_dict)
+
+    def get_all_assettypes(self, size: int = 100) -> Generator[AssettypeDTO]:
+        from_ = 0
+        while True:
+            url = f"core/api/assettypes?from={from_}&size={size}"
+            json_dict = self.requester.get(url).json()
+            yield from [AssettypeDTO.from_dict(item) for item in json_dict['data']]
+            dto_list_total = json_dict['totalCount']
+            from_ = json_dict['from'] + size
+            if from_ >= dto_list_total:
+                break
+
+    def get_all_legacy_assettypes(self, size: int = 100) -> Generator[AssettypeDTO]:
+        yield from [assettype_dto for assettype_dto in self.get_all_assettypes(size)
+                    if assettype_dto.korteUri.startswith('lgc:')]
+
+    def get_all_otl_assettypes(self, size: int = 100) -> Generator[AssettypeDTO]:
+        yield from [assettype_dto for assettype_dto in self.get_all_assettypes(size)
+                    if ':' not in assettype_dto.korteUri]
+
+    def get_asset_by_id(self, assettype_id: str) -> AssetDTO:
+        url = f"core/api/assets/{assettype_id}"
+        json_dict = self.requester.get(url).json()
+        return AssetDTO.from_dict(json_dict)
+
+    def search_assets(self, query_dto: QueryDTO) -> Generator[AssetDTO]:
+        query_dto.from_ = 0
+        if query_dto.size is None:
+            query_dto.size = 100
+        url = "core/api/assets/search"
+        while True:
+            json_dict = self.requester.post(url, data=query_dto.json()).json()
+            yield from [AssetDTO.from_dict(item) for item in json_dict['data']]
+            dto_list_total = json_dict['totalCount']
+            query_dto.from_ = json_dict['from'] + query_dto.size
+            if query_dto.from_ >= dto_list_total:
+                break

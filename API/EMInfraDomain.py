@@ -2,6 +2,7 @@ import dataclasses
 from dataclasses import dataclass
 from enum import Enum
 from json import dumps
+from typing import Self
 
 _asdict_inner_actual = dataclasses._asdict_inner
 def _asdict_inner(obj, dict_factory):
@@ -41,7 +42,7 @@ class LogicalOpEnum(Enum):
     OR = 'OR'
 
 
-RESERVED_WORD_LIST = ('from_')
+RESERVED_WORD_LIST = ('from_', '_next')
 
 @dataclass
 class BaseDataclass:
@@ -115,6 +116,49 @@ class BaseDataclass:
 
 
 @dataclass
+class Link(BaseDataclass):
+    rel: str
+    href: str
+
+
+class DTOList(BaseDataclass):
+    links: [Link]
+    _from: int
+    totalCount: int
+    size: int
+    _next: str
+    previous: str
+    data: list
+
+
+@dataclass
+class AssettypeDTO(BaseDataclass):
+    _type: str
+    links: [Link]
+    uuid: str
+    createdOn: str
+    modifiedOn: str
+    uri: str
+    korteUri: str
+    naam: str
+    actief: bool
+    definitie: str
+    afkorting: str | None = None
+    label: str | None = None
+    data: dict | None = None
+
+    def __post_init__(self):
+        self._fix_nested_list_classes({('links', Link)})
+
+
+class AssettypeDTOList(DTOList):
+    data: list[AssettypeDTO]
+
+    def __post_init__(self):
+        self._fix_nested_list_classes({('data', AssettypeDTO)})
+
+
+@dataclass
 class TermDTO(BaseDataclass):
     property: str
     value: object
@@ -172,11 +216,6 @@ class QueryDTO(BaseDataclass):
         self._fix_enums({('pagingMode', PagingModeEnum)})
         self._fix_nested_classes({('selection', SelectionDTO), ('expansions', ExpansionsDTO)})
 
-
-@dataclass
-class Link(BaseDataclass):
-    rel: str
-    href: str
 
 
 @dataclass
@@ -261,3 +300,36 @@ class FeedPage(BaseDataclass):
     def __post_init__(self):
         self._fix_nested_classes({('generator', Generator)})
         self._fix_nested_list_classes({('links', Link), ('entries', EntryObject)})
+
+@dataclass
+class AssetDTO(BaseDataclass):
+    links: [Link]
+    _type: str
+    uuid: str
+    createdOn: str
+    modifiedOn: str
+    actief: bool
+    toestand: str # TODO enum
+    naam: str | None = None
+    commentaar: str | None = None
+    type: AssettypeDTO | None = None
+    kenmerken: list[dict] | None = None # TODO
+    authorizationMetadata: list[dict] | None = None # TODO
+    children: list[dict] | None = None
+    parent: list[dict] | None = None
+
+    def __post_init__(self):
+        self._fix_nested_classes({('type', AssettypeDTO)})
+        self._fix_nested_list_classes({('links', Link)})
+
+
+def construct_naampad(asset: AssetDTO) -> str:
+    naampad = asset.naam
+    parent = asset.parent
+    if parent is None:
+        return naampad
+    naampad = f'{parent['naam']}/{naampad}'
+    while parent.get('parent') is not None:
+        parent = parent['parent']
+        naampad = f'{parent['naam']}/{naampad}'
+    return naampad
