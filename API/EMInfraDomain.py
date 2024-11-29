@@ -2,7 +2,6 @@ import dataclasses
 from dataclasses import dataclass
 from enum import Enum
 from json import dumps
-from typing import Self
 
 _asdict_inner_actual = dataclasses._asdict_inner
 def _asdict_inner(obj, dict_factory):
