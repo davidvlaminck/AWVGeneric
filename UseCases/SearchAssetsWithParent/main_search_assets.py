@@ -14,7 +14,7 @@ if __name__ == '__main__':
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
 
     asset_types = list(eminfra_client.get_all_otl_assettypes())
-    print(len(asset_types))
+    print(f'aantal OTL types: {len(asset_types)}')
 
     type_term = TermDTO(property='type', operator=OperatorEnum.EQ, value='a7eadedf-b5cf-491b-8b89-ccced9a37004')
     query_dto = QueryDTO(size=100, from_=0, pagingMode=PagingModeEnum.OFFSET,
@@ -26,10 +26,6 @@ if __name__ == '__main__':
                                              value=True, logicalOp=LogicalOpEnum.AND),
                                      TermDTO(property='beheerobject', operator=OperatorEnum.EQ,
                                              value=None, logicalOp=LogicalOpEnum.AND, negate=True)])]))
-                                        TermDTO(property='actief', operator=OperatorEnum.EQ,
-                                                value=True, logicalOp=LogicalOpEnum.AND),
-                                        TermDTO(property='beheerobject', operator=OperatorEnum.EQ,
-                                                value=None, logicalOp=LogicalOpEnum.AND, negate=True)])]))
     headers = ['uuid', 'type', 'naampad', 'em_infra_link']
     rows = []
     for otl_asset_type in asset_types:
