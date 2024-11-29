@@ -328,8 +328,10 @@ def construct_naampad(asset: AssetDTO) -> str:
     parent = asset.parent
     if parent is None:
         return naampad
-    naampad = f'{parent['naam']}/{naampad}'
+    naampad = parent['naam'] + '/' + naampad
+    # naampad = f'{parent['naam']}/{naampad}' not compatible with python 3.10
     while parent.get('parent') is not None:
         parent = parent['parent']
-        naampad = f'{parent['naam']}/{naampad}'
+        naampad = parent['naam'] + '/' + naampad
+        # naampad = f'{parent['naam']}/{naampad}' not compatible with python 3.10
     return naampad
