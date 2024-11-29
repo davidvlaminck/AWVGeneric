@@ -25,7 +25,11 @@ if __name__ == '__main__':
                                      TermDTO(property='actief', operator=OperatorEnum.EQ,
                                              value=True, logicalOp=LogicalOpEnum.AND),
                                      TermDTO(property='beheerobject', operator=OperatorEnum.EQ,
-                                             value=None, logicalOp=LogicalOpEnum.AND, negate=True)])]))
+                                             value=None, logicalOp=LogicalOpEnum.AND, negate=True),
+                                     TermDTO(property='naamPad', operator=OperatorEnum.STARTS_WITH,
+                                             value='DA-', logicalOp=LogicalOpEnum.AND, negate=True),
+                                     TermDTO(property='naamPad', operator=OperatorEnum.STARTS_WITH,
+                                             value='OTN.', logicalOp=LogicalOpEnum.AND, negate=True)])]))
     headers = ['uuid', 'type', 'naampad', 'em_infra_link']
     rows = []
     for otl_asset_type in asset_types:
@@ -33,7 +37,7 @@ if __name__ == '__main__':
         type_term.value = otl_asset_type.uuid
         query_dto.from_ = 0
         rows.extend([asset.uuid, otl_asset_type.korteUri, construct_naampad(asset),
-                     f'https://apps.mow.vlaanderen.be/eminfra/assets{asset.uuid}']
+                     f'https://apps.mow.vlaanderen.be/eminfra/assets/{asset.uuid}']
                     for asset in eminfra_client.search_assets(query_dto))
     table = PrettyTable(headers)
     table.add_rows(rows)
