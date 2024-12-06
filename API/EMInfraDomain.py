@@ -26,6 +26,7 @@ asdict = dataclasses.asdict
 
 class OperatorEnum(Enum):
     EQ = 'EQ'
+    EQ1 = '='
     CONTAINS = 'CONTAINS'
     GT = 'GT'
     GTE = 'GTE'
@@ -34,6 +35,7 @@ class OperatorEnum(Enum):
     IN = 'IN'
     STARTS_WITH = 'STARTS_WITH'
     INTERSECTS = 'INTERSECTS'
+
 
 
 class LogicalOpEnum(Enum):
@@ -320,6 +322,31 @@ class AssetDTO(BaseDataclass):
     def __post_init__(self):
         self._fix_nested_classes({('type', AssettypeDTO)})
         self._fix_nested_list_classes({('links', Link)})
+
+class DocumentCategorieEnum(Enum):
+    KEURINGSVERSLAG = 'KEURINGSVERSLAG'
+    ASBUILT_DOSSIER = 'ASBUILT_DOSSIER'
+    ELEKTRISCH_SCHEMA = 'ELEKTRISCH_SCHEMA'
+    BEREKENINGSNOTA = 'BEREKENINGSNOTA'
+    KABELAANSLUITSCHEMA = 'KABELAANSLUITSCHEMA'
+
+class DocumentLink(Link):
+    uuid: str
+    links: [Link]
+
+@dataclass
+class Document(BaseDataclass):
+    uuid: str
+    categorie: DocumentCategorieEnum
+    naam: str
+    omschrijving: str
+    document: dict[DocumentLink]
+    links: list[dict]
+
+    def __post_init__(self):
+        self._fix_enums({('categorie', DocumentCategorieEnum)})
+        # TODO
+        # self._fix_nested_classes({('bestekRef', BestekRef)})
 
 
 def construct_naampad(asset: AssetDTO) -> str:
