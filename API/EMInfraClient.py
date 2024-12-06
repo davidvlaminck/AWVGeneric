@@ -2,7 +2,7 @@ from collections.abc import Generator
 from pathlib import Path
 
 from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO, PagingModeEnum, QueryDTO, BestekRef, \
-    BestekKoppeling, FeedPage, AssettypeDTO, AssettypeDTOList, DTOList, AssetDTO
+    BestekKoppeling, FeedPage, AssettypeDTO, AssettypeDTOList, DTOList, AssetDTO, Document
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 
@@ -24,13 +24,48 @@ class EMInfraClient:
 
         return [BestekKoppeling.from_dict(item) for item in response.json()['data']]
 
+    # def get_asset_by_bestekref(self, bestekref: str) -> [AssetDTO]:
+        # response = self.requester.get(
+        #     url=f'core/api/installaties/{asset_uuid}/kenmerken/ee2e627e-bb79-47aa-956a-ea167d20acbd/bestekken')
+        # if response.status_code != 200:
+        #     print(response)
+        #     raise ProcessLookupError(response.content.decode("utf-8"))
+        #
+        # print(response.json()['data'])
+        #
+        # return [BestekKoppeling.from_dict(item) for item in response.json()['data']]
+
+
+    def get_documents_by_asset_uuid(self, asset_uuid: str, size: int = 10) -> [Document]:
+        """Get documents by asset uuid
+
+        Retrieves Document associated with a specific asset_uuid
+
+        Args:
+            asset_uuid: str
+            size: int
+            the number of document to retreive in one API call
+        :return:
+            List of Document
+        """
+        _from = 0
+        while True:
+            url = f"core/api/assets/{asset_uuid}/documenten?from={_from}&pagingMode=OFFSET&size={size}"
+            json_dict = self.requester.get(url).json()
+            yield from [Document.from_dict(item) for item in json_dict['data']]
+            dto_list_total = json_dict['totalCount']
+            from_ = json_dict['from'] + size
+            if from_ >= dto_list_total:
+                break
+
+
     def get_bestekref_by_eDelta_dossiernummer(self, eDelta_dossiernummer: str) -> [BestekRef]:
         query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
-                             selection=SelectionDTO(
-                                 expressions=[ExpressionDTO(
-                                     terms=[TermDTO(property='eDeltaDossiernummer',
-                                                    operator=OperatorEnum.EQ,
-                                                    value=eDelta_dossiernummer)])]))
+        selection=SelectionDTO(
+        expressions=[ExpressionDTO(
+        terms=[TermDTO(property='eDeltaDossiernummer',
+        operator=OperatorEnum.EQ,
+        value=eDelta_dossiernummer)])]))
 
         response = self.requester.post('core/api/bestekrefs/search', data=query_dto.json())
         if response.status_code != 200:
