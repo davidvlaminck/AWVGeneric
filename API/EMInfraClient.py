@@ -2,9 +2,10 @@ from collections.abc import Generator
 from pathlib import Path
 
 from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO, PagingModeEnum, QueryDTO, BestekRef, \
-    BestekKoppeling, FeedPage, AssettypeDTO, AssettypeDTOList, DTOList, AssetDTO, Document
+    BestekKoppeling, FeedPage, AssettypeDTO, AssettypeDTOList, DTOList, AssetDTO, AssetDocumentDTO
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
+import os
 
 
 class EMInfraClient:
@@ -12,6 +13,39 @@ class EMInfraClient:
         self.requester = RequesterFactory.create_requester(auth_type=auth_type, env=env, settings_path=settings_path,
                                                            cookie=cookie)
         self.requester.first_part_url += 'eminfra/'
+
+    def download_document(self, document_uuid: str, directory: Path) -> Path:
+        """
+        Downloads a PDF document from a URL and saves it in a (temporary) folder.
+
+        Args:
+            document_uuid (str): The uuid of the PDF-document.
+            directory (Path): Path to the (temporary) folder.
+
+        Returns:
+            Path: The full path of the downloaded PDF file.
+        """
+        # Check if the directory exists, create it if it doesn't
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        # Perform the GET request, extend the headers to accept pdf
+        # self.requester.headers['Accept'] = 'application/pdf'
+        self.requester.headers['Content-Type'] = 'application/pdf'
+        response = self.requester.get(url=f'dms/api/documenten/{document_uuid}/download', headers=self.requester.headers)
+
+        # Check if the request was successful and the file is a PDF
+        if response.status_code == 200 and 'application/pdf' in response.headers.get('Content-Type', ''):
+            pdf_path = os.path.join(directory, "downloaded_document.pdf")
+
+            # Write the content of the PDF to a file
+            with open(pdf_path, "wb") as pdf_file:
+                pdf_file.write(response.content)
+
+            print(f"PDF successfully downloaded to: {pdf_path}")
+            return pdf_path
+        else:
+            raise Exception("Failed to download the PDF. Ensure the URL is correct and the file is a PDF.")
 
     def get_bestekkoppelingen_by_asset_uuid(self, asset_uuid: str) -> [BestekKoppeling]:
         response = self.requester.get(
@@ -35,24 +69,47 @@ class EMInfraClient:
         #
         # return [BestekKoppeling.from_dict(item) for item in response.json()['data']]
 
+    def search_documents_by_asset_uuid(self, asset_uuid: str, query_dto: QueryDTO) -> Generator[AssetDocumentDTO]:
+        """Search documents by asset uuid
 
-    def get_documents_by_asset_uuid(self, asset_uuid: str, size: int = 10) -> [Document]:
+        Retrieves AssetDocumentDTO associated with a specific asset_uuid, and filter the documents with a query.
+
+        Args:
+            asset_uuid: str
+            query_dto: QueryDTO
+            document filter
+        :return:
+            Generator of AssetDocumentDTO
+        """
+        query_dto.from_ = 0
+        if query_dto.size is None:
+            query_dto.size = 100
+        url = f"core/api/assets/{asset_uuid}/documenten/search"
+        while True:
+            json_dict = self.requester.post(url, data=query_dto.json()).json()
+            yield from [AssetDocumentDTO.from_dict(item) for item in json_dict['data']]
+            dto_list_total = json_dict['totalCount']
+            query_dto.from_ = json_dict['from'] + query_dto.size
+            if query_dto.from_ >= dto_list_total:
+                break
+
+    def get_documents_by_asset_uuid(self, asset_uuid: str, size: int = 10) -> Generator[AssetDocumentDTO]:
         """Get documents by asset uuid
 
-        Retrieves Document associated with a specific asset_uuid
+        Retrieves all AssetDocumentDTO associated with a specific asset_uuid
 
         Args:
             asset_uuid: str
             size: int
-            the number of document to retreive in one API call
+            the number of document to retrieve in one API call
         :return:
-            List of Document
+            Generator of AssetDocumentDTO
         """
         _from = 0
         while True:
             url = f"core/api/assets/{asset_uuid}/documenten?from={_from}&pagingMode=OFFSET&size={size}"
             json_dict = self.requester.get(url).json()
-            yield from [Document.from_dict(item) for item in json_dict['data']]
+            yield from [AssetDocumentDTO.from_dict(item) for item in json_dict['data']]
             dto_list_total = json_dict['totalCount']
             from_ = json_dict['from'] + size
             if from_ >= dto_list_total:
