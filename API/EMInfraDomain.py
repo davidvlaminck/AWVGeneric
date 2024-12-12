@@ -26,7 +26,6 @@ asdict = dataclasses.asdict
 
 class OperatorEnum(Enum):
     EQ = 'EQ'
-    EQ1 = '='
     CONTAINS = 'CONTAINS'
     GT = 'GT'
     GTE = 'GTE'
@@ -234,7 +233,7 @@ class BestekRef(BaseDataclass):
     lot: str | None = None
 
     def __post_init__(self):
-        self._fix_nested_classes({('links', Link)})
+        self._fix_nested_list_classes({('links', Link)})
 
 
 class CategorieEnum(Enum):
@@ -302,6 +301,35 @@ class FeedPage(BaseDataclass):
         self._fix_nested_classes({('generator', Generator)})
         self._fix_nested_list_classes({('links', Link), ('entries', EntryObject)})
 
+class AssetDTOToestand(Enum):
+    IN_ONTWERP = 'IN_ONTWERP'
+    GEPLAND = 'GEPLAND'
+    GEANNULEERD = 'GEANNULEERD'
+    IN_OPBOUW = 'IN_OPBOUW'
+    IN_GEBRUIK = 'IN_GEBRUIK'
+    VERWIJDERD = 'VERWIJDERD'
+    OVERGEDRAGEN = 'OVERGEDRAGEN'
+    UIT_GEBRUIK = 'UIT_GEBRUIK'
+
+@dataclass
+class InfraObjectDTO(BaseDataclass):
+    _type: str
+    uuid: str
+    createdOn: str
+    modifiedOn: str
+    naam: str
+    actief: bool
+    links: [Link]
+    toestand: str | None = None
+    authorizationMetadata: str | None = None
+    parent: list[dict] | None = None
+    commentaar: str | None = None
+    type: str | None = None
+
+    def __post_init__(self):
+        self._fix_nested_list_classes({('links', Link)})
+
+
 @dataclass
 class AssetDTO(BaseDataclass):
     links: [Link]
@@ -310,43 +338,78 @@ class AssetDTO(BaseDataclass):
     createdOn: str
     modifiedOn: str
     actief: bool
-    toestand: str # TODO enum
+    toestand: AssetDTOToestand | None = None
+    parent: InfraObjectDTO | None = None
     naam: str | None = None
     commentaar: str | None = None
     type: AssettypeDTO | None = None
     kenmerken: list[dict] | None = None # TODO
     authorizationMetadata: list[dict] | None = None # TODO
     children: list[dict] | None = None
-    parent: list[dict] | None = None
 
     def __post_init__(self):
         self._fix_nested_classes({('type', AssettypeDTO)})
+        self._fix_nested_classes({('parent', InfraObjectDTO)})
+        self._fix_enums({('toestand', AssetDTOToestand)})
         self._fix_nested_list_classes({('links', Link)})
 
 class DocumentCategorieEnum(Enum):
-    KEURINGSVERSLAG = 'KEURINGSVERSLAG'
+    AANGEBODEN_SERVICES = 'AANGEBODEN_SERVICES'
+    ANDER = 'ANDER'
     ASBUILT_DOSSIER = 'ASBUILT_DOSSIER'
-    ELEKTRISCH_SCHEMA = 'ELEKTRISCH_SCHEMA'
     BEREKENINGSNOTA = 'BEREKENINGSNOTA'
+    BRIEF = 'BRIEF'
+    CONFIGBESTAND = 'CONFIGBESTAND'
+    CONSTRUCTIE_EN_MONTAGEPLAN = 'CONSTRUCTIE_EN_MONTAGEPLAN'
+    CONTROLEMETING_EBS = 'CONTROLEMETING_EBS'
+    DIMCONFIGURATIE = 'DIMCONFIGURATIE'
+    ELEKTRISCH_SCHEMA = 'ELEKTRISCH_SCHEMA'
+    FACTUUR = 'FACTUUR'
+    FOTO = 'FOTO'
+    HANDLEIDING = 'HANDLEIDING'
+    INTERVENTIEVERSLAG = 'INTERVENTIEVERSLAG'
     KABELAANSLUITSCHEMA = 'KABELAANSLUITSCHEMA'
+    KEURINGSVERSLAG = 'KEURINGSVERSLAG'
+    LICHTSTUDIE = 'LICHTSTUDIE'
+    LUSSENMEETRAPPORT = 'LUSSENMEETRAPPORT'
+    MEETRAPPORT = 'MEETRAPPORT'
+    M_PLAN = 'M_PLAN'
+    OFFERTE = 'OFFERTE'
+    OPROEPDOCUMENT = 'OPROEPDOCUMENT'
+    PV_INGEBREKESTELLING = 'PV_INGEBREKESTELLING'
+    PV_OPLEVERING = 'PV_OPLEVERING'
+    PV_SCHADEVERWEKKER = 'PV_SCHADEVERWEKKER'
+    RISICOANALYSE = 'RISICOANALYSE'
+    SOFTWARE_DEPENDENCIES = 'SOFTWARE_DEPENDENCIES'
+    TECHNISCHE_FICHE = 'TECHNISCHE_FICHE'
+    TRACO_ATTEST = 'TRACO_ATTEST'
+    V_PLAN = 'V_PLAN'
 
-class DocumentLink(Link):
+class ResourceRefDTO(Link):
     uuid: str
     links: [Link]
 
+    def __post_init__(self):
+        self._fix_nested_classes({('links', Link)})
+
+
 @dataclass
-class Document(BaseDataclass):
+class AssetDocumentDTO(BaseDataclass):
     uuid: str
     categorie: DocumentCategorieEnum
     naam: str
-    omschrijving: str
-    document: dict[DocumentLink]
-    links: list[dict]
+    document: [ResourceRefDTO]
+    links: [Link]
+    omschrijving: str | None = None
+
+    def __hash__(self):
+        # Hash based on name and value
+        return hash(self.uuid)
 
     def __post_init__(self):
         self._fix_enums({('categorie', DocumentCategorieEnum)})
-        # TODO
-        # self._fix_nested_classes({('bestekRef', BestekRef)})
+        self._fix_nested_list_classes({('links', Link)})
+        self._fix_nested_list_classes({('document', ResourceRefDTO)})
 
 
 def construct_naampad(asset: AssetDTO) -> str:
