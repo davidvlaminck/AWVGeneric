@@ -87,3 +87,26 @@ class EMInfraClient:
             query_dto.from_ = json_dict['from'] + query_dto.size
             if query_dto.from_ >= dto_list_total:
                 break
+
+    def remove_parent_from_asset(self, parent_uuid: str, asset_uuid: str):
+        """Removes the parent from an asset.
+
+        The parent is "beheerobject"
+
+        :param parent_uuid: str
+        :param asset_uuid: str
+        :return:
+        """
+        payload = {
+            "name": "remove",
+            "description": "Verwijderen uit boomstructuur van 1 asset",
+            "async": False,
+            "uuids": [asset_uuid],
+        }
+        url=f"core/api/beheerobjecten/{parent_uuid}/assets/ops/remove"
+        response = self.requester.put(
+            url=url,
+            json=payload
+        )
+        if response.status_code not in (200, 202):
+            ProcessLookupError(response)
