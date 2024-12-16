@@ -1,4 +1,6 @@
+import os
 import shutil
+import tempfile
 from itertools import islice
 import pandas as pd
 import re
@@ -35,52 +37,58 @@ if __name__ == '__main__':
                          )
 
     # Store at max X assets in a list.
-    # max_assets = 10
-    # asset_bucket = list(islice(eminfra_client.search_assets(query_dto_search_assets), max_assets))
-    asset_bucket = list(eminfra_client.search_assets(query_dto_search_assets))
+    max_assets = 5
+    asset_bucket = list(islice(eminfra_client.search_assets(query_dto_search_assets), max_assets))
+    # asset_bucket = list(eminfra_client.search_assets(query_dto_search_assets))
 
     # Store assets in a pandas dataframe:
-    df_assets = pd.DataFrame(columns=["asset_uuid", "document_categorie", "document_naam", "document_uuid"])
+    df_assets = pd.DataFrame(columns=["asset_uuid", "assettype", "naam", "naampad", "actief", "toestand", "gemeente", "provincie", "document_categorie", "document_naam", "document_uuid"])
     df_assets["asset_uuid"] = [asset.uuid for asset in asset_bucket]
+    df_assets["assettype"] = [asset.type.afkorting for asset in asset_bucket]
+    df_assets["naam"] = [asset.naam for asset in asset_bucket]
+    df_assets["actief"] = [asset.actief for asset in asset_bucket]
+    df_assets["toestand"] = [asset.toestand.value for asset in asset_bucket]
+
+    # TODO voeg naampad, gemeente, provincie toe.
+    # Todo toevoegen kastnummer? >> zie mail Ben Cannaerts
+    # Staat de kastnummer ook ergens in de excel of kan deze toegevoegd worden, zodat het duidelijk is welke bestanden bij welke kast horen? Dat is de naam van de map, waaronder alle bijhorende documenten zitten op de drive.
+    # De bestanden op de drive zijn we inderdaad enkel geïnteresseerd in de PDF's
 
     # Stap 3. documenten op basis van assets
-    document_bucket = set()
     query_dto_search_documents = QueryDTO(size=5, from_=0, pagingMode=PagingModeEnum.OFFSET,
                          selection=SelectionDTO(
                              expressions=[ExpressionDTO(
                                  terms=[TermDTO(property='categorie',
                                                 operator=OperatorEnum.EQ,
                                                 value=categorie)])]))
-    for asset in asset_bucket:
-        # print(f'Opzoeking van de documenten van het type "{categorie}" voor de asset met als uuid: "{asset.uuid}"')
-        documents = eminfra_client.search_documents_by_asset_uuid(asset_uuid=asset.uuid, query_dto=query_dto_search_documents)
-        # documents = eminfra_client.get_documents_by_asset_uuid(asset_uuid=asset.uuid)
-        for document in documents:
-            # Append document object to the document bucket
-            document_bucket.add(document)
-            # Append document info to the pandas dataframe
-            df_assets.loc[df_assets["asset_uuid"] == asset.uuid, "document_categorie"] = document.categorie.value
-            df_assets.loc[df_assets["asset_uuid"] == asset.uuid, "document_naam"] = document.naam
-            df_assets.loc[df_assets["asset_uuid"] == asset.uuid, "document_uuid"] = document.uuid
 
-    # Stap 4. Bewaar de documenten en het overzicht in een Excel-tabel.
     # Zip alle resultaten.
-    with Path(r"C:\Users\DriesVerdoodtNordend\Downloads\tmp") as temp_dir:
-    # with tempfile.TemporaryDirectory() as temp_dir:
-        temp_dir.mkdir(exist_ok=True)
+    output_dir = Path(r"C:\Users\DriesVerdoodtNordend\Downloads")
+    # with Path(r"C:\Users\DriesVerdoodtNordend\Downloads\tmp") as temp_dir:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+        os.makedirs(temp_path, exist_ok=True)
 
-        # Download each individual file in the temporary directory
-        for document_uuid in df_assets[df_assets.loc[:, "document_uuid"].notna()].loc[:, "document_uuid"].tolist():
-            #eminfra_client.download_document(document_uuid=document.uuid, directory=temp_dir)
-            print(f'document_uuid: {document_uuid}')
+        for asset in asset_bucket:
+            documents = eminfra_client.search_documents_by_asset_uuid(asset_uuid=asset.uuid, query_dto=query_dto_search_documents)
+            for document in documents:
+                # Append document info to the pandas dataframe
+                df_assets.loc[df_assets["asset_uuid"] == asset.uuid, "document_categorie"] = document.categorie.value
+                df_assets.loc[df_assets["asset_uuid"] == asset.uuid, "document_naam"] = document.naam
+                df_assets.loc[df_assets["asset_uuid"] == asset.uuid, "document_uuid"] = document.uuid
 
-        # Write the dataframe to Excel. (overview)
+                # Stap 4. Write documents to temp_dir
+                eminfra_client.download_document(document=document, directory=temp_path)
+
+
+        # Write overview to temp_dir
         edelta_dossiernummer_str = re.sub('[^0-9a-zA-Z]+', '_', edelta_dossiernummer) # replace all non-alphanumeric characters with an underscore
-        df_assets.to_excel(excel_writer=temp_dir/f'{edelta_dossiernummer_str}_overzicht_{categorie.value}.xlsx'
+        df_assets.to_excel(excel_writer=temp_path / f'{edelta_dossiernummer_str}_overzicht_{categorie.value}.xlsx'
                            , sheet_name=edelta_dossiernummer_str
                            , index=False)
 
-        zip_path = temp_dir.parent / 'output'  # The full path of the zip file (without extension)
+        # Zip the output and remove the temp folder (redundant step, since we use the with-statement).
+        zip_path = output_dir / 'output'  # The output path of the zip file (without extension)
         shutil.make_archive(str(zip_path), 'zip', root_dir=str(temp_dir))
-        shutil.rmtree(temp_dir)
+        shutil.rmtree(temp_dir) # this is redunant
         print(f"Folder {temp_dir} has been zipped to {zip_path}.zip and the temporary folder has been removed.")
