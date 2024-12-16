@@ -1,3 +1,4 @@
+import json
 from collections.abc import Generator
 from pathlib import Path
 
@@ -14,38 +15,31 @@ class EMInfraClient:
                                                            cookie=cookie)
         self.requester.first_part_url += 'eminfra/'
 
-    def download_document(self, document_uuid: str, directory: Path) -> Path:
+    def download_document(self, document: AssetDocumentDTO, directory: Path) -> Path:
         """
         Downloads a PDF document from a URL and saves it in a (temporary) folder.
 
         Args:
-            document_uuid (str): The uuid of the PDF-document.
-            directory (Path): Path to the (temporary) folder.
+            document (AssetDocumentDTO): document object
+            directory (Path): Path to the (temporary) directory.
 
         Returns:
             Path: The full path of the downloaded PDF file.
         """
         # Check if the directory exists, create it if it doesn't
-        if not os.path.exists(directory):
-            os.makedirs(directory)
+        os.makedirs(directory, exist_ok=True)
 
-        # Perform the GET request, extend the headers to accept pdf
-        # self.requester.headers['Accept'] = 'application/pdf'
-        self.requester.headers['Content-Type'] = 'application/pdf'
-        response = self.requester.get(url=f'dms/api/documenten/{document_uuid}/download', headers=self.requester.headers)
+        file_name = document.naam
+        doc_link = document.document['links'][0]['href'].split('/eminfra/')[1]
+        json_str = self.requester.get(doc_link).content.decode("utf-8")
+        json_response = json.loads(json_str)
+        doc_download_link = next(l for l in json_response['links'] if l['rel'] == 'download')['href'].split('/eminfra/')[1]
+        file = self.requester.get(doc_download_link)
 
-        # Check if the request was successful and the file is a PDF
-        if response.status_code == 200 and 'application/pdf' in response.headers.get('Content-Type', ''):
-            pdf_path = os.path.join(directory, "downloaded_document.pdf")
-
-            # Write the content of the PDF to a file
-            with open(pdf_path, "wb") as pdf_file:
-                pdf_file.write(response.content)
-
-            print(f"PDF successfully downloaded to: {pdf_path}")
-            return pdf_path
-        else:
-            raise Exception("Failed to download the PDF. Ensure the URL is correct and the file is a PDF.")
+        with open(f'{directory}/{file_name}', 'wb') as f:
+            f.write(file.content)
+            print(f'Write file {file_name} to temp location: {directory}.')
+            return directory / file_name
 
     def get_bestekkoppelingen_by_asset_uuid(self, asset_uuid: str) -> [BestekKoppeling]:
         response = self.requester.get(
