@@ -28,7 +28,7 @@ class AbstractRequester(Session, metaclass=abc.ABCMeta):
             response = super().post(url=self.first_part_url + url, **kwargs)
             if str(response.status_code).startswith('2'):
                 return response
-        raise RuntimeError(f"GET request failed after {self.retries} retries. Last response: {response}")
+        raise RuntimeError(f"POST request failed after {self.retries} retries. Last response: {response}")
 
     @abc.abstractmethod
     def put(self, url: str = '', **kwargs) -> Response:
@@ -37,7 +37,7 @@ class AbstractRequester(Session, metaclass=abc.ABCMeta):
             response = super().put(url=self.first_part_url + url, **kwargs)
             if str(response.status_code).startswith('2'):
                 return response
-        raise RuntimeError(f"GET request failed after {self.retries} retries. Last response: {response}")
+        raise RuntimeError(f"PUT request failed after {self.retries} retries. Last response: {response}")
 
     @abc.abstractmethod
     def patch(self, url: str = '', **kwargs) -> Response:
@@ -46,7 +46,7 @@ class AbstractRequester(Session, metaclass=abc.ABCMeta):
             response = super().patch(url=self.first_part_url + url, **kwargs)
             if str(response.status_code).startswith('2'):
                 return response
-        raise RuntimeError(f"GET request failed after {self.retries} retries. Last response: {response}")
+        raise RuntimeError(f"PATCH request failed after {self.retries} retries. Last response: {response}")
 
     @abc.abstractmethod
     def delete(self, url: str = '', **kwargs) -> Response:
@@ -55,4 +55,4 @@ class AbstractRequester(Session, metaclass=abc.ABCMeta):
             response = super().delete(url=self.first_part_url + url, **kwargs)
             if str(response.status_code).startswith('2'):
                 return response
-        raise RuntimeError(f"GET request failed after {self.retries} retries. Last response: {response}")
+        raise RuntimeError(f"DELETE request failed after {self.retries} retries. Last response: {response}")
