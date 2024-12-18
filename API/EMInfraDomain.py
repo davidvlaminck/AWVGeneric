@@ -261,6 +261,19 @@ class BestekKoppeling(BaseDataclass):
         self._fix_enums({('categorie', CategorieEnum), ('subcategorie', SubCategorieEnum)})
         self._fix_nested_classes({('bestekRef', BestekRef)})
 
+@dataclass
+class LocatieKenmerk(BaseDataclass):
+    _type: str
+    type: dict
+    links: [Link]
+    locatie: dict | None = None
+    geometrie: str | None = None
+    omschrijving: str | None = None
+    relatie: dict | None = None
+
+    def __post_init__(self):
+         self._fix_nested_list_classes({('links', Link)})
+
 
 @dataclass
 class Generator(BaseDataclass):
@@ -412,15 +425,18 @@ class AssetDocumentDTO(BaseDataclass):
         self._fix_nested_list_classes({('document', ResourceRefDTO)})
 
 
+
 def construct_naampad(asset: AssetDTO) -> str:
     naampad = asset.naam
     parent = asset.parent
-    if parent is None:
-        return naampad
-    naampad = parent['naam'] + '/' + naampad
-    # naampad = f'{parent['naam']}/{naampad}' not compatible with python 3.10
-    while parent.get('parent') is not None:
-        parent = parent['parent']
-        naampad = parent['naam'] + '/' + naampad
-        # naampad = f'{parent['naam']}/{naampad}' not compatible with python 3.10
+    while parent is not None:
+        # parent is dictionary (beheerobject)
+        if type(parent) == type({}):
+            naampad = parent.get("naam") + '/' + naampad
+            parent = parent.get("parent")
+
+        # parent is object (installatie of asset)
+        else:
+            naampad = parent.naam + '/' + naampad
+            parent = parent.parent
     return naampad
