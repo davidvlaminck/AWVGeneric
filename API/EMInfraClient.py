@@ -3,7 +3,7 @@ from collections.abc import Generator
 from pathlib import Path
 
 from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO, PagingModeEnum, QueryDTO, BestekRef, \
-    BestekKoppeling, FeedPage, AssettypeDTO, AssettypeDTOList, DTOList, AssetDTO, AssetDocumentDTO
+    BestekKoppeling, FeedPage, AssettypeDTO, AssettypeDTOList, DTOList, AssetDTO, AssetDocumentDTO, LocatieKenmerk
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 import os
@@ -16,8 +16,7 @@ class EMInfraClient:
         self.requester.first_part_url += 'eminfra/'
 
     def download_document(self, document: AssetDocumentDTO, directory: Path) -> Path:
-        """
-        Downloads a PDF document from a URL and saves it in a (temporary) folder.
+        """ Downloads document into a directory.
 
         Args:
             document (AssetDocumentDTO): document object
@@ -26,7 +25,7 @@ class EMInfraClient:
         Returns:
             Path: The full path of the downloaded PDF file.
         """
-        # Check if the directory exists, create it if it doesn't
+        # Check if the directory exists, create if not exist
         os.makedirs(directory, exist_ok=True)
 
         file_name = document.naam
@@ -37,8 +36,8 @@ class EMInfraClient:
         file = self.requester.get(doc_download_link)
 
         with open(f'{directory}/{file_name}', 'wb') as f:
+            print(f'Writing file {file_name} to temp location: {directory}.')
             f.write(file.content)
-            print(f'Write file {file_name} to temp location: {directory}.')
             return directory / file_name
 
     def get_bestekkoppelingen_by_asset_uuid(self, asset_uuid: str) -> [BestekKoppeling]:
@@ -51,6 +50,16 @@ class EMInfraClient:
         print(response.json()['data'])
 
         return [BestekKoppeling.from_dict(item) for item in response.json()['data']]
+
+    def get_kenmerk_locatie_by_asset_uuid(self, asset_uuid: str) -> LocatieKenmerk:
+        response = self.requester.get(
+            url=f'core/api/assets/{asset_uuid}/kenmerken/80052ed4-2f91-400c-8cba-57624653db11')
+        if response.status_code != 200:
+            print(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        # print(response.json())
+        return LocatieKenmerk.from_dict(response.json())
+
 
     # def get_asset_by_bestekref(self, bestekref: str) -> [AssetDTO]:
         # response = self.requester.get(
