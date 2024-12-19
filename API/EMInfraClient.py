@@ -132,6 +132,10 @@ class EMInfraClient:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
+        # Raise an error when empty bestek
+        if not response.json()['data']:
+            raise ValueError(f'Bestek {eDelta_dossiernummer} werd niet teruggevonden')
+
         print(response.json()['data'])
 
         return [BestekRef.from_dict(item) for item in response.json()['data']]
