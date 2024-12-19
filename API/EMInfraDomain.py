@@ -431,12 +431,11 @@ def construct_naampad(asset: AssetDTO) -> str:
     parent = asset.parent
     while parent is not None:
         # parent is dictionary (beheerobject)
-        if type(parent) == type({}):
+        if isinstance(parent, dict):
             naampad = parent.get("naam") + '/' + naampad
             parent = parent.get("parent")
 
-        # parent is object (installatie of asset)
         else:
-            naampad = parent.naam + '/' + naampad
+            naampad = f'{parent.naam}/{naampad}'
             parent = parent.parent
     return naampad
