@@ -7,7 +7,7 @@ from openpyxl.utils import get_column_letter
 from API.Enums import Environment
 
 
-class ExcelEditor:
+ class ExcelModifier:
     def __init__(self, file_path: Path):
         self.file_path = file_path
         self.first_part_url_dict_eminfra = {
@@ -23,12 +23,14 @@ class ExcelEditor:
             Environment.AIM: 'https://services-aim.apps-dev.mow.vlaanderen.be/awvinfra/ui/?asset='
         }
 
-    def convert_uuid_to_formula(self, sheet: str = None, link_type: str = 'eminfra',
+    def add_hyperlink(self, sheet: str = None, link_type: str = 'eminfra',
                                 env: Environment = Environment.PRD) -> None:
         """Convert uuid in Excel file to a formula
     
         Assumption that the column is called uuid (case-insensitive).
 
+        # TODO docstring aanvullen
+        # TODO Ander formaat docstring toepassen: reStructuredText
         :param sheet: str
             Name of the Excel sheet.
         :param link_type:
