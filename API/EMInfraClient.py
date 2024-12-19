@@ -87,3 +87,20 @@ class EMInfraClient:
             query_dto.from_ = json_dict['from'] + query_dto.size
             if query_dto.from_ >= dto_list_total:
                 break
+
+    def get_oef_schema_as_json(self, name: str) -> str:
+        url = f"core/api/otl/schema/oef/{name}"
+        content = self.requester.get(url).content
+        return content.decode("utf-8")
+
+    def get_all_eigenschappen_as_text_generator(self, size: int = 100) -> Generator[str]:
+        from_ = 0
+
+        while True:
+            url = f"core/api/eigenschappen?from={from_}&size={size}"
+            json_dict = self.requester.get(url).json()
+            yield from json_dict['data']
+            dto_list_total = json_dict['totalCount']
+            from_ = json_dict['from'] + size
+            if from_ >= dto_list_total:
+                break
