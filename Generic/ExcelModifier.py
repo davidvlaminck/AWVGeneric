@@ -7,7 +7,7 @@ from openpyxl.utils import get_column_letter
 from API.Enums import Environment
 
 
- class ExcelModifier:
+class ExcelModifier:
     def __init__(self, file_path: Path):
         self.file_path = file_path
         self.first_part_url_dict_eminfra = {
