@@ -3,7 +3,8 @@ from collections.abc import Generator
 from pathlib import Path
 
 from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO, PagingModeEnum, QueryDTO, BestekRef, \
-    BestekKoppeling, FeedPage, AssettypeDTO, AssettypeDTOList, DTOList, AssetDTO, AssetDocumentDTO, LocatieKenmerk
+    BestekKoppeling, FeedPage, AssettypeDTO, AssettypeDTOList, DTOList, AssetDTO, AssetDocumentDTO, LocatieKenmerk, \
+    LogicalOpEnum
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 import os
@@ -174,10 +175,11 @@ class EMInfraClient:
         json_dict = self.requester.get(url).json()
         return AssetDTO.from_dict(json_dict)
 
-    def search_assets(self, query_dto: QueryDTO) -> Generator[AssetDTO]:
+    def _search_assets_helper(self, query_dto: QueryDTO) -> Generator[AssetDTO]:
         query_dto.from_ = 0
         if query_dto.size is None:
             query_dto.size = 100
+
         url = "core/api/assets/search"
         while True:
             json_dict = self.requester.post(url, data=query_dto.json()).json()
@@ -186,3 +188,17 @@ class EMInfraClient:
             query_dto.from_ = json_dict['from'] + query_dto.size
             if query_dto.from_ >= dto_list_total:
                 break
+
+    def search_assets(self, query_dto: QueryDTO) -> Generator[AssetDTO]:
+        query_dto.selection.expressions.append(
+            ExpressionDTO(
+                terms=[TermDTO(property='actief',
+                               operator=OperatorEnum.EQ,
+                               value=True)
+                       ]
+                , logicalOp=LogicalOpEnum.AND)
+        )
+        yield from self._search_assets_helper(query_dto)
+
+    def search_all_assets(self, query_dto: QueryDTO) -> Generator[AssetDTO]:
+        yield from self._search_assets_helper(query_dto)
