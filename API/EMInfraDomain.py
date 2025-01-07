@@ -199,6 +199,10 @@ class DirectionEnum(Enum):
     ASC = 'ASC'
     DESC = 'DESC'
 
+class ApplicationEnum(Enum):
+    EM_INFRA = 'eminfra'
+    ELISA_INFRA = 'elisainfra'
+
 
 @dataclass
 class QueryDTO(BaseDataclass):
