@@ -7,19 +7,22 @@ from itertools import islice
 import pandas as pd
 import re
 
-
+from API.SNGatewayClient import SNGatewayClient
 from API.EMInfraClient import EMInfraClient
 from API.EMInfraDomain import DocumentCategorieEnum, QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, \
-    OperatorEnum, ExpansionsDTO, construct_naampad, LogicalOpEnum
+    OperatorEnum, ExpansionsDTO, construct_naampad, LogicalOpEnum, ApplicationEnum
 from pathlib import Path
 from API.Enums import AuthType, Environment
 from Generic.ExcelModifier import ExcelModifier
 
 if __name__ == '__main__':
-    # TODO: in notebook met de cookie werken, zie voorbeeld SNGW ServiceNowGateway
     settings_path = Path(
         'C:/Users/DriesVerdoodtNordend/OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json')
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
+
+    # TODO: in notebook met de cookie werken, zie voorbeeld SNGW ServiceNowGateway
+    # awv_acm_cookie = '522d523ae5224451beb47874b0153ac4'
+    # sn_client = SNGatewayClient(cookie=awv_acm_cookie, auth_type=AuthType.COOKIE, env=Environment.PRD)  # change environment here
 
     edelta_dossiernummer = 'VWT/DVM/2023/3'
     print(f'De mogelijke document categoriën zijn: {[item.value for item in DocumentCategorieEnum]}')
@@ -54,7 +57,7 @@ if __name__ == '__main__':
             expressions=[ExpressionDTO(
                 terms=[TermDTO(property='categorie',
                                operator=OperatorEnum.IN,
-                               value=[categorie.value for categorie in document_categorien])]
+                               value=[document_categorie.value for document_categorie in document_categorien])]
             )]
         )
     )
@@ -73,10 +76,7 @@ if __name__ == '__main__':
             columns=["uuid", "assettype", "naam", "naampad", "actief", "toestand", "gemeente", "provincie",
                      "document_categorie", "document_naam", "document_uuid"])
 
-        # TODO de List hier weglaten na development
-        max_assets = 20 # include a maximum number of X assets during development
         start_time = datetime.now()
-        # for i, asset in enumerate(list(islice(asset_bucket_generator, max_assets)), start=1):
         for i, asset in enumerate(asset_bucket_generator):
             # Track progress
             if i % 10 == 0:
@@ -129,7 +129,7 @@ if __name__ == '__main__':
                            , engine="openpyxl")
 
         excelModifier = ExcelModifier(output_file_path_excel)
-        excelModifier.add_hyperlink(sheet=edelta_dossiernummer_str, link_type='eminfra', env=Environment.PRD)
+        excelModifier.add_hyperlink(sheet=edelta_dossiernummer_str, link_type=ApplicationEnum.EM_INFRA, env=Environment.PRD)
 
         # Zip the output and remove the temp folder
         zip_path = downloads_path / f'documenten_{edelta_dossiernummer_str}'  # The output path of the zip file (without extension)
