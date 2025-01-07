@@ -6,9 +6,11 @@ if __name__ == '__main__':
     from pathlib import Path
 
     settings_path = Path('C:/Users/DriesVerdoodtNordend/OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json')
-    eminfra_client = EMInfraClient(env=Environment.TEI, auth_type=AuthType.JWT, settings_path=settings_path)
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
 
     # Step 1. Search assets "Geluidwerende constructie", including the parent asset.
+    # The function search_assets() searches by default the active assets. To include the inactive assets, use the function search_all_assets()
+    # The second ExpressionDTO element can be removed when the eminfra_client is updated.
     query_dto = QueryDTO(
         size=5,
         from_=0,
@@ -24,16 +26,15 @@ if __name__ == '__main__':
                             operator=OperatorEnum.EQ,
                             value='60698ead-a2d8-4698-9638-83e1163fb9fd')]
                 )
-                # second element: actief = 'true'
-                # ,
-                # ExpressionDTO(
-                #     logicalOp=LogicalOpEnum.AND,
-                #     terms=[
-                #         TermDTO(
-                #             property='actief',
-                #             operator=OperatorEnum.EQ,
-                #             value='true')]
-                # )
+                ,
+                ExpressionDTO(
+                    terms=[
+                        TermDTO(
+                            property='actief',
+                            operator=OperatorEnum.EQ,
+                            value=True)]
+                    , logicalOp=LogicalOpEnum.AND
+                )
             ]
         )
     )
