@@ -109,4 +109,4 @@ class EMInfraClient:
             json=payload
         )
         if response.status_code not in (200, 202):
-            ProcessLookupError(response)
+            ProcessLookupError(f'Failed to remove parent from asset: {response.text}')
