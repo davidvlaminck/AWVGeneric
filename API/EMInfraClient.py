@@ -2,7 +2,7 @@ from collections.abc import Generator
 from pathlib import Path
 
 from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO, PagingModeEnum, QueryDTO, BestekRef, \
-    BestekKoppeling, FeedPage, AssettypeDTO, AssettypeDTOList, DTOList, AssetDTO
+     BestekKoppeling, FeedPage, AssettypeDTO, AssettypeDTOList, DTOList, AssetDTO, BetrokkenerelatieDTO, AgentDTO
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 
@@ -87,6 +87,41 @@ class EMInfraClient:
             query_dto.from_ = json_dict['from'] + query_dto.size
             if query_dto.from_ >= dto_list_total:
                 break
+
+    def search_betrokkenerelaties(self, query_dto: QueryDTO) -> Generator[BetrokkenerelatieDTO]:
+        query_dto.from_ = 0
+        if query_dto.size is None:
+            query_dto.size = 100
+        url = "core/api/betrokkenerelaties/search"
+        while True:
+            json_dict = self.requester.post(url, data=query_dto.json()).json()
+            yield from [BetrokkenerelatieDTO.from_dict(item) for item in json_dict['data']]
+            dto_list_total = json_dict['totalCount']
+            query_dto.from_ = json_dict['from'] + query_dto.size
+            if query_dto.from_ >= dto_list_total:
+                break
+
+    def search_agent(self, query_dto: QueryDTO) -> Generator[AgentDTO]:
+        query_dto.from_ = 0
+        if query_dto.size is None:
+            query_dto.size = 100
+        url = "core/api/agents/search"
+        while True:
+            json_dict = self.requester.post(url, data=query_dto.json()).json()
+            yield from [AgentDTO.from_dict(item) for item in json_dict['data']]
+            dto_list_total = json_dict['totalCount']
+            query_dto.from_ = json_dict['from'] + query_dto.size
+            if query_dto.from_ >= dto_list_total:
+                break
+
+    def remove_betrokkenerelatie(self, betrokkenerelatie_id: str) -> dict:
+        url = f"core/api/betrokkenerelaties/{betrokkenerelatie_id}"
+        response = self.requester.delete(url=url).json()
+        if response.status_code != 202:
+            print(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return response.json()
+
 
     def get_oef_schema_as_json(self, name: str) -> str:
         url = f"core/api/otl/schema/oef/{name}"
