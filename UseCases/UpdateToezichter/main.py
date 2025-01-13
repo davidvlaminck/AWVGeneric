@@ -7,6 +7,7 @@ from API.Enums import AuthType, Environment
 
 import pandas as pd
 import openpyxl
+import polars as pd # check dit
 
 if __name__ == '__main__':
     from pathlib import Path
@@ -37,12 +38,14 @@ if __name__ == '__main__':
                          selection=SelectionDTO(
                              expressions=[ExpressionDTO(
                                  terms=[type_term
+                                        # TODO extra filter toevoegen: rol=toezichter
                                         # , TermDTO(property='actief', operator=OperatorEnum.EQ,
                                         #         value=True, logicalOp=LogicalOpEnum.AND)
                                         ])]))
 
     # betrokkenerelaties = eminfra_client.search_betrokkenerelaties(query_dto=query_dto)
     betrokkenerelaties = []
+    # TODO gebruik de andere endpoint otl/betrokkenerelatie/search
     betrokkenerelaties.extend(betrokkenerelatie.doel for betrokkenerelatie in eminfra_client.search_betrokkenerelaties(query_dto))
 
     if len(betrokkenerelaties) == 1:
@@ -67,6 +70,7 @@ if __name__ == '__main__':
                                         ])]))
 
     agents = []
+    # TODO indien mogelijk, gebruik OTL-endpoint
     agents.extend(iter(eminfra_client.search_agent(query_dto=query_dto)))
 
     if len(agents) == 1:
@@ -96,7 +100,7 @@ if __name__ == '__main__':
         response = eminfra_client.requester.post(url='core/api/betrokkenerelaties', json=json_data)
 
         # Check if the request was successful
-        if response.status_code in (200, 202):
+        if response.status_code in (200, 202): # todo idem response code kiezen
             print("Request successful!")
             print("Response:", response.json())  # Parse JSON response
         else:
