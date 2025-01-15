@@ -278,6 +278,37 @@ class LocatieKenmerk(BaseDataclass):
     def __post_init__(self):
          self._fix_nested_list_classes({('links', Link)})
 
+@dataclass
+class ToezichterKenmerk(BaseDataclass):
+    _type: str
+    type: dict
+    links: [Link]
+    toezichter: dict | None = None
+
+    def __post_init__(self):
+         self._fix_nested_list_classes({('links', Link)})
+
+
+@dataclass
+class IdentiteitKenmerk(BaseDataclass):
+    _type: str
+    uuid: str
+    actief: bool
+    systeem: bool
+    naam: str
+    gebruikersnaam: str
+    voornaam: str
+    account: dict
+    contactFiche: dict
+    voId: str
+    bron: str
+    functie: str
+    ldapId: str
+    gebruikersrechtOrganisaties: [str]
+    links: list[Link] | None = None
+
+    def __post_init__(self):
+         self._fix_nested_list_classes({('links', Link)})
 
 @dataclass
 class Generator(BaseDataclass):
@@ -337,6 +368,7 @@ class InfraObjectDTO(BaseDataclass):
     naam: str
     actief: bool
     links: [Link]
+    kenmerken: list[dict] | None = None
     toestand: str | None = None
     authorizationMetadata: str | None = None
     parent: list[dict] | None = None
@@ -401,6 +433,14 @@ class DocumentCategorieEnum(Enum):
     TECHNISCHE_FICHE = 'TECHNISCHE_FICHE'
     TRACO_ATTEST = 'TRACO_ATTEST'
     V_PLAN = 'V_PLAN'
+
+class ProvincieEnum(Enum):
+    ANTWERPEN = 'antwerpen'
+    WEST_VLAANDEREN = 'west-vlaanderen'
+    OOST_VLAANDEREN = 'oost-vlaanderen'
+    VLAAMS_BRABANT = 'vlaams-brabant'
+    LIMBURG = 'limburg'
+    BRUSSEL = 'brussel'
 
 class ResourceRefDTO(Link):
     uuid: str
