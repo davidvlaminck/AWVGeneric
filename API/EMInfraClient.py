@@ -4,7 +4,7 @@ from pathlib import Path
 
 from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO, PagingModeEnum, QueryDTO, BestekRef, \
     BestekKoppeling, FeedPage, AssettypeDTO, AssettypeDTOList, DTOList, AssetDTO, AssetDocumentDTO, LocatieKenmerk, \
-    LogicalOpEnum
+    LogicalOpEnum, ToezichterKenmerk, IdentiteitKenmerk
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 import os
@@ -60,6 +60,25 @@ class EMInfraClient:
             raise ProcessLookupError(response.content.decode("utf-8"))
         # print(response.json())
         return LocatieKenmerk.from_dict(response.json())
+
+    def get_kenmerk_toezichter_by_asset_uuid(self, asset_uuid: str) -> ToezichterKenmerk:
+        response = self.requester.get(
+            url=f'core/api/assets/{asset_uuid}/kenmerken/f0166ba2-757c-4cf3-bf71-2e4fdff43fa3')
+        if response.status_code != 200:
+            print(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        # print(response.json())
+        return ToezichterKenmerk.from_dict(response.json())
+
+
+    def get_identiteit(self, toezichter_uuid: str) -> IdentiteitKenmerk:
+        response = self.requester.get(
+            url=f'identiteit/api/identiteiten/{toezichter_uuid}')
+        if response.status_code != 200:
+            print(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        # print(response.json())
+        return IdentiteitKenmerk.from_dict(response.json())
 
 
     # def get_asset_by_bestekref(self, bestekref: str) -> [AssetDTO]:
@@ -202,3 +221,42 @@ class EMInfraClient:
 
     def search_all_assets(self, query_dto: QueryDTO) -> Generator[AssetDTO]:
         yield from self._search_assets_helper(query_dto)
+
+    def search_identiteit(self, naam: str) -> Generator[IdentiteitKenmerk]:
+        query_dto = QueryDTO(size=5, from_=0, pagingMode=PagingModeEnum.OFFSET,
+                 selection=SelectionDTO(
+                     expressions=[
+                         ExpressionDTO(
+                             terms=[TermDTO(property='actief', operator=OperatorEnum.EQ, value=True, logicalOp=None)]
+                         , logicalOp=None
+                         )
+                     ]
+                 )
+            )
+
+        naam_parts = naam.split(' ')
+        for naam_part in naam_parts:
+            query_dto.selection.expressions.append(
+                ExpressionDTO(
+                    terms=[
+                        TermDTO(property='naam', operator=OperatorEnum.CONTAINS, value=f'{naam_part}', logicalOp=None)
+                        , TermDTO(property='voornaam', operator=OperatorEnum.CONTAINS, value=f'{naam_part}', logicalOp=LogicalOpEnum.OR)
+                        , TermDTO(property='roepnaam', operator=OperatorEnum.CONTAINS, value=f'{naam_part}', logicalOp=LogicalOpEnum.OR)
+                        , TermDTO(property='gebruikersnaam', operator=OperatorEnum.CONTAINS, value=f'{naam_part}', logicalOp=LogicalOpEnum.OR)
+                    ]
+                    , logicalOp=LogicalOpEnum.AND
+                )
+            )
+
+        query_dto.from_ = 0
+        if query_dto.size is None:
+            query_dto.size = 100
+
+        url = "identiteit/api/identiteiten/search"
+        while True:
+            json_dict = self.requester.post(url, data=query_dto.json()).json()
+            yield from [IdentiteitKenmerk.from_dict(item) for item in json_dict['data']]
+            dto_list_total = json_dict['totalCount']
+            query_dto.from_ = json_dict['from'] + query_dto.size
+            if query_dto.from_ >= dto_list_total:
+                break
