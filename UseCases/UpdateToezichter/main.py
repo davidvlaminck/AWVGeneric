@@ -4,21 +4,18 @@ from API.EMInfraClient import EMInfraClient
 from API.EMInfraDomain import QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum, \
     LogicalOpEnum, ExpansionsDTO
 from API.Enums import AuthType, Environment
-
 import pandas as pd
-import openpyxl
-import polars as pd # check dit
 
 if __name__ == '__main__':
     from pathlib import Path
 
-    settings_path = Path('C:/Users/DriesVerdoodtNordend/OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json')
+    settings_path = Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
 
     #################################################################################
     ####  Read RSA-report as input
     #################################################################################
-    filepath = Path(r"C:\Users\DriesVerdoodtNordend\Downloads\RSA Bijhorende assets hebben een verschillende toezichtshouder_toezichtsgroep (assettype = Signaalkabel).xlsx")
+    filepath = Path().home() / 'Downloads' / 'RSA Bijhorende assets hebben een verschillende toezichtshouder_toezichtsgroep (assettype = Signaalkabel).xlsx'
 
     df_assets = pd.read_excel(filepath, sheet_name='Resultaat', header=2, nrows=5)
     otl_uuids = df_assets.loc[:, 'otl_uuid']
@@ -37,13 +34,16 @@ if __name__ == '__main__':
                          expansions=ExpansionsDTO(fields=['parent']),
                          selection=SelectionDTO(
                              expressions=[ExpressionDTO(
-                                 terms=[type_term
-                                        # TODO extra filter toevoegen: rol=toezichter
-                                        # , TermDTO(property='actief', operator=OperatorEnum.EQ,
-                                        #         value=True, logicalOp=LogicalOpEnum.AND)
-                                        ])]))
+                                 terms=[type_term])]))
 
-    # betrokkenerelaties = eminfra_client.search_betrokkenerelaties(query_dto=query_dto)
+    # filter_dto = FilterDTO(filters={"bronAsset":asset_uuid_otl})
+    # print(filter_dto)
+    # TODO maak hier een nieuw object aan: QueryDTO_OTL, gebasserd op de QueryDTO, maar met enkel de nodige informatie. Zie Swagger verschil tussen
+    # https://apps.mow.vlaanderen.be/eminfra/core/swagger-ui/#/betrokkenerelaties/betrokkeneRelatieSearch
+    # en
+    # https://apps.mow.vlaanderen.be/eminfra/core/swagger-ui/#/betrokkenerelaties/otlBetrokkeneRelatiesSearch
+
+    betrokkenerelaties = eminfra_client.search_betrokkenerelaties(query_dto=query_dto)
     betrokkenerelaties = []
     # TODO gebruik de andere endpoint otl/betrokkenerelatie/search
     betrokkenerelaties.extend(betrokkenerelatie.doel for betrokkenerelatie in eminfra_client.search_betrokkenerelaties(query_dto))
