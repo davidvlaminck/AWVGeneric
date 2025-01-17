@@ -1,8 +1,9 @@
+import json
 from collections.abc import Generator
 from pathlib import Path
 
 from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO, PagingModeEnum, QueryDTO, BestekRef, \
-     BestekKoppeling, FeedPage, AssettypeDTO, AssettypeDTOList, DTOList, AssetDTO, BetrokkenerelatieDTO, AgentDTO
+    BestekKoppeling, FeedPage, AssettypeDTO, AssettypeDTOList, DTOList, AssetDTO, BetrokkenerelatieDTO, AgentDTO
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 
@@ -101,6 +102,45 @@ class EMInfraClient:
             if query_dto.from_ >= dto_list_total:
                 break
 
+
+    def get_objects_from_oslo_search_endpoint(self, url_part: str,
+                                              filter_string: dict = '{}', size: int = 100,
+                                              expansions_fields: [str] = None) -> Generator:
+        """Returns Generator objects for each OSLO endpoint
+
+        :param url_part: keyword to complete the url
+        :type url_part: str
+        :param filter_string: filter condition
+        :type filter_string: dict
+        :param size:
+        :type size: int
+        :param expansions_fields: additional fields to append to the results
+        :type expansions_fields: [str]
+        :return: Generator
+        """
+        body = {'size': size, 'fromCursor': None, 'filters': filter_string}
+        if expansions_fields:
+            body['expansion']['fields'] = expansions_fields
+        paging_cursor = None
+        url = f'core/api/otl/{url_part}/search'
+
+        while True:
+            # update fromCursor
+            if paging_cursor:
+                body['fromCursor'] = paging_cursor
+            json_body = json.dumps(body)
+
+            response = self.requester.post(url=url, data=json_body)
+            decoded_string = response.content.decode("utf-8")
+            dict_obj = json.loads(decoded_string)
+
+            yield from [item for item in dict_obj["@graph"]]
+
+            if 'em-paging-next-cursor' in response.headers.keys():
+                paging_cursor = response.headers['em-paging-next-cursor']
+            else:
+                break
+
     def search_agent(self, query_dto: QueryDTO) -> Generator[AgentDTO]:
         query_dto.from_ = 0
         if query_dto.size is None:
@@ -114,13 +154,31 @@ class EMInfraClient:
             if query_dto.from_ >= dto_list_total:
                 break
 
-    def remove_betrokkenerelatie(self, betrokkenerelatie_id: str) -> dict:
-        url = f"core/api/betrokkenerelaties/{betrokkenerelatie_id}"
-        response = self.requester.delete(url=url).json()
+    def add_betrokkenerelatie(self, asset_uuid: str, agent_uuid: str, rol: str = 'toezichter') -> dict:
+        json_body = {
+            "bron": {
+                "uuid": f"{asset_uuid}"
+                , "_type": "onderdeel"
+            },
+            "doel": {
+                "uuid": f"{agent_uuid}"
+                , "_type": "agent"
+            },
+            "rol": f"{rol}"
+        }
+        response = self.requester.post(url='core/api/betrokkenerelaties', json=json_body)
         if response.status_code != 202:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
         return response.json()
+
+    def remove_betrokkenerelatie(self, betrokkenerelatie_uuid: str) -> dict:
+        url = f"core/api/betrokkenerelaties/{betrokkenerelatie_uuid}"
+        response = self.requester.delete(url=url)
+        if response.status_code != 202:
+            print(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return response
 
 
     def get_oef_schema_as_json(self, name: str) -> str:
