@@ -1,8 +1,4 @@
-import requests
-
 from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum, \
-    LogicalOpEnum, ExpansionsDTO
 from API.Enums import AuthType, Environment
 import pandas as pd
 
@@ -21,100 +17,46 @@ if __name__ == '__main__':
     otl_uuids = df_assets.loc[:, 'otl_uuid']
     lgc_uuids = df_assets.loc[:, 'lgc_uuid']
 
-    #################################################################################
-    ####  Get betrokkenerelatie toezichter from OTL-asset
-    #################################################################################
     # Get all betrokkenerelaties.
-    # Check if there is only 1 toezichter. This is the default behaviour.
     sample_asset = df_assets.iloc[0, :]
     asset_uuid_otl = sample_asset['otl_uuid']
     asset_uuid_lgc = sample_asset['lgc_uuid']
-    type_term = TermDTO(property='bronAsset', operator=OperatorEnum.EQ, value=asset_uuid_otl)
-    query_dto = QueryDTO(size=100, from_=0, pagingMode=PagingModeEnum.OFFSET,
-                         expansions=ExpansionsDTO(fields=['parent']),
-                         selection=SelectionDTO(
-                             expressions=[ExpressionDTO(
-                                 terms=[type_term])]))
-
-    # filter_dto = FilterDTO(filters={"bronAsset":asset_uuid_otl})
-    # print(filter_dto)
-    # TODO maak hier een nieuw object aan: QueryDTO_OTL, gebasserd op de QueryDTO, maar met enkel de nodige informatie. Zie Swagger verschil tussen
-    # https://apps.mow.vlaanderen.be/eminfra/core/swagger-ui/#/betrokkenerelaties/betrokkeneRelatieSearch
-    # en
-    # https://apps.mow.vlaanderen.be/eminfra/core/swagger-ui/#/betrokkenerelaties/otlBetrokkeneRelatiesSearch
-
-    betrokkenerelaties = eminfra_client.search_betrokkenerelaties(query_dto=query_dto)
-    betrokkenerelaties = []
-    # TODO gebruik de andere endpoint otl/betrokkenerelatie/search
-    betrokkenerelaties.extend(betrokkenerelatie.doel for betrokkenerelatie in eminfra_client.search_betrokkenerelaties(query_dto))
-
-    if len(betrokkenerelaties) == 1:
-        betrokkenerelatie_uuid_otl = betrokkenerelaties[0].get('uuid')
-    else:
-        #TODO error catching
-        raise ValueError(f'Too much betrokkenen for asset: {asset_uuid_otl}')
 
     #################################################################################
-    ####  Get betrokkenerelatie toezichter from the LGC-asset
+    ####  Get betrokkenerelatie from OTL-asset (rol=toezichter)
+    #################################################################################
+
+    generator_betrokkenerelaties = eminfra_client.get_objects_from_oslo_search_endpoint(size=1, url_part='betrokkenerelaties', filter_string={"bronAsset": asset_uuid_otl, 'rol': 'toezichter'})
+
+    betrokkenerelaties = []
+    betrokkenerelaties.extend(iter(generator_betrokkenerelaties))
+
+    if len(betrokkenerelaties) != 1:
+        raise ValueError(f'Exactly 1 betrokkenerelaties (type: toezichter) are expected for asset: {asset_uuid_otl}.\nFound {len(betrokkenerelaties)} betrokkenerelaties')
+
+    agent_uuid_otl = betrokkenerelaties[0].get('RelatieObject.doelAssetId').get('DtcIdentificator.identificator')[:36]   # agent_uuid (de persoon)
+    betrokkenerelatie_uuid_otl = betrokkenerelaties[0].get('RelatieObject.assetId').get('DtcIdentificator.identificator')[:36]  # betrokkenerelatie_uuid (het relatieobject tussen een asset en een persoon)
+
+    #################################################################################
+    ####  Get agent from the LGC-asset
     #################################################################################
     lgc_toezichthouder = f'{sample_asset["lgc_toezichthouder_voornaam"]} {sample_asset["lgc_toezichthouder_naam"]}'
 
-    type_term = TermDTO(property='naam', operator=OperatorEnum.EQ, value=lgc_toezichthouder)
-    query_dto = QueryDTO(size=100, from_=0, pagingMode=PagingModeEnum.OFFSET,
-                         expansions=ExpansionsDTO(fields=['contactInfo']),
-                         selection=SelectionDTO(
-                             expressions=[ExpressionDTO(
-                                 terms=[type_term
-                                        , TermDTO(property='actief', operator=OperatorEnum.EQ,
-                                                value=True, logicalOp=LogicalOpEnum.AND)
-                                        ])]))
-
+    generator_agents = eminfra_client.get_objects_from_oslo_search_endpoint(size=1, url_part='agents', filter_string={"naam": lgc_toezichthouder})
     agents = []
-    # TODO indien mogelijk, gebruik OTL-endpoint
-    agents.extend(iter(eminfra_client.search_agent(query_dto=query_dto)))
+    agents.extend(iter(generator_agents))
 
-    if len(agents) == 1:
-        betrokkenerelatie_uuid_lgc = agents[0].uuid
-    else:
-        # TODO error catching
-        raise ValueError(f'Multiple Agents found for the name: {lgc_toezichthouder}')
-
+    if len(agents) != 1:
+        raise ValueError(f'There are 2 or more agents  found for the name: {lgc_toezichthouder}')
+    agent_uuid_lgc = agents[0].get('purl:Agent.agentId').get('DtcIdentificator.identificator')[:36]
 
     #################################################################################
-    ####  Add new betrokkenerelatie toezichter to OTL-asset
+    ####  Add a new betrokkenerelatie - type: toezichter - to OTL-asset
     #################################################################################
-    json_data = {
-        "bron": {
-            "uuid": f"{asset_uuid_otl}"
-            , "_type": "onderdeel"
-        },
-        "doel": {
-            "uuid": f"{betrokkenerelatie_uuid_lgc}"
-            , "_type": "agent"
-        },
-        "rol": "toezichter"
-    }
-
-    # Send the POST request
-    try:
-        response = eminfra_client.requester.post(url='core/api/betrokkenerelaties', json=json_data)
-
-        # Check if the request was successful
-        if response.status_code in (200, 202): # todo idem response code kiezen
-            print("Request successful!")
-            print("Response:", response.json())  # Parse JSON response
-        else:
-            print(f"Request failed with status code {response.status_code}")
-            print("Response content:", response.text)
-
-    except requests.exceptions.RequestException as e:
-        print("An error occurred:", e)
+    response = eminfra_client.add_betrokkenerelatie(asset_uuid=asset_uuid_otl, agent_uuid=agent_uuid_lgc)
+    betrokkenerelatie_uuid_otl_new = response.get('uuid')
 
     #################################################################################
     ####  Remove betrokkenerelatie toezichter from OTL-asset
     #################################################################################
-    # TODO response nakijken. De response wordt niet gebruikt, dus die kan gewist worden.
-    # TODO Test wissen pas nadat eerst een nieuwe betrokkenerelatie "toezichter" werd toegevoegd.
-    # TODO hier niet de agent-id, maar effectief de betrokkenerelatie-id meegeven. Eerst deze id nog opvissen?
     response = eminfra_client.remove_betrokkenerelatie(betrokkenerelatie_uuid_otl)
-    print('end of file')
