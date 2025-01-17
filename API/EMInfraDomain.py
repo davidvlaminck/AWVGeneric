@@ -60,7 +60,7 @@ class BaseDataclass:
 
     def json(self):
         """
-        get the json formated string
+        get the json formatted string
         """
         d = self.asdict()
         return dumps(self.asdict())
