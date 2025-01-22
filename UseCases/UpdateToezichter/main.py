@@ -28,8 +28,7 @@ if __name__ == '__main__':
 
     generator_betrokkenerelaties = eminfra_client.get_objects_from_oslo_search_endpoint(size=1, url_part='betrokkenerelaties', filter_string={"bronAsset": asset_uuid_otl, 'rol': 'toezichter'})
 
-    betrokkenerelaties = []
-    betrokkenerelaties.extend(iter(generator_betrokkenerelaties))
+    betrokkenerelaties = list(generator_betrokkenerelaties)
 
     if len(betrokkenerelaties) != 1:
         raise ValueError(f'Exactly 1 betrokkenerelaties (type: toezichter) are expected for asset: {asset_uuid_otl}.\nFound {len(betrokkenerelaties)} betrokkenerelaties')
@@ -43,8 +42,7 @@ if __name__ == '__main__':
     lgc_toezichthouder = f'{sample_asset["lgc_toezichthouder_voornaam"]} {sample_asset["lgc_toezichthouder_naam"]}'
 
     generator_agents = eminfra_client.get_objects_from_oslo_search_endpoint(size=1, url_part='agents', filter_string={"naam": lgc_toezichthouder})
-    agents = []
-    agents.extend(iter(generator_agents))
+    agents = list(generator_agents)
 
     if len(agents) != 1:
         raise ValueError(f'There are 2 or more agents  found for the name: {lgc_toezichthouder}')

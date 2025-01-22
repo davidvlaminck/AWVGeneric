@@ -112,7 +112,7 @@ class EMInfraClient:
         :type url_part: str
         :param filter_string: filter condition
         :type filter_string: dict
-        :param size:
+        :param size: amount of objects to return in 1 page or request
         :type size: int
         :param expansions_fields: additional fields to append to the results
         :type expansions_fields: [str]
@@ -134,7 +134,7 @@ class EMInfraClient:
             decoded_string = response.content.decode("utf-8")
             dict_obj = json.loads(decoded_string)
 
-            yield from [item for item in dict_obj["@graph"]]
+            yield from dict_obj["@graph"]
 
             if 'em-paging-next-cursor' in response.headers.keys():
                 paging_cursor = response.headers['em-paging-next-cursor']
