@@ -1,3 +1,4 @@
+import json
 from collections.abc import Generator
 from pathlib import Path
 
@@ -86,6 +87,44 @@ class EMInfraClient:
             dto_list_total = json_dict['totalCount']
             query_dto.from_ = json_dict['from'] + query_dto.size
             if query_dto.from_ >= dto_list_total:
+                break
+
+    def get_objects_from_oslo_search_endpoint(self, url_part: str,
+                                              filter_string: dict = '{}', size: int = 100,
+                                              expansions_fields: [str] = None) -> Generator:
+        """Returns Generator objects for each OSLO endpoint
+
+        :param url_part: keyword to complete the url
+        :type url_part: str
+        :param filter_string: filter condition
+        :type filter_string: dict
+        :param size: amount of objects to return in 1 page or request
+        :type size: int
+        :param expansions_fields: additional fields to append to the results
+        :type expansions_fields: [str]
+        :return: Generator
+        """
+        body = {'size': size, 'fromCursor': None, 'filters': filter_string}
+        if expansions_fields:
+            body['expansion']['fields'] = expansions_fields
+        paging_cursor = None
+        url = f'core/api/otl/{url_part}/search'
+
+        while True:
+            # update fromCursor
+            if paging_cursor:
+                body['fromCursor'] = paging_cursor
+            json_body = json.dumps(body)
+
+            response = self.requester.post(url=url, data=json_body)
+            decoded_string = response.content.decode("utf-8")
+            dict_obj = json.loads(decoded_string)
+
+            yield from dict_obj["@graph"]
+
+            if 'em-paging-next-cursor' in response.headers.keys():
+                paging_cursor = response.headers['em-paging-next-cursor']
+            else:
                 break
 
     def get_oef_schema_as_json(self, name: str) -> str:
