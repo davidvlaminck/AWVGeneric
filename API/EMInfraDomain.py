@@ -249,9 +249,9 @@ class SubCategorieEnum(Enum):
 @dataclass
 class BestekKoppeling(BaseDataclass):
     startDatum: str
-    eindDatum: str
     bestekRef: dict | BestekRef
     status: str
+    eindDatum: str | None = None
     categorie: CategorieEnum | None = None
     subcategorie: SubCategorieEnum | None = None
     bron: str | None = None
