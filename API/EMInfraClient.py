@@ -1,10 +1,16 @@
+import json
 from collections.abc import Generator
+from datetime import datetime, timedelta
+
+import pytz
+from datetime import timezone
 from pathlib import Path
 
 from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO, PagingModeEnum, QueryDTO, BestekRef, \
-    BestekKoppeling, FeedPage, AssettypeDTO, AssettypeDTOList, DTOList, AssetDTO
+    BestekKoppeling, FeedPage, AssettypeDTO, AssettypeDTOList, DTOList, AssetDTO, CategorieEnum
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
+from utils.date_helpers import get_winter_summer_time_interval, validate_dates
 
 
 class EMInfraClient:
@@ -40,6 +46,150 @@ class EMInfraClient:
         print(response.json()['data'])
 
         return [BestekRef.from_dict(item) for item in response.json()['data']]
+
+    def get_bestekref_by_eDelta_besteknummer(self, eDelta_besteknummer: str) -> [BestekRef]:
+        query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
+                             selection=SelectionDTO(
+                                 expressions=[ExpressionDTO(
+                                     terms=[TermDTO(property='eDeltaBesteknummer',
+                                                    operator=OperatorEnum.EQ,
+                                                    value=eDelta_besteknummer)])]))
+
+        response = self.requester.post('core/api/bestekrefs/search', data=query_dto.json())
+        if response.status_code != 200:
+            print(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+
+        print(response.json()['data'])
+
+        return [BestekRef.from_dict(item) for item in response.json()['data']]
+
+
+    def change_bestekkoppelingen_by_asset_uuid(self, asset_uuid: str, bestekkoppeling: [BestekKoppeling]) -> None:
+        response = self.requester.put(
+            url=f'core/api/assets/{asset_uuid}/kenmerken/ee2e627e-bb79-47aa-956a-ea167d20acbd/bestekken',
+            data=json.dumps({'data': [item.asdict() for item in bestekkoppeling]}))
+        if response.status_code != 202:
+            print(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+
+    def adjust_date_bestekkoppeling(self, asset_uuid: str, bestek_ref_uuid: str, start_date: str = None,
+                             end_date: str = 'None') -> dict | None:
+        """
+        Adjusts the startdate and/or the enddate an existing bestekkoppeling.
+
+        :param asset_uuid: asset uuid
+        :param bestek_ref_uuid: bestekkoppeling uuid.
+        :param start_date: start-date of the bestekkoppeling, string format YYYY-MM-DD
+        :param end_date: end-date of the bestekkoppeling, string format YYYY-MM-DD
+        :return: response of the API call, or None when nothing is updated.
+        """
+        start_date, end_date = validate_dates(start_date=start_date, end_date=end_date)
+
+        bestekkoppelingen = self.get_bestekkoppelingen_by_asset_uuid(asset_uuid)
+        if matching_koppeling := next(
+            (
+                k
+                for k in bestekkoppelingen
+                if k.bestekRef.uuid == bestek_ref_uuid
+            ),
+            None,
+        ):
+            if start_date:
+                hour_interval = get_winter_summer_time_interval(start_date)
+                matching_koppeling.startDatum = f'{start_date}T00:00:00.000+0{hour_interval}:00'
+            if end_date:
+                hour_interval = get_winter_summer_time_interval(end_date)
+                matching_koppeling.eindDatum = f'{end_date}T00:00:00.000+0{hour_interval}:00'
+
+        print(f'Update bestekkoppeling(en) voor de installatie: {asset_uuid}')
+        return self.change_bestekkoppelingen_by_asset_uuid(asset_uuid, bestekkoppelingen)
+
+    def end_bestekkoppeling(self, asset_uuid: str, bestek_ref_uuid: str, end_date: str = None) -> dict | None:
+        """
+        End a bestekkoppeling by setting an enddate. Defaults to the actual date of execution.
+
+        :param asset_uuid: asset uuid
+        :param bestek_ref_uuid: bestekkoppeling uuid.
+        :param end_date: end-date of the bestek
+        :return: response of the API call, or None when nothing is updated.
+        """
+        # Get the current date in 'YYYY-MM-DD' format
+        if not end_date:
+            end_date = datetime.now().strftime('%Y-%m-%d')
+
+        # format the end_date
+        time_interval = get_winter_summer_time_interval(date_str=end_date)
+        end_date_formatted = f'{end_date}T00:00:00.000+0{time_interval}:00'
+
+        bestekkoppelingen = self.get_bestekkoppelingen_by_asset_uuid(asset_uuid)
+        if matching_koppeling := next(
+                (
+                        k
+                        for k in bestekkoppelingen
+                        if k.bestekRef.uuid == bestek_ref_uuid
+                ),
+                None,
+        ):
+            matching_koppeling.eindDatum = end_date_formatted
+
+        print(f'Update bestekkoppeling(en) voor de installatie: {asset_uuid}')
+        return self.change_bestekkoppelingen_by_asset_uuid(asset_uuid, bestekkoppelingen)
+
+    def add_bestekkoppeling(self, asset_uuid: str, eDelta_besteknummer: str = None, eDelta_dossiernummer: str = None, start_date: str = None, end_date: str = None, categorie: str = CategorieEnum.WERKBESTEK) -> dict | None:
+        """
+        Add a new bestekkoppeling. Start date default the execution date. End date default open-ended.
+        Besteknummer or dossiernummer should be provided.
+
+        :param asset_uuid: asset uuid
+        :param eDelta_besteknummer: besteknummer
+        :param eDelta_dossiernummer: dossiernummer
+        :param start_date: start-date of the bestek. Default None > actual date.
+        :param end_date: end-date of the bestek. Default None > open-ended.
+        :param categorie: bestek categorie. Default WERKBESTEK
+        :return: response of the API call, or None when nothing is updated.
+        """
+        if eDelta_besteknummer:
+            new_bestekRef = self.get_bestekref_by_eDelta_besteknummer(eDelta_besteknummer=eDelta_besteknummer)
+        elif eDelta_dossiernummer:
+            new_bestekRef = self.get_bestekref_by_eDelta_dossiernummer(eDelta_dossiernummer=eDelta_dossiernummer)
+        else:
+            # Ensure at least one of both parameters is provided
+            raise ValueError("At least 'eDelta_besteknummer' or 'eDelta_dossiernummer' must be provided.")
+
+        # Get the current date in 'YYYY-MM-DD' format
+        if not start_date:
+            start_date = datetime.now().strftime('%Y-%m-%d')
+        time_interval = get_winter_summer_time_interval(date_str=start_date)
+        start_date_formatted = f'{start_date}T00:00:00.000+0{time_interval}:00'
+
+        bestekkoppelingen = self.get_bestekkoppelingen_by_asset_uuid(asset_uuid)
+
+        # Check if the new bestekkoppeling already exists.
+        # when exists > edit the startdate and enddate.
+        # when new > append at first index position
+        if matching_koppeling := next(
+                (
+                        k
+                        for k in bestekkoppelingen
+                        if k.bestekRef.uuid == new_bestekRef[0].uuid
+                ),
+                None,
+        ):
+            # koppeling exists: update start date
+            matching_koppeling.startDatum = start_date_formatted
+        else:
+            # koppeling does not exists for this asset.
+            # Insert the new bestekkoppeling at the first index position.
+            # Complete with "startdatum", "einddatum" and "categorie"
+            new_bestekkoppeling = BestekKoppeling(bestekRef=new_bestekRef, startDatum=start_date_formatted,
+                                                  eindDatum=end_date, categorie=categorie)
+            bestekkoppelingen.insert(0, new_bestekkoppeling)
+
+        print(f'Update bestekkoppeling(en) voor de installatie: {asset_uuid}')
+        return self.change_bestekkoppelingen_by_asset_uuid(asset_uuid, bestekkoppelingen)
+
+
 
     def get_feedproxy_page(self, feed_name: str, page_num: int, page_size: int = 1):
         url = f"feedproxy/feed/{feed_name}/{page_num}/{page_size}"
