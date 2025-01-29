@@ -11,9 +11,9 @@ if __name__ == '__main__':
     #################################################################################
     ####  Read RSA-report as input
     #################################################################################
-    filepath = Path().home() / 'Downloads' / 'update_toezichters' / 'RSA Bijhorende assets hebben een verschillende toezichtshouder_toezichtsgroep (assettype = Signaalkabel).xlsx'
+    # filepath = Path().home() / 'Downloads' / 'update_toezichters' / '[RSA] Bijhorende assets hebben een verschillende toezichtshouder_toezichtsgroep (assettype = Signaalkabel).xlsx'
     # filepath = Path().home() / 'Downloads' / 'update_toezichters' / '[RSA] Bijhorende assets hebben een verschillende toezichtshouder_toezichtsgroep (assettype = Voedingskabel).xlsx'
-    # filepath = Path().home() / 'Downloads' / 'update_toezichters' / '[RSA] Bijhorende assets hebben een verschillende toezichtshouder_toezichtsgroep (assettype = Beschermbuis).xlsx'
+    filepath = Path().home() / 'Downloads' / 'update_toezichters' / 'RSA Bijhorende assets hebben een verschillende toezichtshouder_toezichtsgroep (assettype = Beschermbuis).xlsx'
 
     # todo: omit parameter nrows
     df_assets = pd.read_excel(filepath, sheet_name='Resultaat', header=2, usecols=["otl_uuid", "lgc_uuid", "lgc_toezichthouder_voornaam", "lgc_toezichthouder_naam"])
