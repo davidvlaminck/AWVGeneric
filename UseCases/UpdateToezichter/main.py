@@ -11,9 +11,7 @@ if __name__ == '__main__':
     #################################################################################
     ####  Read RSA-report as input
     #################################################################################
-    # filepath = Path().home() / 'Downloads' / 'update_toezichters' / '[RSA] Bijhorende assets hebben een verschillende toezichtshouder_toezichtsgroep (assettype = Signaalkabel).xlsx'
-    # filepath = Path().home() / 'Downloads' / 'update_toezichters' / '[RSA] Bijhorende assets hebben een verschillende toezichtshouder_toezichtsgroep (assettype = Voedingskabel).xlsx'
-    filepath = Path().home() / 'Downloads' / 'update_toezichters' / 'RSA Bijhorende assets hebben een verschillende toezichtshouder_toezichtsgroep (assettype = Beschermbuis).xlsx'
+    filepath = Path().home() / 'Downloads' / 'update_toezichters' / '[RSA] Bijhorende assets hebben een verschillende toezichtshouder_toezichtsgroep (assettype = Signaalkabel).xlsx'
 
     # todo: omit parameter nrows
     df_assets = pd.read_excel(filepath, sheet_name='Resultaat', header=2, usecols=["otl_uuid", "lgc_uuid", "lgc_toezichthouder_voornaam", "lgc_toezichthouder_naam"])
@@ -49,12 +47,13 @@ if __name__ == '__main__':
         agent_uuid_lgc = agents[0].get('purl:Agent.agentId').get('DtcIdentificator.identificator')[:36]
 
         #################################################################################
+        ####  Remove betrokkenerelatie toezichter from OTL-asset
+        #################################################################################
+        response = eminfra_client.remove_betrokkenerelatie(betrokkenerelatie_uuid_otl)
+
+        #################################################################################
         ####  Add a new betrokkenerelatie - type: toezichter - to OTL-asset
         #################################################################################
         response = eminfra_client.add_betrokkenerelatie(asset_uuid=asset_uuid_otl, agent_uuid=agent_uuid_lgc)
         betrokkenerelatie_uuid_otl_new = response.get('uuid')
 
-        #################################################################################
-        ####  Remove betrokkenerelatie toezichter from OTL-asset
-        #################################################################################
-        response = eminfra_client.remove_betrokkenerelatie(betrokkenerelatie_uuid_otl)
