@@ -24,6 +24,7 @@ def get_winter_summer_time_interval(date_str, timezone='Europe/Brussels') -> int
     else:
         return 1  # "Winter Time (Standard Time)"
 
+
 def validate_dates(start_date: str = None, end_date: str = None):
     """
     Validates that at least one date is provided, converts string dates to datetime,
@@ -48,10 +49,26 @@ def validate_dates(start_date: str = None, end_date: str = None):
 
     return start_date, end_date
 
-def parse_date(date_str: str):
+
+def parse_date(date_str: str) -> datetime:
+    """Parse date from String to Datetime format
+
+    :param date_str: date in string format, structure '%Y-%m-%d'
+    :return: date in datetime format
+    """
     try:
         return datetime.strptime(date_str, '%Y-%m-%d') if date_str else None
     except ValueError as e:
         raise ValueError(
             'Invalid date format. Expected format: %Y-%m-%d'
         ) from e
+
+
+def format_date(date_str: str) -> str:
+    """ Formats date to a complete date, including the correct time_interval during winter/summer time
+
+    :param date_str: '%Y-%m-%d'
+    :return: date as string '%Y-%m-%d'
+    """
+    hour_interval = get_winter_summer_time_interval(date_str=date_str)
+    return f'{date_str}T00:00:00.000+0{hour_interval}:00'
