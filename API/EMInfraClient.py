@@ -9,7 +9,7 @@ from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO
     BestekKoppelingStatusEnum
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
-from utils.date_helpers import validate_dates, format_date
+from utils.date_helpers import validate_dates, format_datetime
 
 
 class EMInfraClient:
@@ -58,26 +58,26 @@ class EMInfraClient:
         return [BestekRef.from_dict(item) for item in response.json()['data']]
 
 
-    def change_bestekkoppelingen_by_asset_uuid(self, asset_uuid: str, bestekkoppeling: [BestekKoppeling]) -> None:
+    def change_bestekkoppelingen_by_asset_uuid(self, asset_uuid: str, bestekkoppelingen: [BestekKoppeling]) -> None:
         response = self.requester.put(
             url=f'core/api/assets/{asset_uuid}/kenmerken/ee2e627e-bb79-47aa-956a-ea167d20acbd/bestekken',
-            data=json.dumps({'data': [item.asdict() for item in bestekkoppeling]}))
+            data=json.dumps({'data': [item.asdict() for item in bestekkoppelingen]}))
         if response.status_code != 202:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-    def adjust_date_bestekkoppeling(self, asset_uuid: str, bestek_ref_uuid: str, start_date: str = None,
-                             end_date: str = None) -> dict | None:
+    def adjust_date_bestekkoppeling(self, asset_uuid: str, bestek_ref_uuid: str, start_datetime: datetime = None,
+                             end_datetime: datetime = None) -> dict | None:
         """
         Adjusts the startdate and/or the enddate of an existing bestekkoppeling.
 
         :param asset_uuid: asset uuid
         :param bestek_ref_uuid: bestekkoppeling uuid.
-        :param start_date: start-date of the bestekkoppeling, string format YYYY-MM-DD
-        :param end_date: end-date of the bestekkoppeling, string format YYYY-MM-DD
+        :param start_datetime: start-date of the bestekkoppeling, datetime
+        :param end_datetime: end-date of the bestekkoppeling, datetime
         :return: response of the API call, or None when nothing is updated.
         """
-        start_date, end_date = validate_dates(start_date=start_date, end_date=end_date)
+        validate_dates(start_datetime=start_datetime, end_datetime=end_datetime)
 
         bestekkoppelingen = self.get_bestekkoppelingen_by_asset_uuid(asset_uuid)
         if matching_koppeling := next(
@@ -88,27 +88,24 @@ class EMInfraClient:
             ),
             None,
         ):
-            if start_date:
-                matching_koppeling.startDatum = format_date(start_date)
-            if end_date:
-                matching_koppeling.eindDatum = format_date(end_date)
+            if start_datetime:
+                matching_koppeling.startDatum = format_datetime(start_datetime)
+            if end_datetime:
+                matching_koppeling.eindDatum = format_datetime(end_datetime)
 
         return self.change_bestekkoppelingen_by_asset_uuid(asset_uuid, bestekkoppelingen)
 
-    def end_bestekkoppeling(self, asset_uuid: str, bestek_ref_uuid: str, end_date: str = None) -> dict | None:
+    def end_bestekkoppeling(self, asset_uuid: str, bestek_ref_uuid: str, end_datetime: datetime = datetime.now()) -> dict | None:
         """
         End a bestekkoppeling by setting an enddate. Defaults to the actual date of execution.
 
         :param asset_uuid: asset uuid
         :param bestek_ref_uuid: bestekkoppeling uuid.
-        :param end_date: end-date of the bestek
+        :param end_datetime: end-date of the bestek
         :return: response of the API call, or None when nothing is updated.
         """
-        # Get the current date in 'YYYY-MM-DD' format
-        if not end_date:
-            end_date = datetime.now().strftime('%Y-%m-%d')
         # format the end_date
-        end_date = format_date(end_date)
+        end_datetime = format_datetime(end_datetime)
 
         bestekkoppelingen = self.get_bestekkoppelingen_by_asset_uuid(asset_uuid)
         if matching_koppeling := next(
@@ -119,11 +116,11 @@ class EMInfraClient:
                 ),
                 None,
         ):
-            matching_koppeling.eindDatum = end_date
+            matching_koppeling.eindDatum = end_datetime
 
         return self.change_bestekkoppelingen_by_asset_uuid(asset_uuid, bestekkoppelingen)
 
-    def add_bestekkoppeling(self, asset_uuid: str, eDelta_besteknummer: str = None, eDelta_dossiernummer: str = None, start_date: str = None, end_date: str = None, categorie: str = BestekCategorieEnum.WERKBESTEK) -> dict | None:
+    def add_bestekkoppeling(self, asset_uuid: str, eDelta_besteknummer: str = None, eDelta_dossiernummer: str = None, start_datetime: datetime = datetime.now(), end_datetime: datetime = None, categorie: str = BestekCategorieEnum.WERKBESTEK) -> dict | None:
         """
         Add a new bestekkoppeling. Start date default the execution date. End date default open-ended.
         The optional parameters "eDelta_besteknummer" and "eDelta_dossiernummer" are mutually exclusive, meaning that one of both optional parameters must be provided.
@@ -131,8 +128,8 @@ class EMInfraClient:
         :param asset_uuid: asset uuid
         :param eDelta_besteknummer: besteknummer
         :param eDelta_dossiernummer: dossiernummer
-        :param start_date: start-date of the bestek. Default None > actual date.
-        :param end_date: end-date of the bestek. Default None > open-ended.
+        :param start_datetime: start-date of the bestek. Default None > actual date.
+        :param end_datetime: end-date of the bestek. Default None > open-ended.
         :param categorie: bestek categorie. Default WERKBESTEK
         :return: response of the API call, or None when nothing is updated.
         """
@@ -144,13 +141,11 @@ class EMInfraClient:
             new_bestekRef = self.get_bestekref_by_eDelta_dossiernummer(eDelta_dossiernummer=eDelta_dossiernummer)[0]
 
         # Format the start_date, or set actual date if None
-        if not start_date:
-            start_date = datetime.now().strftime('%Y-%m-%d')
-        start_date = format_date(start_date)
+        start_datetime = format_datetime(start_datetime)
 
         # Format the end_date if present
-        if end_date:
-            end_date = format_date(end_date)
+        if end_datetime:
+            end_datetime = format_datetime(end_datetime)
 
         bestekkoppelingen = self.get_bestekkoppelingen_by_asset_uuid(asset_uuid)
 
@@ -161,8 +156,8 @@ class EMInfraClient:
             new_bestekkoppeling = BestekKoppeling(
                 bestekRef=new_bestekRef,
                 status=BestekKoppelingStatusEnum.ACTIEF,
-                startDatum=start_date,
-                eindDatum=end_date,
+                startDatum=start_datetime,
+                eindDatum=end_datetime,
                 categorie=categorie
             )
             # Insert the new bestekkoppeling at the first index position.
@@ -170,19 +165,21 @@ class EMInfraClient:
 
             return self.change_bestekkoppelingen_by_asset_uuid(asset_uuid, bestekkoppelingen)
 
-    def update_bestekkoppeling(self, asset_uuid: str, eDelta_besteknummer_old: str = None, eDelta_dossiernummer_old: str = None, eDelta_besteknummer_new: str = None, eDelta_dossiernummer_new: str = None, start_date: str = None, end_date: str = None, categorie: str = BestekCategorieEnum.WERKBESTEK) -> dict | None:
+    def replace_bestekkoppeling(self, asset_uuid: str, eDelta_besteknummer_old: str = None, eDelta_dossiernummer_old: str = None, eDelta_besteknummer_new: str = None, eDelta_dossiernummer_new: str = None, start_datetime: datetime = datetime.now(), end_datetime: datetime = None, categorie: str = BestekCategorieEnum.WERKBESTEK) -> dict | None:
         """
-        Update a new bestekkoppeling.
+        Replaces an existing bestekkoppeling: ends the existing bestekkoppeling and add a new one.
+
         Call the functions end_bestekkoppeling and add_bestekkoppeling respectively
         The optional parameters "eDelta_besteknummer[old|new]" and "eDelta_dossiernummer[old|new]" are mutually exclusive, meaning that one of both optional parameters must be provided.
+        The optional parameter start_datetime is the enddate of the existing bestek and the start date of the new bestek. Default value is the actual date.
 
         :param asset_uuid: asset uuid
         :param eDelta_besteknummer_old: besteknummer existing
         :param eDelta_dossiernummer_old: dossiernummer existing
         :param eDelta_besteknummer_new: besteknummer new
         :param eDelta_dossiernummer_new: dossiernummer new
-        :param start_date: start-date of the bestek. Default None > actual date.
-        :param end_date: end-date of the bestek. Default None > open-ended.
+        :param start_datetime: start-date of the new bestek, and end-date of the existing bestek. Default None > actual date.
+        :param end_datetime: end-date of the new bestek. Default None > open-ended.
         :param categorie: bestek categorie. Default WERKBESTEK
         :return: response of the API call, or None when nothing is updated.
         """
@@ -194,13 +191,15 @@ class EMInfraClient:
         else:
             bestekref = self.get_bestekref_by_eDelta_dossiernummer(eDelta_dossiernummer=eDelta_dossiernummer_old)[0]
 
-        self.end_bestekkoppeling(asset_uuid=asset_uuid, bestek_ref_uuid=bestekref.uuid)
+        self.end_bestekkoppeling(asset_uuid=asset_uuid, bestek_ref_uuid=bestekref.uuid, end_datetime=start_datetime)
 
         # Add bestekkoppeling
         if (eDelta_besteknummer_new is None) == (eDelta_dossiernummer_new is None):  # True if both are None or both are set
             raise ValueError("Exactly one of 'eDelta_besteknummer_new' or 'eDelta_dossiernummer_new' must be provided.")
         else:
-            self.add_bestekkoppeling(asset_uuid=asset_uuid, eDelta_dossiernummer=eDelta_dossiernummer_new, eDelta_besteknummer=eDelta_besteknummer_new, start_date=start_date, end_date=end_date, categorie=categorie)
+            self.add_bestekkoppeling(asset_uuid=asset_uuid, eDelta_besteknummer=eDelta_besteknummer_new,
+                                     eDelta_dossiernummer=eDelta_dossiernummer_new, start_datetime=start_datetime,
+                                     end_datetime=end_datetime, categorie=categorie)
 
     def get_feedproxy_page(self, feed_name: str, page_num: int, page_size: int = 1):
         url = f"feedproxy/feed/{feed_name}/{page_num}/{page_size}"
