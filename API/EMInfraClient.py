@@ -25,8 +25,6 @@ class EMInfraClient:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-        print(response.json()['data'])
-
         return [BestekKoppeling.from_dict(item) for item in response.json()['data']]
 
     def get_bestekref_by_eDelta_dossiernummer(self, eDelta_dossiernummer: str) -> [BestekRef]:
@@ -42,8 +40,6 @@ class EMInfraClient:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-        print(response.json()['data'])
-
         return [BestekRef.from_dict(item) for item in response.json()['data']]
 
     def get_bestekref_by_eDelta_besteknummer(self, eDelta_besteknummer: str) -> [BestekRef]:
@@ -58,8 +54,6 @@ class EMInfraClient:
         if response.status_code != 200:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
-
-        print(response.json()['data'])
 
         return [BestekRef.from_dict(item) for item in response.json()['data']]
 
@@ -99,7 +93,6 @@ class EMInfraClient:
             if end_date:
                 matching_koppeling.eindDatum = format_date(end_date)
 
-        print(f'Update bestekkoppeling(en) voor de installatie: {asset_uuid}')
         return self.change_bestekkoppelingen_by_asset_uuid(asset_uuid, bestekkoppelingen)
 
     def end_bestekkoppeling(self, asset_uuid: str, bestek_ref_uuid: str, end_date: str = None) -> dict | None:
@@ -128,7 +121,6 @@ class EMInfraClient:
         ):
             matching_koppeling.eindDatum = end_date
 
-        print(f'Update bestekkoppeling(en) voor de installatie: {asset_uuid}')
         return self.change_bestekkoppelingen_by_asset_uuid(asset_uuid, bestekkoppelingen)
 
     def add_bestekkoppeling(self, asset_uuid: str, eDelta_besteknummer: str = None, eDelta_dossiernummer: str = None, start_date: str = None, end_date: str = None, categorie: str = BestekCategorieEnum.WERKBESTEK) -> dict | None:
@@ -176,7 +168,6 @@ class EMInfraClient:
             # Insert the new bestekkoppeling at the first index position.
             bestekkoppelingen.insert(0, new_bestekkoppeling)
 
-            print(f'Update bestekkoppeling(en) voor de installatie: {asset_uuid}')
             return self.change_bestekkoppelingen_by_asset_uuid(asset_uuid, bestekkoppelingen)
 
     def update_bestekkoppeling(self, asset_uuid: str, eDelta_besteknummer_old: str = None, eDelta_dossiernummer_old: str = None, eDelta_besteknummer_new: str = None, eDelta_dossiernummer_new: str = None, start_date: str = None, end_date: str = None, categorie: str = BestekCategorieEnum.WERKBESTEK) -> dict | None:
