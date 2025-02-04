@@ -21,7 +21,7 @@ if __name__ == '__main__':
 
     type_term = TermDTO(property='type', operator=OperatorEnum.EQ, value='c505b262-fe1f-42cb-970f-7f44487b24ec')
 
-    excel_file = Path().home() / 'Downloads' / "Verbindingen te leggen 20241220.xlsx"
+    excel_file = Path().home() / 'Downloads' / "file_name.xlsx"
     df_assets = pd.read_excel(excel_file, sheet_name="Sheet1", index_col=None, usecols=["teletransmissieverbinding_uuid", "kabelnettoegang_naam", "kabelnettoegang_uuid"])
 
     # loop over the assets
@@ -67,4 +67,4 @@ if __name__ == '__main__':
         created_assets.append(asset_HoortBij)
 
     # OTLMOW-converter to write to a DAVIE-file (OTLMOW-Converter)
-    OtlmowConverter.from_objects_to_file(file_path=Path('HoortBijRelaties_DA-2025-07920.xlsx'), sequence_of_objects=created_assets)
+    OtlmowConverter.from_objects_to_file(file_path=Path('HoortBijRelaties_DA-2025-XXXXX.xlsx'), sequence_of_objects=created_assets)
