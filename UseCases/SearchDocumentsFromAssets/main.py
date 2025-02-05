@@ -15,7 +15,7 @@ if __name__ == '__main__':
     edelta_dossiernummer = 'VWT/DVM/2023/3'
 
     # document_categorien
-    document_categorien = [DocumentCategorieEnum.KEURINGSVERSLAG, DocumentCategorieEnum.ELEKTRISCH_SCHEMA]
+    document_categorie = [DocumentCategorieEnum.KEURINGSVERSLAG, DocumentCategorieEnum.ELEKTRISCH_SCHEMA]
     print(f'De mogelijke document categoriën zijn: {[item.value for item in DocumentCategorieEnum]}')
 
     # toezichter
@@ -27,4 +27,4 @@ if __name__ == '__main__':
     # provincie = None
 
     download_dir = download_documents(eminfra_client=eminfra_client, edelta_dossiernummer=edelta_dossiernummer,
-                                      document_categorie=document_categorien, provincie=provincie, toezichter=toezichter)
+                                      document_categorie=document_categorie, provincie=provincie, toezichter=toezichter)
