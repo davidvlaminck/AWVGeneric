@@ -22,7 +22,6 @@ def download_documents(eminfra_client, edelta_dossiernummer: str, document_categ
     :param document_categorie: [DocumentCategorieEnum] Lijst van Document categoriën
     :param toezichter: str Naam van de toezichter
     :param provincie: [ProvincieEnum] Lijst van provincienamen
-    :param provincie:
     :returns Path of the .zip-file where all the results have been downloaded.
     :rtype: Path
     """
