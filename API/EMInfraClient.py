@@ -1,4 +1,5 @@
 import json
+import logging
 from collections.abc import Generator
 from pathlib import Path
 
@@ -168,7 +169,7 @@ class EMInfraClient:
         }
         response = self.requester.post(url='core/api/betrokkenerelaties', json=json_body)
         if response.status_code != 202:
-            print(response)
+            logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
         return response.json()
 
@@ -176,7 +177,7 @@ class EMInfraClient:
         url = f"core/api/betrokkenerelaties/{betrokkenerelatie_uuid}"
         response = self.requester.delete(url=url)
         if response.status_code != 202:
-            print(response)
+            logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
         return response
 
