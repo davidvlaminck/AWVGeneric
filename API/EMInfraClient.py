@@ -30,6 +30,8 @@ class EMInfraClient:
         os.makedirs(directory, exist_ok=True)
 
         file_name = document.naam
+        if not document.document['links']:
+            raise ValueError("The 'links' list is empty.")
         doc_link = document.document['links'][0]['href'].split('/eminfra/')[1]
         json_str = self.requester.get(doc_link).content.decode("utf-8")
         json_response = json.loads(json_str)
