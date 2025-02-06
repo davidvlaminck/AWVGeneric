@@ -1,8 +1,10 @@
+import json
+import logging
 from collections.abc import Generator
 from pathlib import Path
 
 from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO, PagingModeEnum, QueryDTO, BestekRef, \
-    BestekKoppeling, FeedPage, AssettypeDTO, AssettypeDTOList, DTOList, AssetDTO
+    BestekKoppeling, FeedPage, AssettypeDTO, AssettypeDTOList, DTOList, AssetDTO, BetrokkenerelatieDTO, AgentDTO
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 
@@ -88,6 +90,20 @@ class EMInfraClient:
             if query_dto.from_ >= dto_list_total:
                 break
 
+    def search_betrokkenerelaties(self, query_dto: QueryDTO) -> Generator[BetrokkenerelatieDTO]:
+        query_dto.from_ = 0
+        if query_dto.size is None:
+            query_dto.size = 100
+        url = "core/api/betrokkenerelaties/search"
+        while True:
+            json_dict = self.requester.post(url, data=query_dto.json()).json()
+            yield from [BetrokkenerelatieDTO.from_dict(item) for item in json_dict['data']]
+            dto_list_total = json_dict['totalCount']
+            query_dto.from_ = json_dict['from'] + query_dto.size
+            if query_dto.from_ >= dto_list_total:
+                break
+
+
     def get_objects_from_oslo_search_endpoint(self, url_part: str,
                                               filter_string: dict = '{}', size: int = 100,
                                               expansions_fields: [str] = None) -> Generator:
@@ -147,6 +163,46 @@ class EMInfraClient:
         )
         if response.status_code != 202:
             ProcessLookupError(f'Failed to remove parent from asset: {response.text}')
+
+    def search_agent(self, query_dto: QueryDTO) -> Generator[AgentDTO]:
+        query_dto.from_ = 0
+        if query_dto.size is None:
+            query_dto.size = 100
+        url = "core/api/agents/search"
+        while True:
+            json_dict = self.requester.post(url, data=query_dto.json()).json()
+            yield from [AgentDTO.from_dict(item) for item in json_dict['data']]
+            dto_list_total = json_dict['totalCount']
+            query_dto.from_ = json_dict['from'] + query_dto.size
+            if query_dto.from_ >= dto_list_total:
+                break
+
+    def add_betrokkenerelatie(self, asset_uuid: str, agent_uuid: str, rol: str = 'toezichter') -> dict:
+        json_body = {
+            "bron": {
+                "uuid": f"{asset_uuid}"
+                , "_type": "onderdeel"
+            },
+            "doel": {
+                "uuid": f"{agent_uuid}"
+                , "_type": "agent"
+            },
+            "rol": f"{rol}"
+        }
+        response = self.requester.post(url='core/api/betrokkenerelaties', json=json_body)
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return response.json()
+
+    def remove_betrokkenerelatie(self, betrokkenerelatie_uuid: str) -> dict:
+        url = f"core/api/betrokkenerelaties/{betrokkenerelatie_uuid}"
+        response = self.requester.delete(url=url)
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return response
+
 
     def get_oef_schema_as_json(self, name: str) -> str:
         url = f"core/api/otl/schema/oef/{name}"

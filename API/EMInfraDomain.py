@@ -60,7 +60,7 @@ class BaseDataclass:
 
     def json(self):
         """
-        get the json formated string
+        get the json formatted string
         """
         d = self.asdict()
         return dumps(self.asdict())
@@ -321,6 +321,33 @@ class AssetDTO(BaseDataclass):
         self._fix_nested_classes({('type', AssettypeDTO)})
         self._fix_nested_list_classes({('links', Link)})
 
+@dataclass
+class BetrokkenerelatieDTO(BaseDataclass):
+    uuid: str
+    createdOn: str
+    modifiedOn: str
+    bron: dict # TODO wijzigen naar Object
+    doel: dict # TODO wijzigen naar Object
+    rol: str # TODO enum
+    links: [Link]
+
+    def __post_init__(self):
+        self._fix_nested_list_classes({('links', Link)})
+
+@dataclass
+class AgentDTO(BaseDataclass):
+    uuid: str
+    createdOn: str
+    modifiedOn: str
+    naam: str
+    voId: str
+    # ovoCode: str | None # TODO delete this line. This info is missing from the response.
+    actief: bool
+    contactInfo: [dict]
+    links: [Link]
+
+    def __post_init__(self):
+        self._fix_nested_list_classes({('links', Link)})
 
 def construct_naampad(asset: AssetDTO) -> str:
     naampad = asset.naam
