@@ -26,7 +26,7 @@ def test_validate_dates_wrong_order():
     start_date = datetime(2025,2,28)
     end_date = datetime(2025,1,1)
 
-    with pytest.raises(ValueError, match='start_datetime and end_datetime must be in chronical order'):
+    with pytest.raises(ValueError, match='start_datetime and end_datetime must be in chronological order'):
         validate_dates(start_datetime=start_date, end_datetime=end_date)
 
 def test_validate_dates_both_none():

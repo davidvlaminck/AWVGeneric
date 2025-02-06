@@ -25,10 +25,10 @@ if __name__ == '__main__':
     bestekkoppelingen = eminfra_client.get_bestekkoppelingen_by_asset_uuid(asset_uuid=asset_uuid)
 
     # get_bestekref_by_eDelta_dossiernummer
-    bestekref1 = eminfra_client.get_bestekref_by_eDelta_dossiernummer(eDelta_dossiernummer=eDelta_dossiernummer)[0]
+    bestekref1 = eminfra_client.get_bestekref_by_eDelta_dossiernummer(eDelta_dossiernummer=eDelta_dossiernummer)
 
     # get_bestekref_by_eDelta_besteknummer (new)
-    bestekref2 = eminfra_client.get_bestekref_by_eDelta_besteknummer(eDelta_besteknummer=eDelta_besteknummer)[0]
+    bestekref2 = eminfra_client.get_bestekref_by_eDelta_besteknummer(eDelta_besteknummer=eDelta_besteknummer)
 
     # change_bestekkoppelingen_by_asset_uuid (new)
     eminfra_client.change_bestekkoppelingen_by_asset_uuid(asset_uuid=asset_uuid, bestekkoppelingen=bestekkoppelingen)

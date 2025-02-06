@@ -44,7 +44,7 @@ for filepath in xlsx_files:
         eDelta_dossiernummer_old = asset["eDelta_dossiernummer"]
         if eDelta_dossiernummer_old is not None and pd.notna(eDelta_dossiernummer_old):
             print(f'End the actual bestekkoppeling for eDeltadossiernummer {eDelta_dossiernummer_old}, assigned to asset: {asset_uuid}')
-            bestek_ref_uuid = eminfra_client.get_bestekref_by_eDelta_dossiernummer(eDelta_dossiernummer=eDelta_dossiernummer_old)[0].uuid
+            bestek_ref_uuid = eminfra_client.get_bestekref_by_eDelta_dossiernummer(eDelta_dossiernummer=eDelta_dossiernummer_old).uuid
             eminfra_client.end_bestekkoppeling(asset_uuid=asset_uuid, bestek_ref_uuid=bestek_ref_uuid, end_datetime=start_datetime)
 
         # add_bestekkoppeling

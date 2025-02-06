@@ -27,7 +27,7 @@ class EMInfraClient:
 
         return [BestekKoppeling.from_dict(item) for item in response.json()['data']]
 
-    def get_bestekref_by_eDelta_dossiernummer(self, eDelta_dossiernummer: str) -> [BestekRef]:
+    def get_bestekref_by_eDelta_dossiernummer(self, eDelta_dossiernummer: str) -> BestekRef | None:
         query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              selection=SelectionDTO(
                                  expressions=[ExpressionDTO(
@@ -40,9 +40,9 @@ class EMInfraClient:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-        return [BestekRef.from_dict(item) for item in response.json()['data']]
+        return [BestekRef.from_dict(item) for item in response.json()['data']][0]
 
-    def get_bestekref_by_eDelta_besteknummer(self, eDelta_besteknummer: str) -> [BestekRef]:
+    def get_bestekref_by_eDelta_besteknummer(self, eDelta_besteknummer: str) -> BestekRef | None:
         query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              selection=SelectionDTO(
                                  expressions=[ExpressionDTO(
@@ -55,7 +55,7 @@ class EMInfraClient:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-        return [BestekRef.from_dict(item) for item in response.json()['data']]
+        return [BestekRef.from_dict(item) for item in response.json()['data']][0]
 
 
     def change_bestekkoppelingen_by_asset_uuid(self, asset_uuid: str, bestekkoppelingen: [BestekKoppeling]) -> None:
@@ -136,9 +136,9 @@ class EMInfraClient:
         if (eDelta_besteknummer is None) == (eDelta_dossiernummer is None):  # True if both are None or both are set
             raise ValueError("Exactly one of 'eDelta_besteknummer' or 'eDelta_dossiernummer' must be provided.")
         elif eDelta_besteknummer:
-            new_bestekRef = self.get_bestekref_by_eDelta_besteknummer(eDelta_besteknummer=eDelta_besteknummer)[0]
+            new_bestekRef = self.get_bestekref_by_eDelta_besteknummer(eDelta_besteknummer=eDelta_besteknummer)
         else:
-            new_bestekRef = self.get_bestekref_by_eDelta_dossiernummer(eDelta_dossiernummer=eDelta_dossiernummer)[0]
+            new_bestekRef = self.get_bestekref_by_eDelta_dossiernummer(eDelta_dossiernummer=eDelta_dossiernummer)
 
         # Format the start_date, or set actual date if None
         start_datetime = format_datetime(start_datetime)
@@ -165,7 +165,7 @@ class EMInfraClient:
 
             return self.change_bestekkoppelingen_by_asset_uuid(asset_uuid, bestekkoppelingen)
 
-    def replace_bestekkoppeling(self, asset_uuid: str, eDelta_besteknummer_old: str = None, eDelta_dossiernummer_old: str = None, eDelta_besteknummer_new: str = None, eDelta_dossiernummer_new: str = None, start_datetime: datetime = datetime.now(), end_datetime: datetime = None, categorie: str = BestekCategorieEnum.WERKBESTEK) -> dict | None:
+    def replace_bestekkoppeling(self, asset_uuid: str, eDelta_besteknummer_old: str = None, eDelta_dossiernummer_old: str = None, eDelta_besteknummer_new: str = None, eDelta_dossiernummer_new: str = None, start_datetime: datetime = datetime.now(), end_datetime: datetime = None, categorie: BestekCategorieEnum = BestekCategorieEnum.WERKBESTEK) -> dict | None:
         """
         Replaces an existing bestekkoppeling: ends the existing bestekkoppeling and add a new one.
 
@@ -187,9 +187,9 @@ class EMInfraClient:
         if (eDelta_besteknummer_old is None) == (eDelta_dossiernummer_old is None):  # True if both are None or both are set
             raise ValueError("Exactly one of 'eDelta_besteknummer_old' or 'eDelta_dossiernummer_old' must be provided.")
         elif eDelta_besteknummer_old:
-            bestekref = self.get_bestekref_by_eDelta_besteknummer(eDelta_besteknummer=eDelta_besteknummer_old)[0]
+            bestekref = self.get_bestekref_by_eDelta_besteknummer(eDelta_besteknummer=eDelta_besteknummer_old)
         else:
-            bestekref = self.get_bestekref_by_eDelta_dossiernummer(eDelta_dossiernummer=eDelta_dossiernummer_old)[0]
+            bestekref = self.get_bestekref_by_eDelta_dossiernummer(eDelta_dossiernummer=eDelta_dossiernummer_old)
 
         self.end_bestekkoppeling(asset_uuid=asset_uuid, bestek_ref_uuid=bestekref.uuid, end_datetime=start_datetime)
 

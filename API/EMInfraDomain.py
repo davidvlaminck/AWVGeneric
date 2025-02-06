@@ -262,7 +262,7 @@ class BestekKoppeling(BaseDataclass):
     bron: str | None = None
 
     def __post_init__(self):
-        self._fix_enums({('categorie', BestekCategorieEnum), ('subcategorie', SubCategorieEnum)})
+        self._fix_enums({('categorie', BestekCategorieEnum), ('subcategorie', SubCategorieEnum), ('status', BestekKoppelingStatusEnum)})
         self._fix_nested_classes({('bestekRef', BestekRef)})
 
 
