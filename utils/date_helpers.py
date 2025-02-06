@@ -37,7 +37,7 @@ def validate_dates(start_datetime: datetime = None, end_datetime: datetime = Non
         raise ValueError("One of both parameters 'start_datetime' or 'end_datetime' must be provided")
     # Check if both are present and if the start_date is earlier than end_date
     elif start_datetime and end_datetime and start_datetime >= end_datetime:
-        raise ValueError("start_datetime and end_datetime must be in chronical order")
+        raise ValueError("start_datetime and end_datetime must be in chronological order")
     return True
 
 
