@@ -177,7 +177,7 @@ class EMInfraClient:
             if query_dto.from_ >= dto_list_total:
                 break
 
-    def add_betrokkenerelatie(self, asset_uuid: str, agent_uuid: str, rol: str = 'toezichter') -> dict:
+    def add_betrokkenerelatie(self, asset_uuid: str, agent_uuid: str, rol: str) -> dict:
         json_body = {
             "bron": {
                 "uuid": f"{asset_uuid}"
