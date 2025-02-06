@@ -141,6 +141,28 @@ class EMInfraClient:
             else:
                 break
 
+    def remove_parent_from_asset(self, parent_uuid: str, asset_uuid: str):
+        """Removes the parent from an asset.
+
+        :param parent_uuid: The UUID of the parent asset.
+        :type parent_uuid: str
+        :param asset_uuid: The UUID of the asset to remove the parent from.
+        :type asset_uuid: str
+        """
+        payload = {
+            "name": "remove",
+            "description": "Verwijderen uit boomstructuur van 1 asset",
+            "async": False,
+            "uuids": [asset_uuid],
+        }
+        url=f"core/api/beheerobjecten/{parent_uuid}/assets/ops/remove"
+        response = self.requester.put(
+            url=url,
+            json=payload
+        )
+        if response.status_code != 202:
+            ProcessLookupError(f'Failed to remove parent from asset: {response.text}')
+
     def search_agent(self, query_dto: QueryDTO) -> Generator[AgentDTO]:
         query_dto.from_ = 0
         if query_dto.size is None:
