@@ -2,12 +2,15 @@ import json
 import logging
 from collections.abc import Generator
 from pathlib import Path
+from datetime import datetime
 
 from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO, PagingModeEnum, QueryDTO, BestekRef, \
-    BestekKoppeling, FeedPage, AssettypeDTO, AssettypeDTOList, DTOList, AssetDTO, BetrokkenerelatieDTO, AgentDTO
+    BestekKoppeling, FeedPage, AssettypeDTO, AssettypeDTOList, DTOList, AssetDTO, BetrokkenerelatieDTO, AgentDTO, \
+    PostitDTO, LogicalOpEnum
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
-
+from utils.date_helpers import validate_dates, format_datetime
+from utils.query_dto_helpers import add_expression
 
 class EMInfraClient:
     def __init__(self, auth_type: AuthType, env: Environment, settings_path: Path = None, cookie: str = None):
@@ -103,6 +106,46 @@ class EMInfraClient:
             if query_dto.from_ >= dto_list_total:
                 break
 
+    def search_postits(self, asset_uuid: str, startDatum: datetime = None, eindDatum: datetime = None) -> Generator[PostitDTO] | None:
+        """
+        Search postits of an asset.
+        If the optional parameters startDatum or eindDatum are missing, return all postits.
+
+        :param asset_uuid: asset_uuid
+        :param startDatum: start date of the postit, default None
+        :param eindDatum: eind date of the postit, default None
+        :return: Generator[PostitDTO] or None
+        """
+        # intiate empty expression
+        query_dto = QueryDTO(
+            size=5,
+            from_=0,
+            pagingMode=PagingModeEnum.OFFSET,
+            selection=SelectionDTO(
+                expressions=[]
+            )
+        )
+
+        if startDatum:
+            add_expression(query_dto, 'startDatum', OperatorEnum.GTE, startDatum)
+
+        if eindDatum:
+            add_expression(query_dto, 'eindDatum', OperatorEnum.LTE, eindDatum)
+
+        # If both dates are present, add logical AND
+        if startDatum and eindDatum:
+            query_dto.selection.expressions[-1].logicalOp = LogicalOpEnum.AND
+
+        if query_dto.size is None:
+            query_dto.size = 100
+        url = f"core/api/assets/{asset_uuid}/postits/search"
+        while True:
+            json_dict = self.requester.post(url, data=query_dto.json()).json()
+            yield from [PostitDTO.from_dict(item) for item in json_dict['data']]
+            dto_list_total = json_dict['totalCount']
+            query_dto.from_ = json_dict['from'] + query_dto.size
+            if query_dto.from_ >= dto_list_total:
+                break
 
     def get_objects_from_oslo_search_endpoint(self, url_part: str,
                                               filter_string: dict = '{}', size: int = 100,
