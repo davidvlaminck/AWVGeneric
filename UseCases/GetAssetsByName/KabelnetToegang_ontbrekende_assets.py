@@ -1,11 +1,7 @@
-import uuid
 import re
 
 from otlmow_converter.OtlmowConverter import OtlmowConverter
 from otlmow_model.OtlmowModel.Classes.Onderdeel.HoortBij import HoortBij
-
-import json
-import os
 
 import pandas as pd
 from pathlib import Path
@@ -27,7 +23,6 @@ if __name__ == '__main__':
 
     # loop over the assets
     created_assets = []
-    # for index in range(0, 1, 1):
     for index in range(len(df_assets)):
         kabelnettoegang_naam = df_assets.iloc[index].bron_naam
         # Apply regex replace
