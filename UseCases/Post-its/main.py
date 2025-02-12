@@ -1,10 +1,7 @@
-import os
 from datetime import datetime
 from pathlib import Path
 
 from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum, \
-    LogicalOpEnum
 from API.Enums import AuthType, Environment
 
 
@@ -19,18 +16,21 @@ if __name__ == '__main__':
     settings_path = Path.home() / 'OneDrive - Nordend' / 'projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
     eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=settings_path)
 
-    # search_postits
+    # search_postits (all postits)
     postits_generator = eminfra_client.search_postits(asset_uuid=asset_uuid)
-    postits_generator_list = list(postits_generator)
+    postit_uuid = list(postits_generator)[-1].uuid # postit that was returned last in the call to serach for all postits.
 
-    # todo tot hier
-    # get (is dit overbodig, want we hebben misschien hetzelfde resultaat met de search post?)
+    # get_postit (one single postit)
+    postit_generator = eminfra_client.get_postit(asset_uuid=asset_uuid, postit_uuid=postit_uuid)
 
-    # make_postits (verplicht start en einddatum)
-    # POST
-    # /assets/{id}/postits
+    # add_postit
+    response = eminfra_client.add_postit(asset_uuid=asset_uuid, commentaar='test add postit using REST API in Python', startDatum=datetime(2025,2,1), eindDatum=datetime(2025, 2, 28))
 
-    # edit_postits
+    # edit_postit
+    response = eminfra_client.edit_postit(asset_uuid=asset_uuid, postit_uuid=postit_uuid, commentaar='new comment for a same postit', startDatum=datetime(2025,2,13), eindDatum=datetime(2025,2,14))
 
-    # PUT
-    # /assets/{id}/postits/{id}
+    # edit_postit (soft delete: set eindDatum on today's date)
+    response = eminfra_client.edit_postit(asset_uuid=asset_uuid, postit_uuid=postit_uuid, eindDatum=datetime(2025,2,28))
+
+    # remove postit (hard delete)
+    response = eminfra_client.remove_postit(asset_uuid=asset_uuid, postit_uuid=postit_uuid)
