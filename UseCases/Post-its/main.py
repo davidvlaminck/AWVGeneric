@@ -16,7 +16,7 @@ if __name__ == '__main__':
     print(f'environment:\t\t{environment}')
     print(f'asset_uuid:\t\t{asset_uuid}')
 
-    settings_path = Path(os.environ["OneDrive"]) / 'projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
+    settings_path = Path.home() / 'OneDrive - Nordend' / 'projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
     eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=settings_path)
 
     # search_postits
