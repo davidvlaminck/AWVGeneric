@@ -147,6 +147,118 @@ class EMInfraClient:
             if query_dto.from_ >= dto_list_total:
                 break
 
+    def get_postit(self, asset_uuid: str, postit_uuid: str) -> Generator[PostitDTO] | None:
+        """
+        Search one postit of an asset.
+
+        :param asset_uuid: asset_uuid
+        :param postit_uuid: postit_uuid
+        :return: Generator[PostitDTO] or None
+        """
+        url = f"core/api/assets/{asset_uuid}/postits/{postit_uuid}"
+
+        response = self.requester.get(url)
+        if response.status_code != 200:
+            print(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return PostitDTO.from_dict(response.json())
+
+    def add_postit(self, asset_uuid: str,  commentaar: str, startDatum: datetime, eindDatum: datetime) -> dict:
+        """
+        Add postit to an asset.
+
+        :param asset_uuid: asset_uuid
+        :param commentaar: comment
+        :param startDatum: start date of the postit
+        :param eindDatum: end date of the postit
+        :return: dict
+        """
+        validate_dates(start_datetime=startDatum, end_datetime=eindDatum)
+
+        startDatum_str = format_datetime(startDatum)
+        eindDatum_str = format_datetime(eindDatum)
+
+        json_body = {
+            "commentaar": commentaar,
+            "startDatum": startDatum_str,
+            "eindDatum": eindDatum_str
+        }
+
+        url = f"core/api/assets/{asset_uuid}/postits"
+        response = self.requester.post(url, json=json_body)
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return response.json()
+
+    def edit_postit(self, asset_uuid: str,  postit_uuid: str, commentaar: str = None, startDatum: datetime = None, eindDatum: datetime = None) -> dict:
+        """
+        Edit postit of an asset.
+        Although mandatory in the API Call, the parameters commentaar, startDatum and eindDatum are optional.
+        When missing, the actual values are used
+
+        Also used to perform a safe-delete, by altering only the parameter eindDatum.
+
+        :param asset_uuid: asset_uuid
+        :param postit_uuid: postit_uuid
+        :param commentaar: comment
+        :param startDatum: start date of the postit
+        :param eindDatum: end date of the postit
+        :return: dict
+        """
+        if startDatum and eindDatum:
+            validate_dates(start_datetime=startDatum, end_datetime=eindDatum)
+
+        actual_postit = self.get_postit(asset_uuid=asset_uuid, postit_uuid=postit_uuid)
+        actual_commentaar = actual_postit.commentaar
+        actual_startDatum = actual_postit.startDatum
+        actual_eindDatum = actual_postit.eindDatum
+        
+        json_body = {}
+        
+        if commentaar:
+            json_body["commentaar"] = commentaar
+        else:
+            json_body["commentaar"] = actual_commentaar
+            
+        if startDatum:
+            startDatum_str = format_datetime(startDatum)
+            json_body["startDatum"] = startDatum_str
+        else:
+            json_body["startDatum"] = actual_startDatum
+            
+        if eindDatum:
+            eindDatum_str = format_datetime(eindDatum)
+            json_body["eindDatum"] = eindDatum_str
+        else:
+            json_body["eindDatum"] = actual_eindDatum
+
+        url = f"core/api/assets/{asset_uuid}/postits/{postit_uuid}"
+        response = self.requester.put(url, json=json_body)
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return response.json()
+
+    def remove_postit(self, asset_uuid: str, postit_uuid: str):
+        """
+        Remove postit of an asset.
+
+        :param asset_uuid: asset_uuid
+        :param postit_uuid: postit_uuid
+        :return: dict
+        """
+        json_body = {
+            "uuids": [f"{postit_uuid}"]
+        }
+
+        url = f"core/api/assets/{asset_uuid}/postits/ops/remove"
+        response = self.requester.put(url, json=json_body)
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return response
+
     def get_objects_from_oslo_search_endpoint(self, url_part: str,
                                               filter_string: dict = '{}', size: int = 100,
                                               expansions_fields: [str] = None) -> Generator:
