@@ -7,11 +7,11 @@ from API.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 
 
-environment = Environment.TEI
+environment = Environment.PRD
 print(f'environment:\t\t{environment}')
 settings_path = Path.home() / 'OneDrive - Nordend' / 'projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
 eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=settings_path)
-eindDatum = datetime(2025, 1, 1)
+eindDatum = datetime(2025, 2, 1)
 
 print("Read the Excel input files.")
 print("Convert to a pandas dataframe and apply conditionaly filtering on 'actief'='ja' and 'toestand'='overgedragen'.")
@@ -35,9 +35,13 @@ for filepath in xlsx_files:
         postits_generator = eminfra_client.search_postits(asset_uuid=asset_uuid)
         postit_uuids = list(postits_generator)
 
-        if postit_uuids:
-            print(f'Found postits for asset: {asset_uuid}')
+        if len(postit_uuids) == 0:
+            pass
+        elif len(postit_uuids) != 1:
+            print(f"Multiple postits found for asset: {asset_uuid}")
+        else:
+            print(f'Found exactly 1 postit for asset: {asset_uuid}')
 
-            # for postit_uuid in postit_uuids:
             # edit_postit (soft delete: set eindDatum on today's date)
-            # response = eminfra_client.edit_postit(asset_uuid=asset_uuid, postit_uuid=postit_uuid, eindDatum=eindDatum)
+            postit_uuid = postit_uuids[0].uuid
+            response = eminfra_client.edit_postit(asset_uuid=asset_uuid, postit_uuid=postit_uuid, eindDatum=eindDatum)
