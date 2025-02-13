@@ -235,6 +235,11 @@ class BestekRef(BaseDataclass):
         self._fix_nested_classes({('links', Link)})
 
 
+class KenmerktypeEnum(Enum):
+    GEMIGREERD_VAN = 'b20f58ea-3de5-4234-b7a8-128b1e47f0d8'  # Verwijzing naar de OTL asset dat na de migratie de legacy asset vervangt.
+    GEMIGREERD_NAAR = '0f2b2466-8d6d-40d4-8124-0c489129cacd'  # Verwijzing naar de legacy asset die na de migratie gedeactiveerd werd
+
+
 class CategorieEnum(Enum):
     WERKBESTEK = 'WERKBESTEK'
     AANLEVERBESTEK = 'AANLEVERBESTEK'
