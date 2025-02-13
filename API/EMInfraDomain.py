@@ -340,11 +340,11 @@ class AgentDTO(BaseDataclass):
     createdOn: str
     modifiedOn: str
     naam: str
-    voId: str
-    # ovoCode: str | None # TODO delete this line. This info is missing from the response.
     actief: bool
     contactInfo: [dict]
     links: [Link]
+    voId: str | None = None
+    ovoCode: str | None = None
 
     def __post_init__(self):
         self._fix_nested_list_classes({('links', Link)})
