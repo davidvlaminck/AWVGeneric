@@ -218,10 +218,10 @@ class EMInfraClient:
             if from_ >= dto_list_total:
                 break
 
-    def get_kenmerken_by_assettype_uuid(self, uuid: str) -> Generator[AssetTypeKenmerkTypeDTO]:
+    def get_kenmerken_by_assettype_uuid(self, uuid: str) -> [AssetTypeKenmerkTypeDTO]:
         url = f"core/api/assettypes/{uuid}/kenmerktypes"
         json_dict = self.requester.get(url).json()
-        yield from [AssetTypeKenmerkTypeDTO.from_dict(item) for item in json_dict['data']]
+        return [AssetTypeKenmerkTypeDTO.from_dict(item) for item in json_dict['data']]
 
     def get_kenmerktype_by_naam(self, naam: str) -> KenmerkTypeDTO:
         query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
