@@ -31,10 +31,7 @@ for filepath in xlsx_files:
         else:
             asset_uuid = asset["id"]
 
-        # todo
-        # search toezichter
-        # edit the filter
-        generator_agents = eminfra_client.get_objects_from_oslo_search_endpoint(size=1, url_part='agents', filter_string={"naam": 'Senne De Greve'})
+        generator_agents = eminfra_client.get_objects_from_oslo_search_endpoint(size=1, url_part='agents', filter_string={"actief": True})
         agents = list(generator_agents)
 
         if not agents:
