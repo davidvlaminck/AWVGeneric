@@ -2,6 +2,7 @@ import dataclasses
 from dataclasses import dataclass
 from enum import Enum
 from json import dumps
+from typing import Optional
 
 _asdict_inner_actual = dataclasses._asdict_inner
 def _asdict_inner(obj, dict_factory):
@@ -120,6 +121,16 @@ class Link(BaseDataclass):
     href: str
 
 
+@dataclass
+class ResourceRefDTO(BaseDataclass):
+    uuid: str
+    links: Optional[list[Link]] = None
+
+    def __post_init__(self):
+        self._fix_nested_list_classes({('links', Link)})
+
+
+@dataclass
 class DTOList(BaseDataclass):
     links: [Link]
     _from: int
@@ -150,6 +161,7 @@ class AssettypeDTO(BaseDataclass):
         self._fix_nested_list_classes({('links', Link)})
 
 
+@dataclass
 class AssettypeDTOList(DTOList):
     data: list[AssettypeDTO]
 
@@ -233,11 +245,6 @@ class BestekRef(BaseDataclass):
 
     def __post_init__(self):
         self._fix_nested_classes({('links', Link)})
-
-
-class KenmerktypeEnum(Enum):
-    GEMIGREERD_VAN = 'b20f58ea-3de5-4234-b7a8-128b1e47f0d8'  # Verwijzing naar de OTL asset dat na de migratie de legacy asset vervangt.
-    GEMIGREERD_NAAR = '0f2b2466-8d6d-40d4-8124-0c489129cacd'  # Verwijzing naar de legacy asset die na de migratie gedeactiveerd werd
 
 
 class CategorieEnum(Enum):
@@ -353,6 +360,42 @@ class AgentDTO(BaseDataclass):
 
     def __post_init__(self):
         self._fix_nested_list_classes({('links', Link)})
+
+
+
+@dataclass
+class KenmerkTypeDTO(BaseDataclass):
+    uuid: str
+    createdOn: str
+    modifiedOn: str
+    naam: str
+    actief: bool
+    predefined: bool
+    standard: bool
+    definitie: str
+    links: [Link]
+
+    def __post_init__(self):
+        self._fix_nested_list_classes({('links', Link)})
+
+
+@dataclass
+class AssetTypeKenmerkTypeAddDTO(BaseDataclass):
+    kenmerkType: ResourceRefDTO
+
+    def __post_init__(self):
+        self._fix_nested_classes({('kenmerkType', KenmerkTypeDTO)})
+
+
+@dataclass
+class AssetTypeKenmerkTypeDTO(BaseDataclass):
+    kenmerkType: KenmerkTypeDTO
+    actief: bool
+    standard: bool
+
+    def __post_init__(self):
+        self._fix_nested_classes({('kenmerkType', KenmerkTypeDTO)})
+
 
 def construct_naampad(asset: AssetDTO) -> str:
     naampad = asset.naam

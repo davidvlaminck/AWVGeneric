@@ -4,7 +4,8 @@ from collections.abc import Generator
 from pathlib import Path
 
 from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO, PagingModeEnum, QueryDTO, BestekRef, \
-    BestekKoppeling, FeedPage, AssettypeDTO, AssettypeDTOList, DTOList, AssetDTO, BetrokkenerelatieDTO, AgentDTO
+    BestekKoppeling, FeedPage, AssettypeDTO, AssettypeDTOList, DTOList, AssetDTO, BetrokkenerelatieDTO, AgentDTO, \
+    AssetTypeKenmerkTypeDTO, KenmerkTypeDTO, AssetTypeKenmerkTypeAddDTO, ResourceRefDTO
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 
@@ -22,8 +23,6 @@ class EMInfraClient:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-        print(response.json()['data'])
-
         return [BestekKoppeling.from_dict(item) for item in response.json()['data']]
 
     def get_bestekref_by_eDelta_dossiernummer(self, eDelta_dossiernummer: str) -> [BestekRef]:
@@ -38,8 +37,6 @@ class EMInfraClient:
         if response.status_code != 200:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
-
-        print(response.json()['data'])
 
         return [BestekRef.from_dict(item) for item in response.json()['data']]
 
@@ -220,3 +217,31 @@ class EMInfraClient:
             from_ = json_dict['from'] + size
             if from_ >= dto_list_total:
                 break
+
+    def get_kenmerken_by_assettype_uuid(self, uuid: str) -> Generator[AssetTypeKenmerkTypeDTO]:
+        url = f"core/api/assettypes/{uuid}/kenmerktypes"
+        json_dict = self.requester.get(url).json()
+        yield from [AssetTypeKenmerkTypeDTO.from_dict(item) for item in json_dict['data']]
+
+    def get_kenmerktype_by_naam(self, naam: str) -> KenmerkTypeDTO:
+        query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
+                             selection=SelectionDTO(
+                                 expressions=[ExpressionDTO(
+                                     terms=[TermDTO(property='naam',
+                                                    operator=OperatorEnum.EQ,
+                                                    value=naam)])]))
+
+        response = self.requester.post('core/api/kenmerktypes/search', data=query_dto.json())
+        if response.status_code != 200:
+            print(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+
+        return next(KenmerkTypeDTO.from_dict(item) for item in response.json()['data'])
+
+    def add_kenmerk_to_assettype(self, assettype_uuid: str, kenmerktype_uuid: str):
+        add_dto = AssetTypeKenmerkTypeAddDTO(kenmerkType=ResourceRefDTO(uuid=kenmerktype_uuid))
+        response = self.requester.post(f'core/api/assettypes/{assettype_uuid}/kenmerktypes', data=add_dto.json())
+        if response.status_code != 202:
+            print(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+

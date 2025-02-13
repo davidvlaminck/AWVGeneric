@@ -6,16 +6,29 @@ from API.Enums import AuthType, Environment
 if __name__ == '__main__':
     from pathlib import Path
 
-    settings_path = Path(r'C:\Users\vlaminda\Documents\resources\settings_SyncOTLDataToLegacy.json')
+    settings_path = Path('/home/davidlinux/Documents/AWV/resources/settings_SyncOTLDataToLegacy.json')
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
+
+    gemigreerd_van_kenmerk = eminfra_client.get_kenmerktype_by_naam('Gemigreerd van')
+    gemigreerd_naar_kenmerk = eminfra_client.get_kenmerktype_by_naam('Gemigreerd naar')
 
     assettypes = eminfra_client.get_all_assettypes()
 
-    assettype = next((x for x in assettypes if x.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/installatie#Meteostation'), None)
+    assettype = next((x for x in assettypes if x.uri ==
+                      'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Datakabel'), None)
     print(assettype)
 
-    # POST POST /assettypes/{id}/ Kenmerk type toevoegen
-    eminfra_client
+    bestaande_kenmerken = eminfra_client.get_kenmerken_by_assettype_uuid(assettype.uuid)
+    gemigreerd_van = next((x for x in bestaande_kenmerken if x.kenmerkType.uuid == gemigreerd_van_kenmerk), None)
+    print(gemigreerd_van)
+
+    if gemigreerd_van is None:
+        eminfra_client.add_kenmerk_to_assettype(assettype_uuid=assettype.uuid,
+                                                kenmerktype_uuid=gemigreerd_naar_kenmerk.uuid)
+
+
+
+
 
 
 #
