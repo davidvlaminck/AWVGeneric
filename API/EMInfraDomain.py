@@ -216,6 +216,11 @@ class ApplicationEnum(Enum):
     ELISA_INFRA = 'elisainfra'
 
 
+class BestekKoppelingStatusEnum(Enum):
+    ACTIEF = 'ACTIEF'
+    INACTIEF = 'INACTIEF'
+    TOEKOMSTIG = 'TOEKOMSTIG'
+
 @dataclass
 class QueryDTO(BaseDataclass):
     size: int
@@ -252,7 +257,7 @@ class BestekRef(BaseDataclass):
         self._fix_nested_list_classes({('links', Link)})
 
 
-class CategorieEnum(Enum):
+class BestekCategorieEnum(Enum):
     WERKBESTEK = 'WERKBESTEK'
     AANLEVERBESTEK = 'AANLEVERBESTEK'
 
@@ -266,15 +271,15 @@ class SubCategorieEnum(Enum):
 @dataclass
 class BestekKoppeling(BaseDataclass):
     startDatum: str
-    eindDatum: str
     bestekRef: dict | BestekRef
-    status: str
-    categorie: CategorieEnum | None = None
+    status: BestekKoppelingStatusEnum
+    eindDatum: str | None = None
+    categorie: BestekCategorieEnum | None = None
     subcategorie: SubCategorieEnum | None = None
     bron: str | None = None
 
     def __post_init__(self):
-        self._fix_enums({('categorie', CategorieEnum), ('subcategorie', SubCategorieEnum)})
+        self._fix_enums({('categorie', BestekCategorieEnum), ('subcategorie', SubCategorieEnum), ('status', BestekKoppelingStatusEnum)})
         self._fix_nested_classes({('bestekRef', BestekRef)})
 
 @dataclass
