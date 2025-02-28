@@ -30,3 +30,25 @@ class SNGatewayClient:
           "enabled": enabled
         })
         return response.json()
+
+    def enable_asset_filter(self, uri: str) -> None:
+        existing_filters = self.get_all_asset_filters()
+        existing_filter = next((filter for filter in existing_filters if filter['uri'] == uri), None)
+        if existing_filter is None:
+            self.add_new_asset_filter(uri=uri, enabled=True)
+        else:
+            if existing_filter['enabled']:
+                print(f'Filter with uri {uri} is already enabled')
+                return
+            self.modify_asset_filter(id=existing_filter['id'], uri=uri, enabled=True)
+
+    def disable_asset_filter(self, uri: str) -> None:
+        existing_filters = self.get_all_asset_filters()
+        existing_filter = next((filter for filter in existing_filters if filter['uri'] == uri), None)
+        if existing_filter is None:
+            self.add_new_asset_filter(uri=uri, enabled=False)
+        else:
+            if not existing_filter['enabled']:
+                print(f'Filter with uri {uri} is already disabled')
+                return
+            self.modify_asset_filter(id=existing_filter['id'], uri=uri, enabled=False)
