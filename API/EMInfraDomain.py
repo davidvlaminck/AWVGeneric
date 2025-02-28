@@ -246,10 +246,10 @@ class BestekRef(BaseDataclass):
     type: str
     actief: bool
     links: [Link]
-    eDeltaDossiernummer: str | None
-    eDeltaBesteknummer: str | None
-    aannemerNaam: str | None
-    aannemerReferentie: str | None
+    eDeltaDossiernummer: str | None = None
+    eDeltaBesteknummer: str | None = None
+    aannemerNaam: str | None = None
+    aannemerReferentie: str | None = None
     nummer: str | None = None
     lot: str | None = None
 
