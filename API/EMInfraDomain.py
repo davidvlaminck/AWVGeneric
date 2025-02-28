@@ -243,13 +243,13 @@ class QueryDTO(BaseDataclass):
 class BestekRef(BaseDataclass):
     uuid: str
     awvId: str
-    eDeltaDossiernummer: str
-    eDeltaBesteknummer: str
     type: str
-    aannemerNaam: str
-    aannemerReferentie: str
     actief: bool
     links: [Link]
+    eDeltaDossiernummer: str | None
+    eDeltaBesteknummer: str | None
+    aannemerNaam: str | None
+    aannemerReferentie: str | None
     nummer: str | None = None
     lot: str | None = None
 
