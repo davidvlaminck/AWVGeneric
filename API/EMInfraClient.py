@@ -1,22 +1,54 @@
 import json
 import logging
 from collections.abc import Generator
+from datetime import datetime, timedelta
+
 from pathlib import Path
 from datetime import datetime
 
 from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO, PagingModeEnum, QueryDTO, BestekRef, \
     BestekKoppeling, FeedPage, AssettypeDTO, AssettypeDTOList, DTOList, AssetDTO, BetrokkenerelatieDTO, AgentDTO, \
-    PostitDTO, LogicalOpEnum
+    PostitDTO, LogicalOpEnum, BestekCategorieEnum, BestekKoppelingStatusEnum, AssetDocumentDTO, LocatieKenmerk, \
+    LogicalOpEnum, ToezichterKenmerk, IdentiteitKenmerk, AssetTypeKenmerkTypeDTO, KenmerkTypeDTO, AssetTypeKenmerkTypeAddDTO, ResourceRefDTO
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 from utils.date_helpers import validate_dates, format_datetime
 from utils.query_dto_helpers import add_expression
+import os
+
 
 class EMInfraClient:
     def __init__(self, auth_type: AuthType, env: Environment, settings_path: Path = None, cookie: str = None):
         self.requester = RequesterFactory.create_requester(auth_type=auth_type, env=env, settings_path=settings_path,
                                                            cookie=cookie)
         self.requester.first_part_url += 'eminfra/'
+
+    def download_document(self, document: AssetDocumentDTO, directory: Path) -> Path:
+        """ Downloads document into a directory.
+
+        Args:
+            document (AssetDocumentDTO): document object
+            directory (Path): Path to the (temporary) directory.
+
+        Returns:
+            Path: The full path of the downloaded PDF file.
+        """
+        # Check if the directory exists, create if not exist
+        os.makedirs(directory, exist_ok=True)
+
+        file_name = document.naam
+        if not document.document['links']:
+            raise ValueError("The 'links' list is empty.")
+        doc_link = document.document['links'][0]['href'].split('/eminfra/')[1]
+        json_str = self.requester.get(doc_link).content.decode("utf-8")
+        json_response = json.loads(json_str)
+        doc_download_link = next(l for l in json_response['links'] if l['rel'] == 'download')['href'].split('/eminfra/')[1]
+        file = self.requester.get(doc_download_link)
+
+        with open(f'{directory}/{file_name}', 'wb') as f:
+            print(f'Writing file {file_name} to temp location: {directory}.')
+            f.write(file.content)
+            return directory / file_name
 
     def get_bestekkoppelingen_by_asset_uuid(self, asset_uuid: str) -> [BestekKoppeling]:
         response = self.requester.get(
@@ -25,26 +57,271 @@ class EMInfraClient:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-        print(response.json()['data'])
-
         return [BestekKoppeling.from_dict(item) for item in response.json()['data']]
 
-    def get_bestekref_by_eDelta_dossiernummer(self, eDelta_dossiernummer: str) -> [BestekRef]:
+    def get_kenmerk_locatie_by_asset_uuid(self, asset_uuid: str) -> LocatieKenmerk:
+        response = self.requester.get(
+            url=f'core/api/assets/{asset_uuid}/kenmerken/80052ed4-2f91-400c-8cba-57624653db11')
+        if response.status_code != 200:
+            print(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        # print(response.json())
+        return LocatieKenmerk.from_dict(response.json())
+
+    def get_kenmerk_toezichter_by_asset_uuid(self, asset_uuid: str) -> ToezichterKenmerk:
+        response = self.requester.get(
+            url=f'core/api/assets/{asset_uuid}/kenmerken/f0166ba2-757c-4cf3-bf71-2e4fdff43fa3')
+        if response.status_code != 200:
+            print(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        # print(response.json())
+        return ToezichterKenmerk.from_dict(response.json())
+
+
+    def get_identiteit(self, toezichter_uuid: str) -> IdentiteitKenmerk:
+        response = self.requester.get(
+            url=f'identiteit/api/identiteiten/{toezichter_uuid}')
+        if response.status_code != 200:
+            print(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        # print(response.json())
+        return IdentiteitKenmerk.from_dict(response.json())
+
+
+    # def get_asset_by_bestekref(self, bestekref: str) -> [AssetDTO]:
+        # response = self.requester.get(
+        #     url=f'core/api/installaties/{asset_uuid}/kenmerken/ee2e627e-bb79-47aa-956a-ea167d20acbd/bestekken')
+        # if response.status_code != 200:
+        #     print(response)
+        #     raise ProcessLookupError(response.content.decode("utf-8"))
+        #
+        # print(response.json()['data'])
+        #
+        # return [BestekKoppeling.from_dict(item) for item in response.json()['data']]
+
+    def search_documents_by_asset_uuid(self, asset_uuid: str, query_dto: QueryDTO) -> Generator[AssetDocumentDTO]:
+        """Search documents by asset uuid
+
+        Retrieves AssetDocumentDTO associated with a specific asset_uuid, and filter the documents with a query.
+
+        Args:
+            asset_uuid: str
+            query_dto: QueryDTO
+            document filter
+        :return:
+            Generator of AssetDocumentDTO
+        """
+        query_dto.from_ = 0
+        if query_dto.size is None:
+            query_dto.size = 100
+        url = f"core/api/assets/{asset_uuid}/documenten/search"
+        while True:
+            json_dict = self.requester.post(url, data=query_dto.json()).json()
+            yield from [AssetDocumentDTO.from_dict(item) for item in json_dict['data']]
+            dto_list_total = json_dict['totalCount']
+            query_dto.from_ = json_dict['from'] + query_dto.size
+            if query_dto.from_ >= dto_list_total:
+                break
+
+    def get_documents_by_asset_uuid(self, asset_uuid: str, size: int = 10) -> Generator[AssetDocumentDTO]:
+        """Get documents by asset uuid
+
+        Retrieves all AssetDocumentDTO associated with a specific asset_uuid
+
+        Args:
+            asset_uuid: str
+            size: int
+            the number of document to retrieve in one API call
+        :return:
+            Generator of AssetDocumentDTO
+        """
+        _from = 0
+        while True:
+            url = f"core/api/assets/{asset_uuid}/documenten?from={_from}&pagingMode=OFFSET&size={size}"
+            json_dict = self.requester.get(url).json()
+            yield from [AssetDocumentDTO.from_dict(item) for item in json_dict['data']]
+            dto_list_total = json_dict['totalCount']
+            from_ = json_dict['from'] + size
+            if from_ >= dto_list_total:
+                break
+
+    def get_bestekref_by_eDelta_dossiernummer(self, eDelta_dossiernummer: str) -> BestekRef | None:
         query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
-                             selection=SelectionDTO(
-                                 expressions=[ExpressionDTO(
-                                     terms=[TermDTO(property='eDeltaDossiernummer',
-                                                    operator=OperatorEnum.EQ,
-                                                    value=eDelta_dossiernummer)])]))
+        selection=SelectionDTO(
+        expressions=[ExpressionDTO(
+        terms=[TermDTO(property='eDeltaDossiernummer',
+        operator=OperatorEnum.EQ,
+        value=eDelta_dossiernummer)])]))
 
         response = self.requester.post('core/api/bestekrefs/search', data=query_dto.json())
         if response.status_code != 200:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-        print(response.json()['data'])
+        return [BestekRef.from_dict(item) for item in response.json()['data']][0]
 
-        return [BestekRef.from_dict(item) for item in response.json()['data']]
+    def get_bestekref_by_eDelta_besteknummer(self, eDelta_besteknummer: str) -> BestekRef | None:
+        query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
+                             selection=SelectionDTO(
+                                 expressions=[ExpressionDTO(
+                                     terms=[TermDTO(property='eDeltaBesteknummer',
+                                                    operator=OperatorEnum.EQ,
+                                                    value=eDelta_besteknummer)])]))
+
+        response = self.requester.post('core/api/bestekrefs/search', data=query_dto.json())
+        if response.status_code != 200:
+            print(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+
+        return [BestekRef.from_dict(item) for item in response.json()['data']][0]
+
+
+    def change_bestekkoppelingen_by_asset_uuid(self, asset_uuid: str, bestekkoppelingen: [BestekKoppeling]) -> None:
+        response = self.requester.put(
+            url=f'core/api/assets/{asset_uuid}/kenmerken/ee2e627e-bb79-47aa-956a-ea167d20acbd/bestekken',
+            data=json.dumps({'data': [item.asdict() for item in bestekkoppelingen]}))
+        if response.status_code != 202:
+            print(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+
+    def adjust_date_bestekkoppeling(self, asset_uuid: str, bestek_ref_uuid: str, start_datetime: datetime = None,
+                             end_datetime: datetime = None) -> dict | None:
+        """
+        Adjusts the startdate and/or the enddate of an existing bestekkoppeling.
+
+        :param asset_uuid: asset uuid
+        :param bestek_ref_uuid: bestekkoppeling uuid.
+        :param start_datetime: start-date of the bestekkoppeling, datetime
+        :param end_datetime: end-date of the bestekkoppeling, datetime
+        :return: response of the API call, or None when nothing is updated.
+        """
+        validate_dates(start_datetime=start_datetime, end_datetime=end_datetime)
+
+        bestekkoppelingen = self.get_bestekkoppelingen_by_asset_uuid(asset_uuid)
+        if matching_koppeling := next(
+            (
+                k
+                for k in bestekkoppelingen
+                if k.bestekRef.uuid == bestek_ref_uuid
+            ),
+            None,
+        ):
+            if start_datetime:
+                matching_koppeling.startDatum = format_datetime(start_datetime)
+            if end_datetime:
+                matching_koppeling.eindDatum = format_datetime(end_datetime)
+
+        return self.change_bestekkoppelingen_by_asset_uuid(asset_uuid, bestekkoppelingen)
+
+    def end_bestekkoppeling(self, asset_uuid: str, bestek_ref_uuid: str, end_datetime: datetime = datetime.now()) -> dict | None:
+        """
+        End a bestekkoppeling by setting an enddate. Defaults to the actual date of execution.
+
+        :param asset_uuid: asset uuid
+        :param bestek_ref_uuid: bestekkoppeling uuid.
+        :param end_datetime: end-date of the bestek
+        :return: response of the API call, or None when nothing is updated.
+        """
+        # format the end_date
+        end_datetime = format_datetime(end_datetime)
+
+        bestekkoppelingen = self.get_bestekkoppelingen_by_asset_uuid(asset_uuid)
+        if matching_koppeling := next(
+                (
+                        k
+                        for k in bestekkoppelingen
+                        if k.bestekRef.uuid == bestek_ref_uuid
+                ),
+                None,
+        ):
+            matching_koppeling.eindDatum = end_datetime
+
+        return self.change_bestekkoppelingen_by_asset_uuid(asset_uuid, bestekkoppelingen)
+
+    def add_bestekkoppeling(self, asset_uuid: str, eDelta_besteknummer: str = None, eDelta_dossiernummer: str = None, start_datetime: datetime = datetime.now(), end_datetime: datetime = None, categorie: str = BestekCategorieEnum.WERKBESTEK) -> dict | None:
+        """
+        Add a new bestekkoppeling. Start date default the execution date. End date default open-ended.
+        The optional parameters "eDelta_besteknummer" and "eDelta_dossiernummer" are mutually exclusive, meaning that one of both optional parameters must be provided.
+
+        :param asset_uuid: asset uuid
+        :param eDelta_besteknummer: besteknummer
+        :param eDelta_dossiernummer: dossiernummer
+        :param start_datetime: start-date of the bestek. Default None > actual date.
+        :param end_datetime: end-date of the bestek. Default None > open-ended.
+        :param categorie: bestek categorie. Default WERKBESTEK
+        :return: response of the API call, or None when nothing is updated.
+        """
+        if (eDelta_besteknummer is None) == (eDelta_dossiernummer is None):  # True if both are None or both are set
+            raise ValueError("Exactly one of 'eDelta_besteknummer' or 'eDelta_dossiernummer' must be provided.")
+        elif eDelta_besteknummer:
+            new_bestekRef = self.get_bestekref_by_eDelta_besteknummer(eDelta_besteknummer=eDelta_besteknummer)
+        else:
+            new_bestekRef = self.get_bestekref_by_eDelta_dossiernummer(eDelta_dossiernummer=eDelta_dossiernummer)
+
+        # Format the start_date, or set actual date if None
+        start_datetime = format_datetime(start_datetime)
+
+        # Format the end_date if present
+        if end_datetime:
+            end_datetime = format_datetime(end_datetime)
+
+        bestekkoppelingen = self.get_bestekkoppelingen_by_asset_uuid(asset_uuid)
+
+        # Check if the new bestekkoppeling doesn't exist and append at the first index position, else do nothing
+        if not (matching_koppeling := next(
+                (k for k in bestekkoppelingen if k.bestekRef.uuid == new_bestekRef.uuid),
+                None,)):
+            new_bestekkoppeling = BestekKoppeling(
+                bestekRef=new_bestekRef,
+                status=BestekKoppelingStatusEnum.ACTIEF,
+                startDatum=start_datetime,
+                eindDatum=end_datetime,
+                categorie=categorie
+            )
+            # Insert the new bestekkoppeling at the first index position.
+            bestekkoppelingen.insert(0, new_bestekkoppeling)
+
+            return self.change_bestekkoppelingen_by_asset_uuid(asset_uuid, bestekkoppelingen)
+
+    def replace_bestekkoppeling(self, asset_uuid: str, eDelta_besteknummer_old: str = None, eDelta_dossiernummer_old: str = None, eDelta_besteknummer_new: str = None, eDelta_dossiernummer_new: str = None, start_datetime: datetime = datetime.now(), end_datetime: datetime = None, categorie: BestekCategorieEnum = BestekCategorieEnum.WERKBESTEK) -> dict | None:
+        """
+        Replaces an existing bestekkoppeling: ends the existing bestekkoppeling and add a new one.
+
+        Call the functions end_bestekkoppeling and add_bestekkoppeling respectively
+        The optional parameters "eDelta_besteknummer[old|new]" and "eDelta_dossiernummer[old|new]" are mutually exclusive, meaning that one of both optional parameters must be provided.
+        The optional parameter start_datetime is the enddate of the existing bestek and the start date of the new bestek. Default value is the actual date.
+
+        :param asset_uuid: asset uuid
+        :param eDelta_besteknummer_old: besteknummer existing
+        :param eDelta_dossiernummer_old: dossiernummer existing
+        :param eDelta_besteknummer_new: besteknummer new
+        :param eDelta_dossiernummer_new: dossiernummer new
+        :param start_datetime: start-date of the new bestek, and end-date of the existing bestek. Default None > actual date.
+        :param end_datetime: end-date of the new bestek. Default None > open-ended.
+        :param categorie: bestek categorie. Default WERKBESTEK
+        :return: response of the API call, or None when nothing is updated.
+        """
+        # End bestekkoppeling
+        if (eDelta_besteknummer_old is None) == (eDelta_dossiernummer_old is None):  # True if both are None or both are set
+            raise ValueError("Exactly one of 'eDelta_besteknummer_old' or 'eDelta_dossiernummer_old' must be provided.")
+        elif eDelta_besteknummer_old:
+            bestekref = self.get_bestekref_by_eDelta_besteknummer(eDelta_besteknummer=eDelta_besteknummer_old)
+        else:
+            bestekref = self.get_bestekref_by_eDelta_dossiernummer(eDelta_dossiernummer=eDelta_dossiernummer_old)
+
+        self.end_bestekkoppeling(asset_uuid=asset_uuid, bestek_ref_uuid=bestekref.uuid, end_datetime=start_datetime)
+        # Raise an error when empty bestek
+        if not response.json()['data']:
+            raise ValueError(f'Bestek {eDelta_dossiernummer} werd niet teruggevonden')
+        # print(response.json()['data'])
+
+        # Add bestekkoppeling
+        if (eDelta_besteknummer_new is None) == (eDelta_dossiernummer_new is None):  # True if both are None or both are set
+            raise ValueError("Exactly one of 'eDelta_besteknummer_new' or 'eDelta_dossiernummer_new' must be provided.")
+        else:
+            self.add_bestekkoppeling(asset_uuid=asset_uuid, eDelta_besteknummer=eDelta_besteknummer_new,
+                                     eDelta_dossiernummer=eDelta_dossiernummer_new, start_datetime=start_datetime,
+                                     end_datetime=end_datetime, categorie=categorie)
 
     def get_feedproxy_page(self, feed_name: str, page_num: int, page_size: int = 1):
         url = f"feedproxy/feed/{feed_name}/{page_num}/{page_size}"
@@ -80,14 +357,68 @@ class EMInfraClient:
         json_dict = self.requester.get(url).json()
         return AssetDTO.from_dict(json_dict)
 
-    def search_assets(self, query_dto: QueryDTO) -> Generator[AssetDTO]:
+    def _search_assets_helper(self, query_dto: QueryDTO) -> Generator[AssetDTO]:
         query_dto.from_ = 0
         if query_dto.size is None:
             query_dto.size = 100
+
         url = "core/api/assets/search"
         while True:
             json_dict = self.requester.post(url, data=query_dto.json()).json()
             yield from [AssetDTO.from_dict(item) for item in json_dict['data']]
+            dto_list_total = json_dict['totalCount']
+            query_dto.from_ = json_dict['from'] + query_dto.size
+            if query_dto.from_ >= dto_list_total:
+                break
+
+    def search_assets(self, query_dto: QueryDTO) -> Generator[AssetDTO]:
+        query_dto.selection.expressions.append(
+            ExpressionDTO(
+                terms=[TermDTO(property='actief',
+                               operator=OperatorEnum.EQ,
+                               value=True)
+                       ]
+                , logicalOp=LogicalOpEnum.AND)
+        )
+        yield from self._search_assets_helper(query_dto)
+
+    def search_all_assets(self, query_dto: QueryDTO) -> Generator[AssetDTO]:
+        yield from self._search_assets_helper(query_dto)
+
+    def search_identiteit(self, naam: str) -> Generator[IdentiteitKenmerk]:
+        query_dto = QueryDTO(size=5, from_=0, pagingMode=PagingModeEnum.OFFSET,
+                 selection=SelectionDTO(
+                     expressions=[
+                         ExpressionDTO(
+                             terms=[TermDTO(property='actief', operator=OperatorEnum.EQ, value=True, logicalOp=None)]
+                         , logicalOp=None
+                         )
+                     ]
+                 )
+            )
+
+        naam_parts = naam.split(' ')
+        for naam_part in naam_parts:
+            query_dto.selection.expressions.append(
+                ExpressionDTO(
+                    terms=[
+                        TermDTO(property='naam', operator=OperatorEnum.CONTAINS, value=f'{naam_part}', logicalOp=None)
+                        , TermDTO(property='voornaam', operator=OperatorEnum.CONTAINS, value=f'{naam_part}', logicalOp=LogicalOpEnum.OR)
+                        , TermDTO(property='roepnaam', operator=OperatorEnum.CONTAINS, value=f'{naam_part}', logicalOp=LogicalOpEnum.OR)
+                        , TermDTO(property='gebruikersnaam', operator=OperatorEnum.CONTAINS, value=f'{naam_part}', logicalOp=LogicalOpEnum.OR)
+                    ]
+                    , logicalOp=LogicalOpEnum.AND
+                )
+            )
+
+        query_dto.from_ = 0
+        if query_dto.size is None:
+            query_dto.size = 100
+
+        url = "identiteit/api/identiteiten/search"
+        while True:
+            json_dict = self.requester.post(url, data=query_dto.json()).json()
+            yield from [IdentiteitKenmerk.from_dict(item) for item in json_dict['data']]
             dto_list_total = json_dict['totalCount']
             query_dto.from_ = json_dict['from'] + query_dto.size
             if query_dto.from_ >= dto_list_total:
@@ -375,3 +706,30 @@ class EMInfraClient:
             from_ = json_dict['from'] + size
             if from_ >= dto_list_total:
                 break
+
+    def get_kenmerken_by_assettype_uuid(self, uuid: str) -> [AssetTypeKenmerkTypeDTO]:
+        url = f"core/api/assettypes/{uuid}/kenmerktypes"
+        json_dict = self.requester.get(url).json()
+        return [AssetTypeKenmerkTypeDTO.from_dict(item) for item in json_dict['data']]
+
+    def get_kenmerktype_by_naam(self, naam: str) -> KenmerkTypeDTO:
+        query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
+                             selection=SelectionDTO(
+                                 expressions=[ExpressionDTO(
+                                     terms=[TermDTO(property='naam',
+                                                    operator=OperatorEnum.EQ,
+                                                    value=naam)])]))
+
+        response = self.requester.post('core/api/kenmerktypes/search', data=query_dto.json())
+        if response.status_code != 200:
+            print(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+
+        return next(KenmerkTypeDTO.from_dict(item) for item in response.json()['data'])
+
+    def add_kenmerk_to_assettype(self, assettype_uuid: str, kenmerktype_uuid: str):
+        add_dto = AssetTypeKenmerkTypeAddDTO(kenmerkType=ResourceRefDTO(uuid=kenmerktype_uuid))
+        response = self.requester.post(f'core/api/assettypes/{assettype_uuid}/kenmerktypes', data=add_dto.json())
+        if response.status_code != 202:
+            print(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
