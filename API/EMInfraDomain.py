@@ -2,6 +2,7 @@ import dataclasses
 from dataclasses import dataclass
 from enum import Enum
 from json import dumps
+from typing import Optional
 
 _asdict_inner_actual = dataclasses._asdict_inner
 def _asdict_inner(obj, dict_factory):
@@ -61,7 +62,7 @@ class BaseDataclass:
 
     def json(self):
         """
-        get the json formated string
+        get the json formatted string
         """
         d = self.asdict()
         return dumps(self.asdict())
@@ -121,6 +122,16 @@ class Link(BaseDataclass):
     href: str
 
 
+@dataclass
+class ResourceRefDTO(BaseDataclass):
+    uuid: str
+    links: Optional[list[Link]] = None
+
+    def __post_init__(self):
+        self._fix_nested_list_classes({('links', Link)})
+
+
+@dataclass
 class DTOList(BaseDataclass):
     links: [Link]
     _from: int
@@ -151,6 +162,7 @@ class AssettypeDTO(BaseDataclass):
         self._fix_nested_list_classes({('links', Link)})
 
 
+@dataclass
 class AssettypeDTOList(DTOList):
     data: list[AssettypeDTO]
 
@@ -468,6 +480,69 @@ class AssetDocumentDTO(BaseDataclass):
         self._fix_nested_list_classes({('links', Link)})
         self._fix_nested_list_classes({('document', ResourceRefDTO)})
 
+        
+@dataclass
+class BetrokkenerelatieDTO(BaseDataclass):
+    uuid: str
+    createdOn: str
+    modifiedOn: str
+    bron: dict # TODO wijzigen naar Object
+    doel: dict # TODO wijzigen naar Object
+    rol: str # TODO enum
+    links: [Link]
+
+    def __post_init__(self):
+        self._fix_nested_list_classes({('links', Link)})
+
+@dataclass
+class AgentDTO(BaseDataclass):
+    uuid: str
+    createdOn: str
+    modifiedOn: str
+    naam: str
+    voId: str
+    # ovoCode: str | None # TODO delete this line. This info is missing from the response.
+    actief: bool
+    contactInfo: [dict]
+    links: [Link]
+
+    def __post_init__(self):
+        self._fix_nested_list_classes({('links', Link)})
+
+
+
+@dataclass
+class KenmerkTypeDTO(BaseDataclass):
+    uuid: str
+    createdOn: str
+    modifiedOn: str
+    naam: str
+    actief: bool
+    predefined: bool
+    standard: bool
+    definitie: str
+    links: [Link]
+
+    def __post_init__(self):
+        self._fix_nested_list_classes({('links', Link)})
+
+
+@dataclass
+class AssetTypeKenmerkTypeAddDTO(BaseDataclass):
+    kenmerkType: ResourceRefDTO
+
+    def __post_init__(self):
+        self._fix_nested_classes({('kenmerkType', KenmerkTypeDTO)})
+
+
+@dataclass
+class AssetTypeKenmerkTypeDTO(BaseDataclass):
+    kenmerkType: KenmerkTypeDTO
+    actief: bool
+    standard: bool
+
+    def __post_init__(self):
+        self._fix_nested_classes({('kenmerkType', KenmerkTypeDTO)})
 
 
 def construct_naampad(asset: AssetDTO) -> str:

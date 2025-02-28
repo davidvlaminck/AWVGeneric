@@ -1,10 +1,12 @@
 import json
+import logging
 from collections.abc import Generator
 from pathlib import Path
 
 from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO, PagingModeEnum, QueryDTO, BestekRef, \
     BestekKoppeling, FeedPage, AssettypeDTO, AssettypeDTOList, DTOList, AssetDTO, AssetDocumentDTO, LocatieKenmerk, \
-    LogicalOpEnum, ToezichterKenmerk, IdentiteitKenmerk
+    LogicalOpEnum, ToezichterKenmerk, IdentiteitKenmerk, BetrokkenerelatieDTO, AgentDTO, \
+    AssetTypeKenmerkTypeDTO, KenmerkTypeDTO, AssetTypeKenmerkTypeAddDTO, ResourceRefDTO
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 import os
@@ -49,8 +51,6 @@ class EMInfraClient:
         if response.status_code != 200:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
-
-        print(response.json()['data'])
 
         return [BestekKoppeling.from_dict(item) for item in response.json()['data']]
 
@@ -157,8 +157,7 @@ class EMInfraClient:
         # Raise an error when empty bestek
         if not response.json()['data']:
             raise ValueError(f'Bestek {eDelta_dossiernummer} werd niet teruggevonden')
-
-        print(response.json()['data'])
+        # print(response.json()['data'])
 
         return [BestekRef.from_dict(item) for item in response.json()['data']]
 
@@ -262,3 +261,161 @@ class EMInfraClient:
             query_dto.from_ = json_dict['from'] + query_dto.size
             if query_dto.from_ >= dto_list_total:
                 break
+
+    def search_betrokkenerelaties(self, query_dto: QueryDTO) -> Generator[BetrokkenerelatieDTO]:
+        query_dto.from_ = 0
+        if query_dto.size is None:
+            query_dto.size = 100
+        url = "core/api/betrokkenerelaties/search"
+        while True:
+            json_dict = self.requester.post(url, data=query_dto.json()).json()
+            yield from [BetrokkenerelatieDTO.from_dict(item) for item in json_dict['data']]
+            dto_list_total = json_dict['totalCount']
+            query_dto.from_ = json_dict['from'] + query_dto.size
+            if query_dto.from_ >= dto_list_total:
+                break
+
+
+    def get_objects_from_oslo_search_endpoint(self, url_part: str,
+                                              filter_string: dict = '{}', size: int = 100,
+                                              expansions_fields: [str] = None) -> Generator:
+        """Returns Generator objects for each OSLO endpoint
+
+        :param url_part: keyword to complete the url
+        :type url_part: str
+        :param filter_string: filter condition
+        :type filter_string: dict
+        :param size: amount of objects to return in 1 page or request
+        :type size: int
+        :param expansions_fields: additional fields to append to the results
+        :type expansions_fields: [str]
+        :return: Generator
+        """
+        body = {'size': size, 'fromCursor': None, 'filters': filter_string}
+        if expansions_fields:
+            body['expansion']['fields'] = expansions_fields
+        paging_cursor = None
+        url = f'core/api/otl/{url_part}/search'
+
+        while True:
+            # update fromCursor
+            if paging_cursor:
+                body['fromCursor'] = paging_cursor
+            json_body = json.dumps(body)
+
+            response = self.requester.post(url=url, data=json_body)
+            decoded_string = response.content.decode("utf-8")
+            dict_obj = json.loads(decoded_string)
+
+            yield from dict_obj["@graph"]
+
+            if 'em-paging-next-cursor' in response.headers.keys():
+                paging_cursor = response.headers['em-paging-next-cursor']
+            else:
+                break
+
+    def remove_parent_from_asset(self, parent_uuid: str, asset_uuid: str):
+        """Removes the parent from an asset.
+
+        :param parent_uuid: The UUID of the parent asset.
+        :type parent_uuid: str
+        :param asset_uuid: The UUID of the asset to remove the parent from.
+        :type asset_uuid: str
+        """
+        payload = {
+            "name": "remove",
+            "description": "Verwijderen uit boomstructuur van 1 asset",
+            "async": False,
+            "uuids": [asset_uuid],
+        }
+        url=f"core/api/beheerobjecten/{parent_uuid}/assets/ops/remove"
+        response = self.requester.put(
+            url=url,
+            json=payload
+        )
+        if response.status_code != 202:
+            ProcessLookupError(f'Failed to remove parent from asset: {response.text}')
+
+    def search_agent(self, query_dto: QueryDTO) -> Generator[AgentDTO]:
+        query_dto.from_ = 0
+        if query_dto.size is None:
+            query_dto.size = 100
+        url = "core/api/agents/search"
+        while True:
+            json_dict = self.requester.post(url, data=query_dto.json()).json()
+            yield from [AgentDTO.from_dict(item) for item in json_dict['data']]
+            dto_list_total = json_dict['totalCount']
+            query_dto.from_ = json_dict['from'] + query_dto.size
+            if query_dto.from_ >= dto_list_total:
+                break
+
+    def add_betrokkenerelatie(self, asset_uuid: str, agent_uuid: str, rol: str) -> dict:
+        json_body = {
+            "bron": {
+                "uuid": f"{asset_uuid}"
+                , "_type": "onderdeel"
+            },
+            "doel": {
+                "uuid": f"{agent_uuid}"
+                , "_type": "agent"
+            },
+            "rol": f"{rol}"
+        }
+        response = self.requester.post(url='core/api/betrokkenerelaties', json=json_body)
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return response.json()
+
+    def remove_betrokkenerelatie(self, betrokkenerelatie_uuid: str) -> dict:
+        url = f"core/api/betrokkenerelaties/{betrokkenerelatie_uuid}"
+        response = self.requester.delete(url=url)
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return response
+
+
+    def get_oef_schema_as_json(self, name: str) -> str:
+        url = f"core/api/otl/schema/oef/{name}"
+        content = self.requester.get(url).content
+        return content.decode("utf-8")
+
+    def get_all_eigenschappen_as_text_generator(self, size: int = 100) -> Generator[str]:
+        from_ = 0
+
+        while True:
+            url = f"core/api/eigenschappen?from={from_}&size={size}"
+            json_dict = self.requester.get(url).json()
+            yield from json_dict['data']
+            dto_list_total = json_dict['totalCount']
+            from_ = json_dict['from'] + size
+            if from_ >= dto_list_total:
+                break
+
+    def get_kenmerken_by_assettype_uuid(self, uuid: str) -> [AssetTypeKenmerkTypeDTO]:
+        url = f"core/api/assettypes/{uuid}/kenmerktypes"
+        json_dict = self.requester.get(url).json()
+        return [AssetTypeKenmerkTypeDTO.from_dict(item) for item in json_dict['data']]
+
+    def get_kenmerktype_by_naam(self, naam: str) -> KenmerkTypeDTO:
+        query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
+                             selection=SelectionDTO(
+                                 expressions=[ExpressionDTO(
+                                     terms=[TermDTO(property='naam',
+                                                    operator=OperatorEnum.EQ,
+                                                    value=naam)])]))
+
+        response = self.requester.post('core/api/kenmerktypes/search', data=query_dto.json())
+        if response.status_code != 200:
+            print(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+
+        return next(KenmerkTypeDTO.from_dict(item) for item in response.json()['data'])
+
+    def add_kenmerk_to_assettype(self, assettype_uuid: str, kenmerktype_uuid: str):
+        add_dto = AssetTypeKenmerkTypeAddDTO(kenmerkType=ResourceRefDTO(uuid=kenmerktype_uuid))
+        response = self.requester.post(f'core/api/assettypes/{assettype_uuid}/kenmerktypes', data=add_dto.json())
+        if response.status_code != 202:
+            print(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
