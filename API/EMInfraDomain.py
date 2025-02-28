@@ -499,6 +499,21 @@ class BetrokkenerelatieDTO(BaseDataclass):
     def __post_init__(self):
         self._fix_nested_list_classes({('links', Link)})
 
+
+@dataclass
+class PostitDTO(BaseDataclass):
+    uuid: str
+    createdOn: str
+    modifiedOn: str
+    links: [Link]
+    startDatum: str
+    eindDatum: str  # mandatory
+    commentaar: str | None = None
+
+    def __post_init__(self):
+        self._fix_nested_list_classes({('links', Link)})
+
+
 @dataclass
 class AgentDTO(BaseDataclass):
     uuid: str
