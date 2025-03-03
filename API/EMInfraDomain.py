@@ -459,12 +459,14 @@ class ProvincieEnum(Enum):
     LIMBURG = 'limburg'
     BRUSSEL = 'brussel'
 
-class ResourceRefDTO(Link):
+
+@dataclass
+class ResourceRefDTO(BaseDataclass):
     uuid: str
-    links: [Link]
+    links: Optional[list[Link]] = None
 
     def __post_init__(self):
-        self._fix_nested_classes({('links', Link)})
+        self._fix_nested_list_classes({('links', Link)})
 
 
 @dataclass

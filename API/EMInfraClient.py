@@ -728,6 +728,7 @@ class EMInfraClient:
         return next(KenmerkTypeDTO.from_dict(item) for item in response.json()['data'])
 
     def add_kenmerk_to_assettype(self, assettype_uuid: str, kenmerktype_uuid: str):
+        r = ResourceRefDTO(uuid=kenmerktype_uuid)
         add_dto = AssetTypeKenmerkTypeAddDTO(kenmerkType=ResourceRefDTO(uuid=kenmerktype_uuid))
         response = self.requester.post(f'core/api/assettypes/{assettype_uuid}/kenmerktypes', data=add_dto.json())
         if response.status_code != 202:
