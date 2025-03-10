@@ -734,3 +734,15 @@ class EMInfraClient:
         if response.status_code != 202:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
+
+    def update_eigenschap(self, asset_uuid: str, eigenschap_uuid: str, eigenschap_waarde: str):
+        request_body = {
+            "data": [{
+                "eigenschap": {"uuid": eigenschap_uuid},
+                "typedValue": {"_type": "text", "value": eigenschap_waarde}
+            }]
+        }
+        response = self.requester.patch(url=f'core/api/assets/{asset_uuid}/kenmerken/7bb10957-9086-4a06-badb-2d1024156c38/eigenschapwaarden', json=request_body)
+        if response.status_code != 202:
+            print(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
