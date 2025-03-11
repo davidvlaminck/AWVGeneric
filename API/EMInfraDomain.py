@@ -245,6 +245,8 @@ class BestekRef(BaseDataclass):
     type: str
     actief: bool
     links: [Link]
+    createdOn: str | None = None
+    modifiedOn: str | None = None
     awvId: str | None = None
     eDeltaDossiernummer: str | None = None
     eDeltaBesteknummer: str | None = None
