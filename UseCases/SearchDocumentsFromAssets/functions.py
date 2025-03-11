@@ -132,53 +132,47 @@ def download_documents(eminfra_client, edelta_dossiernummer: str, document_categ
 
             naampad = construct_naampad(asset)
 
-            documents = eminfra_client.search_documents_by_asset_uuid(
-                asset_uuid=asset.uuid
-                , query_dto=query_dto_search_document
+            documents = list(
+                eminfra_client.search_documents_by_asset_uuid(
+                    asset_uuid=asset.uuid
+                    , query_dto=query_dto_search_document
+                )
             )
 
             # create a folder in the temp path
             directory_path = temp_path / locatie_provincie / toezichter_volledige_naam
 
-            document = next(documents, None)
-            if document:
-                row_dict = {
-                    'uuid': asset.uuid
-                    , 'assettype': asset.type.afkorting
-                    , 'naam': asset.naam
-                    , 'naampad': naampad
-                    , 'actief': asset.actief
-                    , 'toestand': asset.toestand.value
-                    , 'toezichter_naam': toezichter_naam
-                    , 'toezichter_voornaam': toezichter_voornaam
-                    , 'provincie': locatie_provincie
-                    , 'gemeente': locatie_gemeente
-                    , 'document_categorie': document.categorie.value
-                    , 'document_naam': document.naam
-                    , 'document_uuid': document.uuid
-                }
+            if documents:
+                for document in documents:
+                    row_dict = {
+                        'uuid': asset.uuid
+                        , 'assettype': asset.type.afkorting
+                        , 'naam': asset.naam
+                        , 'naampad': naampad
+                        , 'actief': asset.actief
+                        , 'toestand': asset.toestand.value
+                        , 'toezichter_naam': toezichter_naam
+                        , 'toezichter_voornaam': toezichter_voornaam
+                        , 'provincie': locatie_provincie
+                        , 'gemeente': locatie_gemeente
+                        , 'document_categorie': document.categorie.value
+                        , 'document_naam': document.naam
+                        , 'document_uuid': document.uuid
+                    }
 
-                row_df = pd.DataFrame([row_dict])
-                df_assets = pd.concat([df_assets, row_df], ignore_index=True)
+                    row_df = pd.DataFrame([row_dict])
+                    df_assets = pd.concat([df_assets, row_df], ignore_index=True)
 
-                # Write document to temp_dir
-                eminfra_client.download_document(
-                    document=document
-                    , directory = directory_path / naampad.replace('/', '__') / document.categorie.value
-                )
+                    # Write document to temp_dir
+                    eminfra_client.download_document(
+                        document=document
+                        , directory = directory_path / naampad.replace('/', '__') / document.categorie.value
+                    )
             else:
                 # when documents are missing, append prefix "geen_documenten_"to the folder name.
                 directory_path_geen_bestanden_beschikbaar = directory_path / '_geen_bestanden_beschikbaar' / naampad.replace('/', '__')
-                try:
-                    directory_path_geen_bestanden_beschikbaar.mkdir(parents=True)
-                    print(f"Directory '{directory_path_geen_bestanden_beschikbaar}' created successfully.")
-                except FileExistsError:
-                    print(f"Directory '{directory_path_geen_bestanden_beschikbaar}' already exists.")
-                except PermissionError:
-                    print(f"Permission denied: Unable to create '{directory_path_geen_bestanden_beschikbaar}'.")
-                except Exception as e:
-                    print(f"An error occurred: {e}")
-
+                directory_path_geen_bestanden_beschikbaar.mkdir(parents=True, exist_ok=True)
+                print(f"Directory '{directory_path_geen_bestanden_beschikbaar}' is created or already exists.")
 
         # Write overview
         edelta_dossiernummer_str = re.sub('[^0-9a-zA-Z]+', '_', edelta_dossiernummer)  # replace all non-alphanumeric characters with an underscore
