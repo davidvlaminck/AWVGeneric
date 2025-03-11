@@ -9,7 +9,8 @@ from datetime import datetime
 from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO, PagingModeEnum, QueryDTO, BestekRef, \
     BestekKoppeling, FeedPage, AssettypeDTO, AssettypeDTOList, DTOList, AssetDTO, BetrokkenerelatieDTO, AgentDTO, \
     PostitDTO, LogicalOpEnum, BestekCategorieEnum, BestekKoppelingStatusEnum, AssetDocumentDTO, LocatieKenmerk, \
-    LogicalOpEnum, ToezichterKenmerk, IdentiteitKenmerk, AssetTypeKenmerkTypeDTO, KenmerkTypeDTO, AssetTypeKenmerkTypeAddDTO, ResourceRefDTO
+    LogicalOpEnum, ToezichterKenmerk, IdentiteitKenmerk, AssetTypeKenmerkTypeDTO, KenmerkTypeDTO, \
+    AssetTypeKenmerkTypeAddDTO, ResourceRefDTO, Eigenschap
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 from utils.date_helpers import validate_dates, format_datetime
@@ -707,6 +708,21 @@ class EMInfraClient:
             if from_ >= dto_list_total:
                 break
 
+    def search_eigenschappen(self, eigenschap_naam: str) -> [Eigenschap]:
+        query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
+                             selection=SelectionDTO(
+                                 expressions=[ExpressionDTO(
+                                     terms=[TermDTO(property='naam',
+                                                    operator=OperatorEnum.EQ,
+                                                    value=eigenschap_naam)])]))
+
+        response = self.requester.post('core/api/eigenschappen/search', data=query_dto.json())
+        if response.status_code != 200:
+            print(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+
+        return [Eigenschap.from_dict(item) for item in response.json()['data']]
+
     def get_kenmerken_by_assettype_uuid(self, uuid: str) -> [AssetTypeKenmerkTypeDTO]:
         url = f"core/api/assettypes/{uuid}/kenmerktypes"
         json_dict = self.requester.get(url).json()
@@ -731,6 +747,19 @@ class EMInfraClient:
         r = ResourceRefDTO(uuid=kenmerktype_uuid)
         add_dto = AssetTypeKenmerkTypeAddDTO(kenmerkType=ResourceRefDTO(uuid=kenmerktype_uuid))
         response = self.requester.post(f'core/api/assettypes/{assettype_uuid}/kenmerktypes', data=add_dto.json())
+        if response.status_code != 202:
+            print(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+
+    def update_eigenschap(self, asset_uuid: str, eigenschap_uuid: str, eigenschap_waarde: str):
+        request_body = {
+            "data": [{
+                "eigenschap": {"uuid": eigenschap_uuid},
+                "typedValue": {"_type": "text", "value": eigenschap_waarde}
+            }]
+        }
+        EIGENSCHAP_UUID = '7bb10957-9086-4a06-badb-2d1024156c38'
+        response = self.requester.patch(url=f'core/api/assets/{asset_uuid}/kenmerken/{EIGENSCHAP_UUID}/eigenschapwaarden', json=request_body)
         if response.status_code != 202:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
