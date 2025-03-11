@@ -548,6 +548,25 @@ class KenmerkTypeDTO(BaseDataclass):
     def __post_init__(self):
         self._fix_nested_list_classes({('links', Link)})
 
+@dataclass
+class Eigenschap(BaseDataclass):
+    uuid: str
+    createdOn: str
+    modifiedOn: str
+    uri: str
+    label: str
+    naam: str
+    alleenLezen: bool
+    actief: bool
+    definitie: str
+    categorie: str
+    type: dict
+    kardinaliteitMin: int
+    kardinaliteitMax: int
+    links: [Link]
+
+    def __post_init__(self):
+        self._fix_nested_list_classes({('links', Link)})
 
 @dataclass
 class AssetTypeKenmerkTypeAddDTO(BaseDataclass):
