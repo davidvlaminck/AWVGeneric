@@ -11,7 +11,7 @@ from API.Enums import Environment
 from pathlib import Path
 from Generic.ExcelModifier import ExcelModifier
 
-def download_documents(eminfra_client, edelta_dossiernummer: str, document_categorie:[DocumentCategorieEnum], toezichter:str = None, provincie:[ProvincieEnum] = None) -> Path|None:
+def download_documents(eminfra_client, edelta_dossiernummer: str, document_categorie:[DocumentCategorieEnum] = None, toezichter:str = None, provincie:[ProvincieEnum] = None) -> Path|None:
     """Download documents
 
     Downloading documents from EM-Infra based on the criteria:
@@ -26,7 +26,12 @@ def download_documents(eminfra_client, edelta_dossiernummer: str, document_categ
     :rtype: Path
     """
     provincie_value = [item.value for item in provincie] if provincie else provincie
-    document_categorie_value = [item.value for item in document_categorie]
+    if document_categorie:
+        document_categorie_value = [item.value for item in document_categorie]
+    else:
+        # if None, use all the enumeration values.
+        document_categorie_value = [item.value for item in DocumentCategorieEnum]
+
     print(f'Ophalen van alle documenten die voldoen aan volgende criteria:'
           f'\tDocument categorie: {document_categorie_value}'
           f'\tDossiernummer: {edelta_dossiernummer}'
@@ -34,7 +39,7 @@ def download_documents(eminfra_client, edelta_dossiernummer: str, document_categ
           f'\tProvincie: {provincie_value}')
 
     bestek_ref = eminfra_client.get_bestekref_by_eDelta_dossiernummer(edelta_dossiernummer)
-    bestek_ref_uuid = bestek_ref[0].uuid
+    bestek_ref_uuid = bestek_ref.uuid
 
     # build query to search assets linked with an order (NL: bestek)
     query_dto_search_assets = QueryDTO(
@@ -88,7 +93,7 @@ def download_documents(eminfra_client, edelta_dossiernummer: str, document_categ
     downloads_path = Path.home() / 'Downloads' / 'Results'
     print("Downloading documents...")
 
-    with tempfile.TemporaryDirectory() as temp_dir:
+    with (tempfile.TemporaryDirectory() as temp_dir):
         temp_path = Path(temp_dir)
 
         asset_bucket_generator = eminfra_client.search_all_assets(query_dto_search_assets)
@@ -127,36 +132,47 @@ def download_documents(eminfra_client, edelta_dossiernummer: str, document_categ
 
             naampad = construct_naampad(asset)
 
-            documents = eminfra_client.search_documents_by_asset_uuid(
-                asset_uuid=asset.uuid
-                , query_dto=query_dto_search_document
+            documents = list(
+                eminfra_client.search_documents_by_asset_uuid(
+                    asset_uuid=asset.uuid
+                    , query_dto=query_dto_search_document
+                )
             )
 
-            for document in documents:
-                row_dict = {
-                    'uuid': asset.uuid
-                    , 'assettype': asset.type.afkorting
-                    , 'naam': asset.naam
-                    , 'naampad': naampad
-                    , 'actief': asset.actief
-                    , 'toestand': asset.toestand.value
-                    , 'toezichter_naam': toezichter_naam
-                    , 'toezichter_voornaam': toezichter_voornaam
-                    , 'provincie': locatie_provincie
-                    , 'gemeente': locatie_gemeente
-                    , 'document_categorie': document.categorie.value
-                    , 'document_naam': document.naam
-                    , 'document_uuid': document.uuid
+            # create a folder in the temp path
+            directory_path = temp_path / locatie_provincie / toezichter_volledige_naam
+
+            if documents:
+                for document in documents:
+                    row_dict = {
+                        'uuid': asset.uuid
+                        , 'assettype': asset.type.afkorting
+                        , 'naam': asset.naam
+                        , 'naampad': naampad
+                        , 'actief': asset.actief
+                        , 'toestand': asset.toestand.value
+                        , 'toezichter_naam': toezichter_naam
+                        , 'toezichter_voornaam': toezichter_voornaam
+                        , 'provincie': locatie_provincie
+                        , 'gemeente': locatie_gemeente
+                        , 'document_categorie': document.categorie.value
+                        , 'document_naam': document.naam
+                        , 'document_uuid': document.uuid
                     }
 
-                row_df = pd.DataFrame([row_dict])
-                df_assets = pd.concat([df_assets, row_df], ignore_index=True)
+                    row_df = pd.DataFrame([row_dict])
+                    df_assets = pd.concat([df_assets, row_df], ignore_index=True)
 
-                # Write document to temp_dir
-                eminfra_client.download_document(
-                    document=document
-                    , directory=temp_path / locatie_provincie / toezichter_volledige_naam / naampad.replace('/', '__') / document.categorie.value
-                )
+                    # Write document to temp_dir
+                    eminfra_client.download_document(
+                        document=document
+                        , directory = directory_path / naampad.replace('/', '__') / document.categorie.value
+                    )
+            else:
+                # when documents are missing, append prefix "geen_documenten_"to the folder name.
+                directory_path_geen_bestanden_beschikbaar = directory_path / '_geen_bestanden_beschikbaar' / naampad.replace('/', '__')
+                directory_path_geen_bestanden_beschikbaar.mkdir(parents=True, exist_ok=True)
+                print(f"Directory '{directory_path_geen_bestanden_beschikbaar}' is created or already exists.")
 
         # Write overview
         edelta_dossiernummer_str = re.sub('[^0-9a-zA-Z]+', '_', edelta_dossiernummer)  # replace all non-alphanumeric characters with an underscore
@@ -170,7 +186,7 @@ def download_documents(eminfra_client, edelta_dossiernummer: str, document_categ
         excelModifier.add_hyperlink(sheet=edelta_dossiernummer_str, link_type=ApplicationEnum.EM_INFRA, env=Environment.PRD)
 
         # Zip the output folder. Temp folder is automatically removed
-        zip_path = downloads_path / f'documenten_{edelta_dossiernummer_str}.zip'
+        zip_path = downloads_path / f'documenten_{edelta_dossiernummer_str}'
         shutil.make_archive(str(zip_path), 'zip', root_dir=str(temp_dir))
         print(f"Folder {temp_dir} has been zipped to {zip_path}.")
 
