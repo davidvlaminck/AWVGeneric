@@ -1,9 +1,7 @@
 from pathlib import Path
 
-from pathlib import Path
 from tqdm import tqdm
 
-from API.EMInfraDomain import BestekKoppeling
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 
@@ -15,8 +13,7 @@ class FSClient:
         self.requester.first_part_url += 'geolatte-nosqlfs/cert/api/databases/featureserver/'
 
     def download_laag(self, laag: str, file_path: Path) -> None:
-        response = self.requester.get(
-            url=f'{laag}/query?fmt=json&projection=properties', stream=True)
+        response = self.requester.get(url=f'{laag}/query?fmt=json&projection=properties', stream=True)
         if response.status_code != 200:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
