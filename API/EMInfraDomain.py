@@ -285,6 +285,32 @@ class BestekKoppeling(BaseDataclass):
         self._fix_nested_classes({('bestekRef', BestekRef)})
 
 @dataclass
+class EventType(BaseDataclass):
+    description: str
+    name: str
+
+@dataclass
+class EventContext(BaseDataclass):
+    uuid: str
+    omschrijving: str
+    links: [Link]
+
+    def __post_init__(self):
+        self._fix_nested_classes({('links', Link)})
+
+@dataclass
+class Event(BaseDataclass):
+    type: dict | EventType
+    eventNumber: int
+    createdOn: str
+    determinedOn: str
+    data: dict
+    links: [Link]
+
+    def __post_init__(self):
+        self._fix_nested_classes({('type', EventType), ('links', Link)})
+
+@dataclass
 class LocatieKenmerk(BaseDataclass):
     _type: str
     type: dict
@@ -321,9 +347,9 @@ class IdentiteitKenmerk(BaseDataclass):
     contactFiche: dict
     voId: str
     bron: str
-    functie: str
-    ldapId: str
     gebruikersrechtOrganisaties: [str]
+    ldapId: str | None = None
+    functie: str | None = None
     links: list[Link] | None = None
 
     def __post_init__(self):
@@ -377,6 +403,13 @@ class AssetDTOToestand(Enum):
     VERWIJDERD = 'VERWIJDERD'
     OVERGEDRAGEN = 'OVERGEDRAGEN'
     UIT_GEBRUIK = 'UIT_GEBRUIK'
+
+class ObjectType(Enum):
+    INSTALLATIE = 'INSTALLATIE'
+    ONDERDEEL = 'ONDERDEEL'
+    BEHEEROBJECT = 'BEHEEROBJECT'
+    EIGENSCHAP = 'EIGENSCHAP'
+    KENMERKTYPE = 'KENMERKTYPE'
 
 @dataclass
 class InfraObjectDTO(BaseDataclass):
