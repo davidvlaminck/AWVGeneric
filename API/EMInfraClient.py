@@ -329,9 +329,10 @@ class EMInfraClient:
         json_dict = self.requester.get(url).json()
         return FeedPage.from_dict(json_dict)
 
-    def get_assettype_by_id(self, assettype_id: str) -> AssettypeDTO:
+    async def get_assettype_by_id(self, assettype_id: str) -> AssettypeDTO:
         url = f"core/api/assettypes/{assettype_id}"
-        json_dict = self.requester.get(url).json()
+        _, content = await self.requester.get_async(url)
+        json_dict = json.loads(content)
         return AssettypeDTO.from_dict(json_dict)
 
     def get_all_assettypes(self, size: int = 100) -> Generator[AssettypeDTO]:
