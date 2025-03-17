@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
     excel_path = Path.home() / 'Downloads' / 'bestekken' / '[RSA] Assets gelinkt aan bestekken zonder aannemer.xlsx'
     if not excel_path.exists():
-        FileNotFoundError(f'Could nog found the file: {excel_path}')
+        raise FileNotFoundError(f'Could nog found the file: {excel_path}')
     df_assets = pd.read_excel(excel_path, sheet_name='Resultaat', header=2, usecols=['uuid', 'naampad', 'naam', 'bestekuuid'])
 
     for index, asset in df_assets.iterrows():
@@ -41,7 +41,7 @@ if __name__ == '__main__':
         nbr_bestekkoppelingen = len(bestekkoppelingen)
         nbr_bestekkoppelingen_update = len(bestekkoppelingen_update)
 
-        if (nbr_bestekkoppelingen - nbr_bestekkoppelingen_update) == 1:
+        if (nbr_bestekkoppelingen - nbr_bestekkoppelingen_update) == 1 and nbr_bestekkoppelingen_update >= 1:
             print(f'\t# bestekkoppelingen intial: {nbr_bestekkoppelingen}')
             print(f'\t# bestekkoppelingen new: {nbr_bestekkoppelingen_update}')
 
