@@ -46,7 +46,7 @@ class ExcelModifier:
             (
                 get_column_letter(col_idx)
                 for col_idx, cell in enumerate(ws[1], start=1)
-                if str.lower(cell.value) == "uuid"
+                if "uuid" in str.lower(cell.value)
             ),
             None,
         )

@@ -845,3 +845,9 @@ class EMInfraClient:
         if response.status_code != 202:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
+
+    def update_kenmerk(self, asset_uuid=str, kenmerk_uuid= str, request_body= dict):
+        response = self.requester.put(url=f'core/api/assets/{asset_uuid}/kenmerken/{kenmerk_uuid}', json=request_body)
+        if response.status_code != 202:
+            print(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
