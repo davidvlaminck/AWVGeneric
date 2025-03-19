@@ -825,7 +825,7 @@ class EMInfraClient:
 
         return next(KenmerkTypeDTO.from_dict(item) for item in response.json()['data'])
 
-    def add_kenmerk_to_assettype(self, assettype_uuid: str, kenmerktype_uuid: str):
+    def add_kenmerk_to_assettype(self, assettype_uuid: str, kenmerktype_uuid: str) -> None:
         r = ResourceRefDTO(uuid=kenmerktype_uuid)
         add_dto = AssetTypeKenmerkTypeAddDTO(kenmerkType=ResourceRefDTO(uuid=kenmerktype_uuid))
         response = self.requester.post(f'core/api/assettypes/{assettype_uuid}/kenmerktypes', data=add_dto.json())
@@ -833,7 +833,7 @@ class EMInfraClient:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-    def update_eigenschap(self, asset_uuid: str, eigenschap_uuid: str, eigenschap_waarde: str):
+    def update_eigenschap(self, asset_uuid: str, eigenschap_uuid: str, eigenschap_waarde: str) -> None:
         request_body = {
             "data": [{
                 "eigenschap": {"uuid": eigenschap_uuid},
@@ -846,7 +846,7 @@ class EMInfraClient:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-    def update_kenmerk(self, asset_uuid=str, kenmerk_uuid= str, request_body= dict):
+    def update_kenmerk(self, asset_uuid=str, kenmerk_uuid= str, request_body= dict) -> None:
         response = self.requester.put(url=f'core/api/assets/{asset_uuid}/kenmerken/{kenmerk_uuid}', json=request_body)
         if response.status_code != 202:
             print(response)
