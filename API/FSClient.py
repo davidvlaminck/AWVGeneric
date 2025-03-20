@@ -36,11 +36,14 @@ class FSClient:
         line = await stream_reader.read()
         return line.decode('utf-8').strip()
 
-    async def download_layer_to_records(self, layer: str, session, page_size: int = 1000):
-        start = 0
+    async def download_layer_to_records(self, layer: str, session, start: int = 0, page_size: int = 1000):
+        break_after_call = False
         for _ in range(self.requester.retries):
             with tqdm(unit=' records', desc=layer) as pbar:
                 while True:
+                    if break_after_call:
+                        return
+                    break_after_call = True
                     url = f'{self.requester.first_part_url}{layer}/query?fmt=json&projection=properties&start={start}&limit={page_size}'
                     url = url.replace('services.', '').replace('/cert', '')
                     async with session.get(url=url, headers=self.requester.headers) as response:
@@ -64,8 +67,8 @@ class FSClient:
                         except Exception as ex:
                             print(ex)
 
-        raise RuntimeError(f"GET request failed after {self.requester.retries} retries. Last response:"
-                           f" {response.text}")
+        raise RuntimeError(f"GET request failed after {self.requester.retries} retries. request_uri = '{url}'"
+                           f"Last response: {response.text}")
 
 
     async def download_layer_to_records2(self, layer: str, session):
@@ -90,7 +93,8 @@ class FSClient:
                                     pbar.update(len(chunks))
                                     for c in chunks:
                                         yield c
-
+                                    if total_size >= 2000:
+                                        return
                                 else:
                                     if chunk_rest:
                                         total_size += 1

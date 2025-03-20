@@ -30,22 +30,36 @@ async def main():
     fs_client = FSClient(env=Environment.PRD, auth_type=AuthType.COOKIE, cookie=cookie)
 
     layers = [
-        #"bebouwdekommen_wrapp",  # 1 seconde # 33788
-        #'innames',  # 21 seconden 84659
+        "bebouwdekommen_wrapp",  # 1 seconde # 33788
+        'innames',  # 21 seconden 84659
         #
-        #"fietspaden_wrapp",  # 13 seconden 137170
+        "fietspaden_wrapp",  # 13 seconden 137170
         'uvroutes',  # 4 seconden 2470
-        #"referentiepunten2",  # 4 seconden 82616 records
+        "referentiepunten2",  # 4 seconden 82616 records
     ]
-    # total 168 seconds
-    # stream: 41 second
+    # total for 2k each = 4 seconds
+
+    # tasks = []
+    # connector = aiohttp.TCPConnector(limit=10)
+    # async with ClientSession(connector=connector) as session:
+    #     for layer in layers:
+    #         tasks.append(asyncio.create_task(coroutine_wrapper(fs_client.download_layer_to_records2(
+    #             layer=layer, session=session))))
+    #
+    #     results = await asyncio.gather(*tasks)
+    #     for result in results:
+    #         print(result.head())
 
     tasks = []
     connector = aiohttp.TCPConnector(limit=10)
     async with ClientSession(connector=connector) as session:
         for layer in layers:
             tasks.append(asyncio.create_task(coroutine_wrapper(fs_client.download_layer_to_records(
-                layer=layer, session=session))))
+                layer=layer, session=session, start=0, page_size=1000))))
+            tasks.append(asyncio.create_task(coroutine_wrapper(fs_client.download_layer_to_records(
+                layer=layer, session=session, start=1000, page_size=1000))))
+            tasks.append(asyncio.create_task(coroutine_wrapper(fs_client.download_layer_to_records(
+                layer=layer, session=session, start=2000, page_size=1000))))
 
         results = await asyncio.gather(*tasks)
         for result in results:
