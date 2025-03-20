@@ -15,14 +15,15 @@ def main(chunk_size: int):
 
     settings_path = Path('C:\\Users\\vlaminda\\Documents\\resources\\settings_SyncOTLDataToLegacy.json')
     settings_path = Path('/home/davidlinux/Documents/AWV/resources/settings_SyncOTLDataToLegacy.json')
+
     fs_client = FSClient(settings_path=settings_path, auth_type=AuthType.JWT, env=Environment.PRD)
 
     layers = [
-    #'innames', # 21 seconden
-    "bebouwdekommen_wrapp", # 1 seconde
-    #"fietspaden_wrapp", # 13 seconden
-    'uvroutes', # 4 seconden
-    "referentiepunten2",  # 4 seconden
+        #'innames',
+        # "bebouwdekommen_wrapp",
+        # "fietspaden_wrapp",
+        'uvroutes',
+        #"referentiepunten2",
     ]
 
     for layer in layers:
@@ -43,15 +44,3 @@ if __name__ == '__main__':
         main(chunk_size=chunk_size)
         stop = time.time()
         print(f"Execution time with chunk_size {chunk_size}: {round(stop - start, 2)}")
-
-    # 16kB : 19.12 - 15.72
-    # 32kB : 23.04 - 19.29
-    # 64kB : 20.11 - 18.96
-    # 128kB : 13.17 - 27.63
-    # 256kB : 17.21 - 12.69
-    # 512kB : 20.23 - 17.7
-    # 768kB : 29.48 - 16.63
-    # 1024kB : 31.31 - 18.08
-    # 2048kB : 24.53 - 19.73
-    # 5MB  28.201
-    # 10MB  25.485

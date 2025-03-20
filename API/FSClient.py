@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Iterator
 
 from tqdm import tqdm
 
@@ -31,13 +32,12 @@ class FSClient:
         print(f"\r✅ {pbar.n / (1000*1000)} MB gedownload.")
 
 
-    def download_layer_to_records(self, layer: str, chunk_size: int = 1024*1024) -> None:
+    def download_layer_to_records(self, layer: str, chunk_size: int = 1024*256):
         response = self.requester.get(url=f'{layer}/query?fmt=json&projection=properties', stream=True)
         if response.status_code != 200:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-        chunk_size = 1024*256
         chunk_rest = ''
 
         with tqdm(unit=' records', desc=layer) as pbar:
