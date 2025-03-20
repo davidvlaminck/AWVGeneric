@@ -15,25 +15,30 @@ from API.FSClient import FSClient
 async def coroutine_wrapper(async_gen):
     records=[]
     async for record in async_gen:
-        record = json.loads(record)
-        record.update(record.pop('properties'))
-        records.append(record)
+        try:
+            record = json.loads(record)
+            record.update(record.pop('properties'))
+            records.append(record)
+        except json.JSONDecodeError:
+            print(f"Error: {record}")
 
     return DataFrame(records)
 
 
 async def main():
-    cookie='2eceed0bd1d44e50a507bb9e8d5eedfd'
+    cookie='01fa3af312454ab1bce93c64d77d0a83'
     fs_client = FSClient(env=Environment.PRD, auth_type=AuthType.COOKIE, cookie=cookie)
 
     layers = [
-        "bebouwdekommen_wrapp",  # 1 seconde
-        'innames',  # 21 seconden
-
-        "fietspaden_wrapp",  # 13 seconden
-        'uvroutes',  # 4 seconden
-        "referentiepunten2",  # 4 seconden
+        #"bebouwdekommen_wrapp",  # 1 seconde # 33788
+        #'innames',  # 21 seconden 84659
+        #
+        #"fietspaden_wrapp",  # 13 seconden 137170
+        'uvroutes',  # 4 seconden 2470
+        #"referentiepunten2",  # 4 seconden 82616 records
     ]
+    # total 168 seconds
+    # stream: 41 second
 
     tasks = []
     connector = aiohttp.TCPConnector(limit=10)

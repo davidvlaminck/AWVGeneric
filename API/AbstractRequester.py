@@ -21,6 +21,7 @@ class AbstractRequester(metaclass=abc.ABCMeta):
                     if str(response.status).startswith('2'):
                         headers = dict(response.headers)
                         content = await response.text()
+
                         return headers, content
         raise RuntimeError(f"GET request failed after {self.retries} retries. Last response: {await response.text()}")
 

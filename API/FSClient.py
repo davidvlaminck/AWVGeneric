@@ -31,8 +31,44 @@ class FSClient:
 
         print(f"\r✅ {pbar.n / (1000*1000)} MB gedownload.")
 
+    @classmethod
+    async def read_all_lines(cls, stream_reader):
+        line = await stream_reader.read()
+        return line.decode('utf-8').strip()
 
-    async def download_layer_to_records(self, layer: str, session):
+    async def download_layer_to_records(self, layer: str, session, page_size: int = 1000):
+        start = 0
+        for _ in range(self.requester.retries):
+            with tqdm(unit=' records', desc=layer) as pbar:
+                while True:
+                    url = f'{self.requester.first_part_url}{layer}/query?fmt=json&projection=properties&start={start}&limit={page_size}'
+                    url = url.replace('services.', '').replace('/cert', '')
+                    async with session.get(url=url, headers=self.requester.headers) as response:
+                        try:
+                            if not str(response.status).startswith('2'):
+                                raise RuntimeError(f"Error: {response.text}")
+
+                            decoded = await self.read_all_lines(response)
+                            chunks = decoded.split('\n')
+                            if chunks[-1] == '':
+                                chunks.pop(-1)
+                            if not chunks:
+                                return
+                            start += len(chunks)
+                            pbar.update(len(chunks))
+
+                            for c in chunks:
+                                yield c
+
+                            # print(f"\r✅ {pbar.n} records gedownload.")
+                        except Exception as ex:
+                            print(ex)
+
+        raise RuntimeError(f"GET request failed after {self.requester.retries} retries. Last response:"
+                           f" {response.text}")
+
+
+    async def download_layer_to_records2(self, layer: str, session):
         total_size = 0
         chunk_size = 1024 * 1024  # 1 MB
         chunk_rest = ''
