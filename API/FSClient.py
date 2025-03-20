@@ -31,29 +31,29 @@ class FSClient:
         print(f"\r✅ {pbar.n / (1000*1000)} MB gedownload.")
 
 
-    def download_layer_to_records(self, layer: str) -> None:
+    def download_layer_to_records(self, layer: str, chunk_size: int = 1024*1024) -> None:
         response = self.requester.get(url=f'{layer}/query?fmt=json&projection=properties', stream=True)
         if response.status_code != 200:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-        total_size = 0
-        chunk_size = 1024 * 1024  # 1 MB
+        chunk_size = 1024*256
         chunk_rest = ''
 
         with tqdm(unit=' records', desc=layer) as pbar:
             for chunk in response.iter_content(chunk_size=chunk_size):
                 if chunk:
                     chunk_rest += chunk.decode("utf-8")
-                    chunks = chunk_rest.split('\n')
-                    chunk_rest = chunks.pop(-1)
-                    total_size += len(chunks)
-                    pbar.update(len(chunks))
-                    yield from chunks
-                else:
-                    if chunk_rest:
-                        total_size += 1
-                        pbar.update(1)
-                        yield chunk_rest
+                    chunk_rest = yield from self._process_chunk(chunk_rest, pbar)
+                elif chunk_rest:
+                    chunk_rest = yield from self._process_chunk(chunk_rest, pbar)
 
         print(f"\r✅ {pbar.n} records gedownload.")
+
+    @classmethod
+    def _process_chunk(cls, chunk_rest, pbar) -> str:
+        chunks = chunk_rest.split('\n')
+        chunk_rest = chunks.pop(-1)
+        pbar.update(len(chunks))
+        yield from chunks
+        return chunk_rest
