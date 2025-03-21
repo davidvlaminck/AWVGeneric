@@ -923,20 +923,3 @@ class EMInfraClient:
         if response.status_code != 202:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
-
-    def search_child_assets(self, asset_uuid: str) -> Generator[AssetDTO] | None:
-        query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
-                             expansions=ExpansionsDTO(fields=['parent']),
-                             selection=SelectionDTO(
-                                 expressions=[ExpressionDTO(
-                                     terms=[
-                                         TermDTO(property='actief', operator=OperatorEnum.EQ, value=True)
-                                     ])]))
-        url = f"core/api/assets/{asset_uuid}/assets/search"
-        while True:
-            json_dict = self.requester.post(url, data=query_dto.json()).json()
-            yield from [AssetDTO.from_dict(item) for item in json_dict['data']]
-            dto_list_total = json_dict['totalCount']
-            query_dto.from_ = json_dict['from'] + query_dto.size
-            if query_dto.from_ >= dto_list_total:
-                break
