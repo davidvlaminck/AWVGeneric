@@ -10,7 +10,8 @@ from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO
     BestekKoppeling, FeedPage, AssettypeDTO, AssettypeDTOList, DTOList, AssetDTO, BetrokkenerelatieDTO, AgentDTO, \
     PostitDTO, LogicalOpEnum, BestekCategorieEnum, BestekKoppelingStatusEnum, AssetDocumentDTO, LocatieKenmerk, \
     LogicalOpEnum, ToezichterKenmerk, IdentiteitKenmerk, AssetTypeKenmerkTypeDTO, KenmerkTypeDTO, \
-    AssetTypeKenmerkTypeAddDTO, ResourceRefDTO, Eigenschap, Event, EventType, ObjectType, EventContext
+    AssetTypeKenmerkTypeAddDTO, ResourceRefDTO, Eigenschap, Event, EventType, ObjectType, EventContext, ExpansionsDTO, \
+    RelatieTypeDTOList, BeheerobjectDTO
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 from utils.date_helpers import validate_dates, format_datetime
@@ -358,6 +359,12 @@ class EMInfraClient:
         json_dict = self.requester.get(url).json()
         return AssetDTO.from_dict(json_dict)
 
+    def get_beheerobject_by_uuid(self, beheerobject_uuid: str) -> BeheerobjectDTO:
+        url = f"core/api/beheerobjecten/{beheerobject_uuid}"
+        json_dict = self.requester.get(url).json()
+        return BeheerobjectDTO.from_dict(json_dict)
+
+
     def _search_assets_helper(self, query_dto: QueryDTO) -> Generator[AssetDTO]:
         query_dto.from_ = 0
         if query_dto.size is None:
@@ -383,8 +390,73 @@ class EMInfraClient:
         )
         yield from self._search_assets_helper(query_dto)
 
+    def search_parent_asset(self, asset_uuid: str) -> Generator[AssetDTO] | None:
+        query_dto = QueryDTO(size=1, from_=0, pagingMode=PagingModeEnum.OFFSET,
+                             expansions=ExpansionsDTO(fields=['parent']),
+                             selection=SelectionDTO(
+                                 expressions=[ExpressionDTO(
+                                     terms=[
+                                         TermDTO(property='id', operator=OperatorEnum.EQ, value=asset_uuid)
+                                     ])]))
+        url = "core/api/assets/search"
+        json_dict = self.requester.post(url, data=query_dto.json()).json()
+        # The Generator is limited to one object, since there is only one parent-asset.
+        yield from [AssetDTO.from_dict(json_dict['data'][0]['parent'])]
+
+    def search_child_assets(self, asset_uuid: str) -> Generator[AssetDTO] | None:
+        query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
+                             expansions=ExpansionsDTO(fields=['parent']),
+                             selection=SelectionDTO(
+                                 expressions=[ExpressionDTO(
+                                     terms=[
+                                         TermDTO(property='actief', operator=OperatorEnum.EQ, value=True)
+                                     ])]))
+        url = f"core/api/assets/{asset_uuid}/assets/search"
+        while True:
+            json_dict = self.requester.post(url, data=query_dto.json()).json()
+            yield from [AssetDTO.from_dict(item) for item in json_dict['data']]
+            dto_list_total = json_dict['totalCount']
+            query_dto.from_ = json_dict['from'] + query_dto.size
+            if query_dto.from_ >= dto_list_total:
+                break
+
+    def search_asset_by_uuid(self, asset_uuid: str) -> Generator[AssetDTO]:
+        query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
+                             expansions=ExpansionsDTO(fields=['parent']),
+                             selection=SelectionDTO(
+                                 expressions=[ExpressionDTO(
+                                     terms=[
+                                         TermDTO(property='id', operator=OperatorEnum.EQ, value=asset_uuid)
+                                     ])]))
+        yield from self._search_assets_helper(query_dto)
+
+    def search_relaties(self, asset_uuid: str, relatietype_uuid: str) -> Generator[RelatieTypeDTOList]:
+        url = f"core/api/assets/{asset_uuid}/kenmerken/{relatietype_uuid}/relatietypes"
+        json_dict = self.requester.get(url).json()
+        yield from [RelatieTypeDTOList.from_dict(item) for item in json_dict['data']]
+
+
     def search_all_assets(self, query_dto: QueryDTO) -> Generator[AssetDTO]:
         yield from self._search_assets_helper(query_dto)
+
+    def create_lgc_asset(self, parent_uuid: str, naam: str, typeUuid: str) -> dict | None:
+        """
+        Create a legacy asset in the arborescence
+        :param parent_uuid: asset uuid van de parent-asset
+        :param naam: naam van de nieuw aan te maken child-asset
+        :param typeUuid: assettype van het nieuw aan te maken child-asset
+        :return:
+        """
+        json_body = {
+            "naam": naam,
+            "typeUuid": typeUuid
+        }
+        url = f'core/api/assets/{parent_uuid}/assets'
+        response = self.requester.post(url, json=json_body)
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return response.json()
 
     def get_all_eventtypes(self) -> Generator[EventType]:
         url = f"core/api/events/eventtypes"
@@ -851,3 +923,20 @@ class EMInfraClient:
         if response.status_code != 202:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
+
+    def search_child_assets(self, asset_uuid: str) -> Generator[AssetDTO] | None:
+        query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
+                             expansions=ExpansionsDTO(fields=['parent']),
+                             selection=SelectionDTO(
+                                 expressions=[ExpressionDTO(
+                                     terms=[
+                                         TermDTO(property='actief', operator=OperatorEnum.EQ, value=True)
+                                     ])]))
+        url = f"core/api/assets/{asset_uuid}/assets/search"
+        while True:
+            json_dict = self.requester.post(url, data=query_dto.json()).json()
+            yield from [AssetDTO.from_dict(item) for item in json_dict['data']]
+            dto_list_total = json_dict['totalCount']
+            query_dto.from_ = json_dict['from'] + query_dto.size
+            if query_dto.from_ >= dto_list_total:
+                break
