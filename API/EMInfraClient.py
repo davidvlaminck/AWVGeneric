@@ -10,7 +10,8 @@ from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO
     BestekKoppeling, FeedPage, AssettypeDTO, AssettypeDTOList, DTOList, AssetDTO, BetrokkenerelatieDTO, AgentDTO, \
     PostitDTO, LogicalOpEnum, BestekCategorieEnum, BestekKoppelingStatusEnum, AssetDocumentDTO, LocatieKenmerk, \
     LogicalOpEnum, ToezichterKenmerk, IdentiteitKenmerk, AssetTypeKenmerkTypeDTO, KenmerkTypeDTO, \
-    AssetTypeKenmerkTypeAddDTO, ResourceRefDTO, Eigenschap, Event, EventType, ObjectType, EventContext
+    AssetTypeKenmerkTypeAddDTO, ResourceRefDTO, Eigenschap, Event, EventType, ObjectType, EventContext, ExpansionsDTO, \
+    RelatieTypeDTO
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 from utils.date_helpers import validate_dates, format_datetime
@@ -383,8 +384,65 @@ class EMInfraClient:
         )
         yield from self._search_assets_helper(query_dto)
 
+    def search_parent_asset(self, asset_uuid: str) -> Generator[AssetDTO] | None:
+        query_dto = QueryDTO(size=1, from_=0, pagingMode=PagingModeEnum.OFFSET,
+                             expansions=ExpansionsDTO(fields=['parent']),
+                             selection=SelectionDTO(
+                                 expressions=[ExpressionDTO(
+                                     terms=[
+                                         TermDTO(property='id', operator=OperatorEnum.EQ, value=asset_uuid)
+                                     ])]))
+        url = "core/api/assets/search"
+        json_dict = self.requester.post(url, data=query_dto.json()).json()
+        # The Generator is limited to one object, since there is only one parent-asset.
+        yield from [AssetDTO.from_dict(json_dict['data'][0]['parent'])]
+
+    def search_child_assets(self, asset_uuid: str) -> Generator[AssetDTO] | None:
+        query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
+                             expansions=ExpansionsDTO(fields=['parent']),
+                             selection=SelectionDTO(
+                                 expressions=[ExpressionDTO(
+                                     terms=[
+                                         TermDTO(property='actief', operator=OperatorEnum.EQ, value=True)
+                                     ])]))
+        url = f"core/api/assets/{asset_uuid}/assets/search"
+        while True:
+            json_dict = self.requester.post(url, data=query_dto.json()).json()
+            yield from [AssetDTO.from_dict(item) for item in json_dict['data']]
+            dto_list_total = json_dict['totalCount']
+            query_dto.from_ = json_dict['from'] + query_dto.size
+            if query_dto.from_ >= dto_list_total:
+                break
+
+    def search_relaties(self, assetId: str, kenmerkTypeId: str, relatieTypeId: str) -> Generator[RelatieTypeDTO]:
+        url = f"core/api/assets/{assetId}/kenmerken/{kenmerkTypeId}/assets-via/{relatieTypeId}"
+        json_dict = self.requester.get(url).json()
+        yield from [RelatieTypeDTO.from_dict(item) for item in json_dict['data']]
+
+
     def search_all_assets(self, query_dto: QueryDTO) -> Generator[AssetDTO]:
         yield from self._search_assets_helper(query_dto)
+
+    def create_lgc_asset(self, parent_uuid: str, naam: str, typeUuid: str) -> dict | None:
+        """
+        Create a legacy asset in the arborescence
+        :param parent_uuid: asset uuid van de parent-asset
+        :param naam: naam van de nieuw aan te maken child-asset
+        :param typeUuid: assettype van het nieuw aan te maken child-asset
+        :return:
+        """
+        json_body = {
+            "naam": naam,
+            "typeUuid": typeUuid
+        }
+        url = f'core/api/assets/{parent_uuid}/assets'
+        response = self.requester.post(url, json=json_body)
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return response.json()
+
+
 
     def get_all_eventtypes(self) -> Generator[EventType]:
         url = f"core/api/events/eventtypes"
@@ -848,6 +906,23 @@ class EMInfraClient:
 
     def update_kenmerk(self, asset_uuid=str, kenmerk_uuid= str, request_body= dict) -> None:
         response = self.requester.put(url=f'core/api/assets/{asset_uuid}/kenmerken/{kenmerk_uuid}', json=request_body)
+        if response.status_code != 202:
+            print(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+
+    def add_relatie(self, assetId: str, kenmerkTypeId: str, relatieTypeId: str, doel_assetId: str) -> None:
+        """
+        https://apps.mow.vlaanderen.be/eminfra/core/swagger-ui/#/kenmerk/addRelatie_40
+
+        :param assetId:
+        :param kenmerkTypeId: 91d6223c-c5d7-4917-9093-f9dc8c68dd3e
+        :param relatieTypeId: f2c5c4a1-0899-4053-b3b3-2d662c717b44
+        :return:
+        """
+        # todo assettype in een Dictionary gieten
+        json_body = {"uuid": doel_assetId}
+        url = f'core/api/assets/{assetId}/kenmerken/{kenmerkTypeId}/assets-via/{relatieTypeId}'
+        response = self.requester.post(url=url, data=json_body)
         if response.status_code != 202:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
