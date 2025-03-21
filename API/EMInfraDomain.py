@@ -538,6 +538,22 @@ class BetrokkenerelatieDTO(BaseDataclass):
 
 
 @dataclass
+class RelatieTypeDTO(BaseDataclass):
+    _type: str
+    uuid: str
+    createdOn: str
+    modifiedOn: str
+    naam: str
+    actief: bool
+    type: dict
+    toestand: AssetDTOToestand
+    links: [Link]
+    authorizationMetadata: dict | None = None
+
+    def __post_init__(self):
+        self._fix_nested_list_classes({('links', Link)})
+
+@dataclass
 class PostitDTO(BaseDataclass):
     uuid: str
     createdOn: str
