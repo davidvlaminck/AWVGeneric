@@ -48,7 +48,7 @@ class EMInfraClient:
         file = self.requester.get(doc_download_link)
 
         with open(f'{directory}/{file_name}', 'wb') as f:
-            print(f'Writing file {file_name} to temp location: {directory}.')
+            logging.info(f'Writing file {file_name} to temp location: {directory}.')
             f.write(file.content)
             return directory / file_name
 
@@ -56,7 +56,7 @@ class EMInfraClient:
         response = self.requester.get(
             url=f'core/api/installaties/{asset_uuid}/kenmerken/ee2e627e-bb79-47aa-956a-ea167d20acbd/bestekken')
         if response.status_code != 200:
-            print(response)
+            logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
         return [BestekKoppeling.from_dict(item) for item in response.json()['data']]
@@ -65,18 +65,16 @@ class EMInfraClient:
         response = self.requester.get(
             url=f'core/api/assets/{asset_uuid}/kenmerken/80052ed4-2f91-400c-8cba-57624653db11')
         if response.status_code != 200:
-            print(response)
+            logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
-        # print(response.json())
         return LocatieKenmerk.from_dict(response.json())
 
     def get_kenmerk_toezichter_by_asset_uuid(self, asset_uuid: str) -> ToezichterKenmerk:
         response = self.requester.get(
             url=f'core/api/assets/{asset_uuid}/kenmerken/f0166ba2-757c-4cf3-bf71-2e4fdff43fa3')
         if response.status_code != 200:
-            print(response)
+            logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
-        # print(response.json())
         return ToezichterKenmerk.from_dict(response.json())
 
 
@@ -84,22 +82,10 @@ class EMInfraClient:
         response = self.requester.get(
             url=f'identiteit/api/identiteiten/{toezichter_uuid}')
         if response.status_code != 200:
-            print(response)
+            logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
-        # print(response.json())
         return IdentiteitKenmerk.from_dict(response.json())
 
-
-    # def get_asset_by_bestekref(self, bestekref: str) -> [AssetDTO]:
-        # response = self.requester.get(
-        #     url=f'core/api/installaties/{asset_uuid}/kenmerken/ee2e627e-bb79-47aa-956a-ea167d20acbd/bestekken')
-        # if response.status_code != 200:
-        #     print(response)
-        #     raise ProcessLookupError(response.content.decode("utf-8"))
-        #
-        # print(response.json()['data'])
-        #
-        # return [BestekKoppeling.from_dict(item) for item in response.json()['data']]
 
     def search_documents_by_asset_uuid(self, asset_uuid: str, query_dto: QueryDTO) -> Generator[AssetDocumentDTO]:
         """Search documents by asset uuid
@@ -157,7 +143,7 @@ class EMInfraClient:
 
         response = self.requester.post('core/api/bestekrefs/search', data=query_dto.json())
         if response.status_code != 200:
-            print(response)
+            logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
         return [BestekRef.from_dict(item) for item in response.json()['data']][0]
@@ -172,7 +158,7 @@ class EMInfraClient:
 
         response = self.requester.post('core/api/bestekrefs/search', data=query_dto.json())
         if response.status_code != 200:
-            print(response)
+            logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
         return [BestekRef.from_dict(item) for item in response.json()['data']][0]
@@ -183,7 +169,7 @@ class EMInfraClient:
             url=f'core/api/assets/{asset_uuid}/kenmerken/ee2e627e-bb79-47aa-956a-ea167d20acbd/bestekken',
             data=json.dumps({'data': [item.asdict() for item in bestekkoppelingen]}))
         if response.status_code != 202:
-            print(response)
+            logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
     def adjust_date_bestekkoppeling(self, asset_uuid: str, bestek_ref_uuid: str, start_datetime: datetime = None,
@@ -312,10 +298,6 @@ class EMInfraClient:
             bestekref = self.get_bestekref_by_eDelta_dossiernummer(eDelta_dossiernummer=eDelta_dossiernummer_old)
 
         self.end_bestekkoppeling(asset_uuid=asset_uuid, bestek_ref_uuid=bestekref.uuid, end_datetime=start_datetime)
-        # Raise an error when empty bestek
-        if not response.json()['data']:
-            raise ValueError(f'Bestek {eDelta_dossiernummer} werd niet teruggevonden')
-        # print(response.json()['data'])
 
         # Add bestekkoppeling
         if (eDelta_besteknummer_new is None) == (eDelta_dossiernummer_new is None):  # True if both are None or both are set
@@ -395,7 +377,8 @@ class EMInfraClient:
         url = "core/api/assets/search"
         json_dict = self.requester.post(url, data=query_dto.json()).json()
         # The Generator is limited to one object, since there is only one parent-asset.
-        yield from [AssetDTO.from_dict(json_dict['data'][0]['parent'])]
+        if json_dict['data']:
+            yield from [AssetDTO.from_dict(json_dict['data'][0]['parent'])]
 
     def search_child_assets(self, asset_uuid: str) -> Generator[AssetDTO] | None:
         query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
@@ -631,7 +614,7 @@ class EMInfraClient:
 
         response = self.requester.get(url)
         if response.status_code != 200:
-            print(response)
+            logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
         return PostitDTO.from_dict(response.json())
 
@@ -858,7 +841,7 @@ class EMInfraClient:
 
         response = self.requester.post('core/api/eigenschappen/search', data=query_dto.json())
         if response.status_code != 200:
-            print(response)
+            logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
         return [Eigenschap.from_dict(item) for item in response.json()['data']]
@@ -878,7 +861,7 @@ class EMInfraClient:
 
         response = self.requester.post('core/api/kenmerktypes/search', data=query_dto.json())
         if response.status_code != 200:
-            print(response)
+            logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
         return next(KenmerkTypeDTO.from_dict(item) for item in response.json()['data'])
@@ -888,7 +871,7 @@ class EMInfraClient:
         add_dto = AssetTypeKenmerkTypeAddDTO(kenmerkType=ResourceRefDTO(uuid=kenmerktype_uuid))
         response = self.requester.post(f'core/api/assettypes/{assettype_uuid}/kenmerktypes', data=add_dto.json())
         if response.status_code != 202:
-            print(response)
+            logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
     def update_eigenschap(self, asset_uuid: str, kenmerk_uuid: str, eigenschap: Eigenschap, typedValue: dict) -> None:
@@ -902,13 +885,13 @@ class EMInfraClient:
         }
         response = self.requester.patch(url=f'core/api/assets/{asset_uuid}/kenmerken/{kenmerk_uuid}/eigenschapwaarden', json=request_body)
         if response.status_code != 202:
-            print(response)
+            logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-    def update_kenmerk(self, asset_uuid=str, kenmerk_uuid=str, request_body=dict) -> None:
+    def update_kenmerk(self, asset_uuid: str, kenmerk_uuid: str, request_body: dict) -> None:
         response = self.requester.put(url=f'core/api/assets/{asset_uuid}/kenmerken/{kenmerk_uuid}', json=request_body)
         if response.status_code != 202:
-            print(response)
+            logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
     def add_relatie(self, assetId: str, kenmerkTypeId: str, relatieTypeId: str, doel_assetId: str) -> None:
@@ -931,14 +914,14 @@ class EMInfraClient:
         url = f'core/api/assets/{assetId}/kenmerken/{kenmerkTypeId}/{relatie_type}/{relatieTypeId}'
         response = self.requester.post(url=url, json=json_body)
         if response.status_code != 202:
-            print(response)
+            logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
     def get_kenmerken(self, assetId: str) -> list[KenmerkType]:
         url = f'core/api/assets/{assetId}/kenmerken'
         response = self.requester.get(url)
         if response.status_code != 200:
-            print(response)
+            logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
         return [KenmerkType.from_dict(item) for item in response.json()['data']]
 
