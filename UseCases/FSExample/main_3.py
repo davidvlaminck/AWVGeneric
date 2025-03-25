@@ -10,24 +10,25 @@ from API.FSClient import FSClient
 import cProfile
 
 
-def main():
+def main(chunk_size: int):
     logging.basicConfig(level=logging.INFO)
 
     settings_path = Path('C:\\Users\\vlaminda\\Documents\\resources\\settings_SyncOTLDataToLegacy.json')
     settings_path = Path('/home/davidlinux/Documents/AWV/resources/settings_SyncOTLDataToLegacy.json')
+
     fs_client = FSClient(settings_path=settings_path, auth_type=AuthType.JWT, env=Environment.PRD)
 
     layers = [
-    'innames', # 21 seconden
-    "bebouwdekommen_wrapp", # 1 seconde
-    "fietspaden_wrapp", # 13 seconden
-    'uvroutes', # 4 seconden
-    "referentiepunten2",  # 4 seconden
+        #'innames',
+        # "bebouwdekommen_wrapp",
+        # "fietspaden_wrapp",
+        'uvroutes',
+        #"referentiepunten2",
     ]
 
     for layer in layers:
         records=[]
-        for record in fs_client.download_layer_to_records(layer=layer):
+        for record in fs_client.download_layer_to_records(layer=layer, chunk_size=chunk_size):
             record = json.loads(record)
             record.update(record.pop('properties'))
             records.append(record)
@@ -38,8 +39,8 @@ def main():
 
 
 if __name__ == '__main__':
-    start = time.time()
-    main()
-    stop = time.time()
-    print(f"Execution time: {round(stop - start, 2)}")
-    # total 44.65
+    for chunk_size in [1024*256]:
+        start = time.time()
+        main(chunk_size=chunk_size)
+        stop = time.time()
+        print(f"Execution time with chunk_size {chunk_size}: {round(stop - start, 2)}")

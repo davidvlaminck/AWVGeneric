@@ -454,6 +454,21 @@ class AssetDTO(BaseDataclass):
         self._fix_enums({('toestand', AssetDTOToestand)})
         self._fix_nested_list_classes({('links', Link)})
 
+@dataclass
+class BeheerobjectDTO(BaseDataclass):
+    _type: str
+    uuid: str
+    createdOn: str
+    modifiedOn: str
+    actief: bool
+    links: [Link]
+    naam: str | None = None
+    type: dict | None = None
+
+    def __post_init__(self):
+        self._fix_nested_list_classes({('links', Link)})
+
+
 class DocumentCategorieEnum(Enum):
     AANGEBODEN_SERVICES = 'AANGEBODEN_SERVICES'
     ANDER = 'ANDER'
@@ -553,6 +568,15 @@ class RelatieTypeDTO(BaseDataclass):
 
     def __post_init__(self):
         self._fix_nested_list_classes({('links', Link)})
+
+@dataclass
+class RelatieTypeDTOList(BaseDataclass):
+    relatieType: RelatieTypeDTO | dict
+    links: [Link]
+
+    def __post_init__(self):
+        self._fix_nested_list_classes({('links', Link)})
+        self._fix_nested_classes({('relatieType', RelatieTypeDTO)})
 
 @dataclass
 class PostitDTO(BaseDataclass):

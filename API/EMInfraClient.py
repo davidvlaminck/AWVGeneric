@@ -11,7 +11,7 @@ from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO
     PostitDTO, LogicalOpEnum, BestekCategorieEnum, BestekKoppelingStatusEnum, AssetDocumentDTO, LocatieKenmerk, \
     LogicalOpEnum, ToezichterKenmerk, IdentiteitKenmerk, AssetTypeKenmerkTypeDTO, KenmerkTypeDTO, \
     AssetTypeKenmerkTypeAddDTO, ResourceRefDTO, Eigenschap, Event, EventType, ObjectType, EventContext, ExpansionsDTO, \
-    RelatieTypeDTO, KenmerkType, EigenschapValueDTO
+    RelatieTypeDTO, KenmerkType, EigenschapValueDTO, RelatieTypeDTOList, BeheerobjectDTO
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 from utils.date_helpers import validate_dates, format_datetime
@@ -341,6 +341,12 @@ class EMInfraClient:
         json_dict = self.requester.get(url).json()
         return AssetDTO.from_dict(json_dict)
 
+    def get_beheerobject_by_uuid(self, beheerobject_uuid: str) -> BeheerobjectDTO:
+        url = f"core/api/beheerobjecten/{beheerobject_uuid}"
+        json_dict = self.requester.get(url).json()
+        return BeheerobjectDTO.from_dict(json_dict)
+
+
     def _search_assets_helper(self, query_dto: QueryDTO) -> Generator[AssetDTO]:
         query_dto.from_ = 0
         if query_dto.size is None:
@@ -380,6 +386,7 @@ class EMInfraClient:
         if json_dict['data']:
             yield from [AssetDTO.from_dict(json_dict['data'][0]['parent'])]
 
+
     def search_child_assets(self, asset_uuid: str) -> Generator[AssetDTO] | None:
         query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              expansions=ExpansionsDTO(fields=['parent']),
@@ -401,6 +408,16 @@ class EMInfraClient:
         url = f"core/api/assets/{assetId}/kenmerken/{kenmerkTypeId}/assets-via/{relatieTypeId}"
         json_dict = self.requester.get(url).json()
         yield from [RelatieTypeDTO.from_dict(item) for item in json_dict['data']]
+
+    def search_asset_by_uuid(self, asset_uuid: str) -> Generator[AssetDTO]:
+        query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
+                             expansions=ExpansionsDTO(fields=['parent']),
+                             selection=SelectionDTO(
+                                 expressions=[ExpressionDTO(
+                                     terms=[
+                                         TermDTO(property='id', operator=OperatorEnum.EQ, value=asset_uuid)
+                                     ])]))
+        yield from self._search_assets_helper(query_dto)
 
 
     def search_all_assets(self, query_dto: QueryDTO) -> Generator[AssetDTO]:
@@ -424,7 +441,6 @@ class EMInfraClient:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
         return response.json()
-
 
 
     def get_all_eventtypes(self) -> Generator[EventType]:
