@@ -554,18 +554,17 @@ class BetrokkenerelatieDTO(BaseDataclass):
 
 @dataclass
 class RelatieTypeDTO(BaseDataclass):
+    _type: str
     uuid: str
     createdOn: str
     modifiedOn: str
-    naam: str
-    definitie: str
-    gericht: bool
     actief: bool
-    bronKenmerkType: dict
-    doelKenmerkType: dict
+    type: dict
+    toestand: AssetDTOToestand
     links: [Link]
-    uri: str | None = None
-    label: str | None = None
+    naam: str | None = None
+    authorizationMetadata: dict | None = None
+    commentaar: str | None = None
 
     def __post_init__(self):
         self._fix_nested_list_classes({('links', Link)})
@@ -626,6 +625,19 @@ class KenmerkTypeDTO(BaseDataclass):
         self._fix_nested_list_classes({('links', Link)})
 
 @dataclass
+class KenmerkType(BaseDataclass):
+    _type: str
+    type: KenmerkTypeDTO
+    links: [Link]
+    bestekRef: dict | None = None
+    bestekKoppelingen: dict | None = None
+    toezichter: dict | None =  None
+    toezichtGroep: dict | None = None
+
+    def __post_init__(self):
+        self._fix_nested_list_classes({('links', Link)})
+
+@dataclass
 class Eigenschap(BaseDataclass):
     uuid: str
     createdOn: str
@@ -645,6 +657,18 @@ class Eigenschap(BaseDataclass):
     def __post_init__(self):
         self._fix_nested_list_classes({('links', Link)})
 
+@dataclass
+class EigenschapValueDTO(BaseDataclass):
+    typedValue: dict
+    determinedOn: str
+    determinedBy: str
+    eigenschap: Eigenschap
+    actief: bool
+    kenmerkType: KenmerkTypeDTO
+    alias: str | None = None
+
+    def __post_init__(self):
+        self._fix_nested_classes({('eigenschap', Eigenschap), ('kenmerkType', KenmerkTypeDTO)})
 @dataclass
 class AssetTypeKenmerkTypeAddDTO(BaseDataclass):
     kenmerkType: ResourceRefDTO
