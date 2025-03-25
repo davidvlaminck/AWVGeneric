@@ -11,7 +11,7 @@ from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO
     PostitDTO, LogicalOpEnum, BestekCategorieEnum, BestekKoppelingStatusEnum, AssetDocumentDTO, LocatieKenmerk, \
     LogicalOpEnum, ToezichterKenmerk, IdentiteitKenmerk, AssetTypeKenmerkTypeDTO, KenmerkTypeDTO, \
     AssetTypeKenmerkTypeAddDTO, ResourceRefDTO, Eigenschap, Event, EventType, ObjectType, EventContext, ExpansionsDTO, \
-    RelatieTypeDTO
+    RelatieTypeDTO, KenmerkType, EigenschapValueDTO
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 from utils.date_helpers import validate_dates, format_datetime
@@ -891,20 +891,21 @@ class EMInfraClient:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-    def update_eigenschap(self, asset_uuid: str, eigenschap_uuid: str, eigenschap_waarde: str) -> None:
+    def update_eigenschap(self, asset_uuid: str, kenmerk_uuid: str, eigenschap: Eigenschap, typedValue: dict) -> None:
         request_body = {
-            "data": [{
-                "eigenschap": {"uuid": eigenschap_uuid},
-                "typedValue": {"_type": "text", "value": eigenschap_waarde}
+            "data": [
+                # vervang dit door de klasse Eigenschap...
+                {
+                "eigenschap": eigenschap.asdict(),
+                "typedValue": typedValue
             }]
         }
-        EIGENSCHAP_UUID = '7bb10957-9086-4a06-badb-2d1024156c38'
-        response = self.requester.patch(url=f'core/api/assets/{asset_uuid}/kenmerken/{EIGENSCHAP_UUID}/eigenschapwaarden', json=request_body)
+        response = self.requester.patch(url=f'core/api/assets/{asset_uuid}/kenmerken/{kenmerk_uuid}/eigenschapwaarden', json=request_body)
         if response.status_code != 202:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-    def update_kenmerk(self, asset_uuid=str, kenmerk_uuid= str, request_body= dict) -> None:
+    def update_kenmerk(self, asset_uuid=str, kenmerk_uuid=str, request_body=dict) -> None:
         response = self.requester.put(url=f'core/api/assets/{asset_uuid}/kenmerken/{kenmerk_uuid}', json=request_body)
         if response.status_code != 202:
             print(response)
@@ -919,10 +920,34 @@ class EMInfraClient:
         :param relatieTypeId: f2c5c4a1-0899-4053-b3b3-2d662c717b44
         :return:
         """
-        # todo assettype in een Dictionary gieten
+        _target_asset = self.get_asset_by_id(assettype_id=doel_assetId)
+        _type = _target_asset._type
+        if _type == 'installatie':
+            relatie_type = 'installaties-via'
+        else:
+            raise ValueError(f'Type of the "doel_assetId" {doel_assetId} can not be determined')
+
         json_body = {"uuid": doel_assetId}
-        url = f'core/api/assets/{assetId}/kenmerken/{kenmerkTypeId}/assets-via/{relatieTypeId}'
-        response = self.requester.post(url=url, data=json_body)
+        url = f'core/api/assets/{assetId}/kenmerken/{kenmerkTypeId}/{relatie_type}/{relatieTypeId}'
+        response = self.requester.post(url=url, json=json_body)
         if response.status_code != 202:
             print(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
+
+    def get_kenmerken(self, assetId: str) -> list[KenmerkType]:
+        url = f'core/api/assets/{assetId}/kenmerken'
+        response = self.requester.get(url)
+        if response.status_code != 200:
+            print(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return [KenmerkType.from_dict(item) for item in response.json()['data']]
+
+    def get_eigenschappen(self, assetId: str) -> list[EigenschapValueDTO]:
+        # ophalen kenmerk_uuid
+        kenmerken = self.get_kenmerken(assetId=assetId)
+        kenmerk_uuid = [kenmerk.type.get('uuid') for kenmerk in kenmerken if kenmerk.type.get('naam').startswith('Eigenschappen')][0]
+
+        # ophalen eigenschapwaarden
+        url = f'core/api/assets/{assetId}/kenmerken/{kenmerk_uuid}/eigenschapwaarden'
+        json_dict = self.requester.get(url).json()
+        return [EigenschapValueDTO.from_dict(item) for item in json_dict['data']]
