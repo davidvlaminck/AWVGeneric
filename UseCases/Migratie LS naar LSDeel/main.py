@@ -1,5 +1,5 @@
 import os
- import pandas as pd
+import pandas as pd
 
 from API.EMInfraClient import EMInfraClient
 from API.EMInfraDomain import QueryDTO, PagingModeEnum, ExpansionsDTO, SelectionDTO, ExpressionDTO, OperatorEnum, \
@@ -98,7 +98,7 @@ if __name__ == '__main__':
             try:
                 eminfra_client.add_relatie(assetId=ls_asset.uuid, kenmerkTypeId=kenmerkTypeId_voedt,
                                        relatieTypeId=relatieTypeId_voedt, doel_assetId=lsdeel_asset.uuid)
-            except:
+            except Exception as e:
                 print(f'Voedings relatie kan niet gelegd worden van asset: {ls_asset.uuid} naar: {lsdeel_asset.uuid}')
 
 
@@ -114,7 +114,7 @@ if __name__ == '__main__':
             try:
                 eminfra_client.add_relatie(assetId=ls_asset.uuid, kenmerkTypeId=kenmerkTypeId_bevestiging,
                                        relatieTypeId=relatieTypeId_bevestiging, doel_assetId=parent_asset.uuid)
-            except:
+            except Exception as e:
                 print(f'Bevestiging relatie kan niet gelegd worden tussen asset: {ls_asset.uuid} en diens parent: {parent_asset.uuid}')
 
         # ophalen bevestigingsrelatie van de LSDeel
@@ -127,7 +127,7 @@ if __name__ == '__main__':
             try:
                 eminfra_client.add_relatie(assetId=lsdeel_asset.uuid, kenmerkTypeId=kenmerkTypeId_bevestiging,
                                        relatieTypeId=relatieTypeId_bevestiging, doel_assetId=parent_asset.uuid)
-            except:
+            except Exception as e:
                 print(f'Bevestiging relatie kan niet gelegd worden tussen asset: {lsdeel_asset.uuid} en diens parent: {parent_asset.uuid}')
 
         # ophalen alle beschikbare eigenschappen LS
