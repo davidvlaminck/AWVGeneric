@@ -11,7 +11,7 @@ from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO
     PostitDTO, LogicalOpEnum, BestekCategorieEnum, BestekKoppelingStatusEnum, AssetDocumentDTO, LocatieKenmerk, \
     LogicalOpEnum, ToezichterKenmerk, IdentiteitKenmerk, AssetTypeKenmerkTypeDTO, KenmerkTypeDTO, \
     AssetTypeKenmerkTypeAddDTO, ResourceRefDTO, Eigenschap, Event, EventType, ObjectType, EventContext, ExpansionsDTO, \
-    RelatieTypeDTO, KenmerkType, EigenschapValueDTO, RelatieTypeDTOList, BeheerobjectDTO
+    RelatieTypeDTO, KenmerkType, EigenschapValueDTO, RelatieTypeDTOList, BeheerobjectDTO, ToezichtgroepTypeEnum
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 from utils.date_helpers import validate_dates, format_datetime
@@ -861,6 +861,42 @@ class EMInfraClient:
             raise ProcessLookupError(response.content.decode("utf-8"))
 
         return [Eigenschap.from_dict(item) for item in response.json()['data']]
+
+    def search_toezichtgroep(self, naam: str, type: ToezichtgroepTypeEnum = None) -> Generator[
+        dict]:  # todo wijzig dict naar een toezichtgroep object
+        query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
+                             selection=SelectionDTO(
+                                 expressions=[
+                                     ExpressionDTO(
+                                         terms=[
+                                             TermDTO(property='naam',
+                                                     operator=OperatorEnum.EQ,
+                                                     value=naam),
+                                             TermDTO(property='referentie',
+                                                     operator=OperatorEnum.EQ,
+                                                     value=naam,
+                                                     logicalOp=LogicalOpEnum.OR),
+
+                                         ])
+                                 ]))
+        if type:
+            expression_type = ExpressionDTO(
+                terms=[
+                    TermDTO(
+                        property='type', operator=OperatorEnum.EQ, value=type)
+                ],
+                logicalOp=LogicalOpEnum.AND
+            )
+            query_dto.selection.expressions.append(expression_type)
+        url = "identiteit/api/toezichtgroepen/search"
+        while True:
+            json_dict = self.requester.post(url, data=query_dto.json()).json()
+            yield from [item for item in json_dict['data']]
+            # yield from [ToezichtgroepDTO.from_dict(item) for item in json_dict['data']]
+            dto_list_total = json_dict['totalCount']
+            query_dto.from_ = json_dict['from'] + query_dto.size
+            if query_dto.from_ >= dto_list_total:
+                break
 
     def get_kenmerken_by_assettype_uuid(self, uuid: str) -> [AssetTypeKenmerkTypeDTO]:
         url = f"core/api/assettypes/{uuid}/kenmerktypes"
