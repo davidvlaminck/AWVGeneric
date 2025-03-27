@@ -47,4 +47,4 @@ if __name__ == '__main__':
         #################################################################################
         kenmerken = eminfra_client.get_kenmerken(assetId=asset_uuid)
         kenmerk_uuid = next(kenmerk.type.get('uuid') for kenmerk in kenmerken if kenmerk.type.get('naam').startswith('Eigenschappen'))
-        eminfra_client.update_eigenschap(asset_uuid=asset_uuid, kenmerk_uuid=kenmerk_uuid, eigenschap_uuid=eigenschap_uuid, eigenschap_waarde=serienummer_new)
+        eminfra_client.update_eigenschap(assetId=asset_uuid, eigenschap=eigenschap_generator)
