@@ -509,6 +509,9 @@ class ProvincieEnum(Enum):
     LIMBURG = 'limburg'
     BRUSSEL = 'brussel'
 
+class ToezichtgroepTypeEnum(Enum):
+    INTERN = 'INTERN'
+    EXTERN = 'EXTERN'
 
 @dataclass
 class ResourceRefDTO(BaseDataclass):
