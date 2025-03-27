@@ -890,16 +890,16 @@ class EMInfraClient:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-    def update_eigenschap(self, asset_uuid: str, kenmerk_uuid: str, eigenschap: Eigenschap, typedValue: dict) -> None:
+    def update_eigenschap(self, assetId: str, eigenschap: EigenschapValueDTO) -> None:
         request_body = {
             "data": [
-                # vervang dit door de klasse Eigenschap...
                 {
-                "eigenschap": eigenschap.asdict(),
-                "typedValue": typedValue
+                "eigenschap": eigenschap.eigenschap.asdict(),
+                "typedValue": eigenschap.typedValue
             }]
         }
-        response = self.requester.patch(url=f'core/api/assets/{asset_uuid}/kenmerken/{kenmerk_uuid}/eigenschapwaarden', json=request_body)
+        kenmerk_uuid = eigenschap.kenmerkType.uuid
+        response = self.requester.patch(url=f'core/api/assets/{assetId}/kenmerken/{kenmerk_uuid}/eigenschapwaarden', json=request_body)
         if response.status_code != 202:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
@@ -948,5 +948,10 @@ class EMInfraClient:
 
         # ophalen eigenschapwaarden
         url = f'core/api/assets/{assetId}/kenmerken/{kenmerk_uuid}/eigenschapwaarden'
+        json_dict = self.requester.get(url).json()
+        return [EigenschapValueDTO.from_dict(item) for item in json_dict['data']]
+
+    def get_eigenschapwaarden(self, assetId: str) -> Generator[EigenschapValueDTO]:
+        url = f'core/api/assets/{assetId}/eigenschapwaarden'
         json_dict = self.requester.get(url).json()
         return [EigenschapValueDTO.from_dict(item) for item in json_dict['data']]
