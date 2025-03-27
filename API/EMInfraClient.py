@@ -951,7 +951,7 @@ class EMInfraClient:
         json_dict = self.requester.get(url).json()
         return [EigenschapValueDTO.from_dict(item) for item in json_dict['data']]
 
-    def get_eigenschapwaarden(self, assetId: str) -> Generator[EigenschapValueDTO]:
+    def get_eigenschapwaarden(self, assetId: str) -> list[EigenschapValueDTO]:
         url = f'core/api/assets/{assetId}/eigenschapwaarden'
         json_dict = self.requester.get(url).json()
         return [EigenschapValueDTO.from_dict(item) for item in json_dict['data']]
