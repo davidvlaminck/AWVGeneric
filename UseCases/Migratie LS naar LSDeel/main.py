@@ -152,7 +152,4 @@ if __name__ == '__main__':
         kenmerk_uuid = next(kenmerk.type.get('uuid') for kenmerk in kenmerken if kenmerk.type.get('naam').startswith('Eigenschappen'))
         # Loop over het resultaat en genereer de eigenschappen voor het LSDeel
         for new_eigenschap in new_eigenschappen:
-            eminfra_client.update_eigenschap(asset_uuid=lsdeel_asset.uuid,
-                                             kenmerk_uuid=kenmerk_uuid,
-                                             eigenschap=new_eigenschap.eigenschap,
-                                             typedValue=new_eigenschap.typedValue)
+            eminfra_client.update_eigenschap(assetId=lsdeel_asset.uuid, eigenschap=new_eigenschap)
