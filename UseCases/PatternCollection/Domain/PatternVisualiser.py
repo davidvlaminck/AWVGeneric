@@ -7,7 +7,7 @@ from API.EMInfraClient import EMInfraClient
 from API.EMSONClient import EMSONClient
 from API.Enums import AuthType, Environment
 from UseCases.PatternCollection.Domain.AssetInfoCollector import AssetInfoCollector
-
+from UseCases.PatternCollection.Domain.InfoObject import directional_relations
 
 
 class PatternVisualiser:
@@ -30,7 +30,7 @@ class PatternVisualiser:
             
     @classmethod
     def generate_pattern_from_dicts(cls, dicts):
-        pattern = []
+        # sort assets and relations
         assets = {}
         relations = {}
         for d in dicts:
@@ -38,6 +38,8 @@ class PatternVisualiser:
                 relations[d['assetId']['identificator']] = d
             else:
                 assets[d['assetId']['identificator']] = d
+
+        # clean up relations
         for relation_key in list(relations.keys()):
             relation = relations[relation_key]
             source_id = relation['bronAssetId']['identificator']
@@ -45,6 +47,7 @@ class PatternVisualiser:
             if source_id not in assets or target_id not in assets:
                 relations.pop(relation_key)
 
+        # clean up assets
         used_assets = {}
         for relation in relations.values():
             source_id = relation['bronAssetId']['identificator']
@@ -52,7 +55,24 @@ class PatternVisualiser:
             used_assets[source_id] = assets[source_id]
             used_assets[target_id] = assets[target_id]
 
+        relation_types = {relation['typeURI'] for relation in relations.values()}
+        relation_types_dict = {relation_type: f'r{i+1}' for i, relation_type in enumerate(relation_types)}
+
+        asset_types = list({asset['typeURI'] for asset in used_assets.values()})
+        asset_types_dict = {asset_type: f'{chr(i+97)}' for i, asset_type in enumerate(asset_types)}
+
+
+        for relation in relations.values():
+            relation_type = relation['typeURI']
+            relation_id = relation_types_dict[relation_type]
+
+
+            directed = (relation_type in directional_relations)
+
+            source_id = relation['bronAssetId']['identificator']
+            target_id = relation['doelAssetId']['identificator']
 
 
 
+        pattern = []
         return pattern
