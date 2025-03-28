@@ -641,6 +641,22 @@ class KenmerkType(BaseDataclass):
         self._fix_nested_list_classes({('links', Link)})
 
 @dataclass
+class ToezichtgroepDTO(BaseDataclass):
+    _type: str
+    naam: str
+    uuid: str
+    referentie: str
+    actiefInterval: str
+    contactFiche: dict
+    links: [Link]
+    omschrijving: str | None = None
+    createdOn: str | None = None
+    modifiedOn: str | None = None
+
+    def __post_init__(self):
+        self._fix_nested_list_classes({('links', Link)})
+
+@dataclass
 class Eigenschap(BaseDataclass):
     uuid: str
     createdOn: str
