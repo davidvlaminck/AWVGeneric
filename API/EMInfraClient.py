@@ -731,21 +731,21 @@ class EMInfraClient:
         return response
 
     def get_objects_from_oslo_search_endpoint(self, url_part: str,
-                                              filter_string: dict = '{}', size: int = 100,
+                                              filter_dict: dict = '{}', size: int = 100,
                                               expansions_fields: [str] = None) -> Generator:
         """Returns Generator objects for each OSLO endpoint
 
         :param url_part: keyword to complete the url
         :type url_part: str
-        :param filter_string: filter condition
-        :type filter_string: dict
+        :param filter_dict: filter condition
+        :type filter_dict: dict
         :param size: amount of objects to return in 1 page or request
         :type size: int
         :param expansions_fields: additional fields to append to the results
         :type expansions_fields: [str]
         :return: Generator
         """
-        body = {'size': size, 'fromCursor': None, 'filters': filter_string}
+        body = {'size': size, 'fromCursor': None, 'filters': filter_dict}
         if expansions_fields:
             body['expansion']['fields'] = expansions_fields
         paging_cursor = None

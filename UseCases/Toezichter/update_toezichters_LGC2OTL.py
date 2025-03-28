@@ -24,7 +24,7 @@ if __name__ == '__main__':
         #################################################################################
         ####  Get betrokkenerelatie from OTL-asset (rol=toezichter)
         #################################################################################
-        generator_betrokkenerelaties = eminfra_client.get_objects_from_oslo_search_endpoint(size=1, url_part='betrokkenerelaties', filter_string={"bronAsset": asset_uuid_otl, 'rol': 'toezichter'})
+        generator_betrokkenerelaties = eminfra_client.get_objects_from_oslo_search_endpoint(size=1, url_part='betrokkenerelaties', filter_dict={"bronAsset": asset_uuid_otl, 'rol': 'toezichter'})
         betrokkenerelaties = list(generator_betrokkenerelaties)
         if len(betrokkenerelaties) != 1:
             print(f'Exactly 1 betrokkenerelaties (type: toezichter) are expected for asset: {asset_uuid_otl}.\nFound {len(betrokkenerelaties)} betrokkenerelaties')
@@ -36,7 +36,7 @@ if __name__ == '__main__':
         #################################################################################
         ####  Get agent from the LGC-asset
         #################################################################################
-        generator_agents = eminfra_client.get_objects_from_oslo_search_endpoint(size=1, url_part='agents', filter_string={"naam": lgc_toezichthouder_full_name})
+        generator_agents = eminfra_client.get_objects_from_oslo_search_endpoint(size=1, url_part='agents', filter_dict={"naam": lgc_toezichthouder_full_name})
         agents = list(generator_agents)
         if len(agents) != 1:
             print(f'Agent {lgc_toezichthouder_full_name} was not found or returned multiple results.')
