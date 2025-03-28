@@ -1,21 +1,16 @@
+from collections.abc import Generator
 from API.EMInfraClient import EMInfraClient
+from API.EMInfraDomain import AssetDTO
 from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path
-from otlmow_model.OtlmowModel.Classes.Onderdeel import Beschermbuis, Voedingskabel, Signaalkabel
-from otlmow_model.OtlmowModel.BaseClasses.OTLObject import dynamic_create_instance_from_uri
-from otlmow_model.OtlmowModel.Classes.Onderdeel.HeeftBetrokkene import HeeftBetrokkene
 from otlmow_model.OtlmowModel.Classes.ImplementatieElement.RelatieObject import RelatieObject
-from otlmow_model.OtlmowModel.Helpers.RelationCreator import Agent, create_betrokkenerelation, create_relation
-from otlmow_model.OtlmowModel.BaseClasses.MetaInfo import meta_info
-from otlmow_model.OtlmowModel.Datatypes.KlBetrokkenheidRol import KlBetrokkenheidRol
+from otlmow_model.OtlmowModel.Helpers.RelationCreator import create_betrokkenerelation
 from otlmow_converter.OtlmowConverter import OtlmowConverter
-
 
 def load_settings():
     """Load API settings from JSON"""
     return Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
-
 
 def read_report(downloads_subpath: str, sheet_name: str = 'Resultaat', usecols: list = ["uuid"]):
     """Read RSA-report as input into a DataFrame."""
@@ -25,9 +20,45 @@ def read_report(downloads_subpath: str, sheet_name: str = 'Resultaat', usecols: 
     df_assets.drop_duplicates(inplace=True)
     return df_assets
 
-
 def construct_full_name(first_name: str, last_name: str) -> str | None:
     return " ".join([first_name, last_name]) if first_name and last_name else None
+
+def create_betrokkenerelatie(source: AssetDTO, agent_naam :str, rol: str) -> RelatieObject | None:
+    generator_agents = eminfra_client.get_objects_from_oslo_search_endpoint(
+        url_part='agents'
+        , filter_string={"naam": agent_naam})
+    agents = list(generator_agents)
+    if len(agents) != 1:
+        print('Agent was not found or returned multiple results.')
+        return None
+    agent_uri = agents[0].get('@type')
+    agent_uuid = agents[0].get('purl:Agent.agentId').get('DtcIdentificator.identificator')[:36]
+
+    return create_betrokkenerelation(rol=rol
+                                     , source_typeURI=source.type.uri
+                                     , source_uuid=source.uuid
+                                     , target_uuid=agent_uuid
+                                     , target_typeURI=agent_uri)
+
+def get_bestaande_betrokkenerelaties(asset: AssetDTO, rol: str, isActief: bool) -> Generator[RelatieObject]:
+    generator = eminfra_client.get_objects_from_oslo_search_endpoint(
+        url_part='betrokkenerelaties'
+        , filter_string={"bronAsset": asset.uuid, 'rol': rol})
+
+    for item in generator:
+        betrokkenerelatie_uuid = item['RelatieObject.assetId']['DtcIdentificator.identificator']
+        relatie = create_betrokkenerelation(
+            rol=rol,
+            source_typeURI=item['RelatieObject.bron']['@type'],
+            source_uuid=item['RelatieObject.bronAssetId']['DtcIdentificator.identificator'][:36],
+            target_typeURI=item['RelatieObject.doel']['@type'],
+            target_uuid=item['RelatieObject.doelAssetId']['DtcIdentificator.identificator'][:36],
+        )
+        relatie.assetId.identificator = betrokkenerelatie_uuid  # Assign existing UUID
+        relatie.assetId.identificator = betrokkenerelatie_uuid  # take the uuid of the existing relatie_toezichter
+        relatie.isActief = isActief
+        yield relatie
+            
 
 
 if __name__ == '__main__':
@@ -39,108 +70,50 @@ if __name__ == '__main__':
         usecols=["otl_uuid", "otl_uri", "lgc_uuid", "lgc_toezichthouder_gebruikersnaam", "lgc_toezichtsgroep_naam",
                  "lgc_toezichthouder_voornaam", "lgc_toezichthouder_naam"])
 
+    existing_assets = []
     created_assets = []
-    for index, asset in df_assets.iloc[15:16].iterrows():  # todo remove slicing of the dataframe
-        # otl_object = dynamic_create_instance_from_uri(asset.otl_uri)
-        # print(meta_info(otl_object))
+    for index, asset in df_assets.iloc[:30].iterrows():  # todo remove slicing of the dataframe
+        print(f'Processing asset: {asset.otl_uuid}')
+        #################################################################################
+        ####  Ophalen van de bestaande asset
+        #################################################################################
+        otl_asset = next(eminfra_client.search_asset_by_uuid(asset_uuid=asset.otl_uuid))
 
-        # search otl_asset and extract the uuid of the asset. This ensures that the asset exists.
-        otl_asset = eminfra_client.search_asset_by_uuid(asset_uuid=asset.otl_uuid)
+        #################################################################################
+        ####  Wis de bestaande betrokkenerelatie. Set isActief = False
+        #################################################################################
+        print('\tListing existing relations toezichter and toezichtsgroep')
+        existing_assets.extend(
+            list(get_bestaande_betrokkenerelaties(asset=otl_asset, rol='toezichter', isActief=False)))
 
+        existing_assets.extend(
+            list(get_bestaande_betrokkenerelaties(asset=otl_asset, rol='toezichtsgroep', isActief=False)))
+
+        #################################################################################
+        ####  Maak nieuwe BetrokkeneRelaties
+        #################################################################################
+        print('\tCreating new relations toezichter and toezichtsgroep')
         # search toezichter and extract the uuid of the toezichter. This ensures that the toezichter exists.
-        toezichthouder = construct_full_name(first_name=asset.lgc_toezichthouder_voornaam,
-                                             last_name=asset.lgc_toezichthouder_naam)
-        if toezichthouder:
-            generator_agents = eminfra_client.get_objects_from_oslo_search_endpoint(size=1, url_part='agents',
-                                                                                    filter_string={
-                                                                                        "naam": toezichthouder})
-            agents = list(generator_agents)
-            if len(agents) != 1:
-                print('Agent was not found or returned multiple results.')
-                continue
-            agent_uuid = agents[0].get('purl:Agent.agentId').get('DtcIdentificator.identificator')[:36]
-            agent_uri = agents[0].get('@type')
+        toezichter_naam = construct_full_name(first_name=asset.lgc_toezichthouder_voornaam,
+                                              last_name=asset.lgc_toezichthouder_naam)
+        toezichtgroep_naam = asset.lgc_toezichtsgroep_naam
 
-            relatie_toezichter = create_betrokkenerelation(rol='toezichter', source_typeURI=asset.otl_uri,
-                                                           source_uuid=asset.otl_uuid, target_uuid=agent_uuid,
-                                                           target_typeURI=agent_uri)
-            relatie_toezichter.assetId.identificator = f'HeeftBetrokkene_{index}'
+        if toezichter_naam:
+            print(f'\t\tToezichter: {toezichter_naam}')
+            nieuwe_relatie = create_betrokkenerelatie(source=otl_asset, agent_naam=toezichter_naam, rol='toezichter')
+            nieuwe_relatie.assetId.identificator = f'HeeftBetrokkene_{index}_toezichter'
+            created_assets.append(nieuwe_relatie)
 
-            created_assets.append(relatie_toezichter)
+        if toezichtgroep_naam:
+            print(f'\t\tToezichtsgroep: {toezichtgroep_naam}')
+            nieuwe_relatie = create_betrokkenerelatie(source=otl_asset, agent_naam=toezichtgroep_naam, rol='toezichtsgroep')
+            nieuwe_relatie.assetId.identificator = f'HeeftBetrokkene_{index}_toezichtsgroep'
+            created_assets.append(nieuwe_relatie)
 
-        toezichtgroep = asset.lgc_toezichtsgroep_naam
-        if toezichtgroep:
-            generator_toezichtgroep = eminfra_client.search_toezichtgroep(naam=toezichtgroep)
-            toezichtgroepen = list(generator_toezichtgroep)
-            if len(toezichtgroepen) != 1:
-                print('Toezichtgroep was not found or returned multiple results.')
-                continue
-            toezichtsgroep_uuid = toezichtgroepen[0].get('purl:Agent.agentId').get('DtcIdentificator.identificator')[
-                                  :36]
-            toezichtsgroep_uri = toezichtgroepen[0].get('@type')
+    # todo: apply mapping on toezichtgroep_naam, conform issue#36
 
-            relatie_toezichtsgroep = create_betrokkenerelation(rol='toezichtsgroep', source_typeURI=asset.otl_uri,
-                                                               source_uuid=asset.otl_uuid,
-                                                               target_uuid=toezichtsgroep_uuid,
-                                                               target_typeURI=toezichtsgroep_uri)
-            relatie_toezichtsgroep.assetId.identificator = f'HeeftBetrokkene_{index}'
-
-            created_assets.append(relatie_toezichtsgroep)
-        # todo: nakijken om de uuid 36 karakters bevat of meer.
-        # search toezichtsgroep and extract the uuid of the toezichtsgroep. This ensures that the toezichtsgroep exists.
-        # otl_object.assetId.identificator = asset.otl_uuid
-
-        # create relatie, sla die relatie ook op in de pool (lijst) van alle assets.
-        # relatie_toezichter = create_betrokkenerelation(rol='toezichter', source_uuid=asset.otl_uuid, target_uuid=agent_uuid)
-        # relatie_toezichtsgroep = create_betrokkenerelation(rol='toezichtsgroep', source_uuid=asset.otl_uuid, target_uuid=agent_uuid)
-        #
-        # created_assets.append(relatie_toezichter)
-        # created_assets.append(relatie_toezichtsgroep)
-
-    OtlmowConverter.from_objects_to_file(file_path=Path('assets_update_toezichter_toezichtsgroep.xlsx'),
+    OtlmowConverter.from_objects_to_file(file_path=Path(Path().home() / 'Downloads' / 'toezichter' / 'assets_delete_toezichter_toezichtsgroep.xlsx'),
+                                         sequence_of_objects=existing_assets)
+    OtlmowConverter.from_objects_to_file(file_path=Path(Path().home() / 'Downloads' / 'toezichter' / 'assets_update_toezichter_toezichtsgroep.xlsx'),
                                          sequence_of_objects=created_assets)
 
-    #
-    #
-    #
-    #
-    # asset_uuid_otl = asset['otl_uuid']
-    # asset_uuid_lgc = asset['lgc_uuid']
-    # lgc_toezichthouder_full_name = f'{asset["lgc_toezichthouder_voornaam"]} {asset["lgc_toezichthouder_naam"]}'
-    # print(f"Updating HeeftBetrokkene-relatie Toezichter for asset: {asset_uuid_otl}")
-    #
-    # #################################################################################
-    # ####  Get betrokkenerelatie from OTL-asset (rol=toezichter)
-    # #################################################################################
-    # generator_betrokkenerelaties = eminfra_client.get_objects_from_oslo_search_endpoint(size=1, url_part='betrokkenerelaties', filter_string={"bronAsset": asset_uuid_otl, 'rol': 'toezichter'})
-    # betrokkenerelaties = list(generator_betrokkenerelaties)
-    # if len(betrokkenerelaties) != 1:
-    #     print(f'Exactly 1 betrokkenerelaties (type: toezichter) are expected for asset: {asset_uuid_otl}.\nFound {len(betrokkenerelaties)} betrokkenerelaties')
-    #     continue
-    #     # raise ValueError(f'Exactly 1 betrokkenerelaties (type: toezichter) are expected for asset: {asset_uuid_otl}.\nFound {len(betrokkenerelaties)} betrokkenerelaties')
-    # agent_uuid_otl = betrokkenerelaties[0].get('RelatieObject.doelAssetId').get('DtcIdentificator.identificator')[:36]   # agent_uuid (de persoon)
-    # betrokkenerelatie_uuid_otl = betrokkenerelaties[0].get('RelatieObject.assetId').get('DtcIdentificator.identificator')[:36]  # betrokkenerelatie_uuid (het relatieobject tussen een asset en een persoon)
-    #
-    # #################################################################################
-    # ####  Get agent from the LGC-asset
-    # #################################################################################
-    # generator_agents = eminfra_client.get_objects_from_oslo_search_endpoint(size=1, url_part='agents', filter_string={"naam": lgc_toezichthouder_full_name})
-    # agents = list(generator_agents)
-    # if len(agents) != 1:
-    #     print(f'Agent {lgc_toezichthouder_full_name} was not found or returned multiple results.')
-    #     continue
-    #     # raise ValueError(f'Agent {lgc_toezichthouder_full_name} was not found or returned multiple results.')
-    # agent_uuid_lgc = agents[0].get('purl:Agent.agentId').get('DtcIdentificator.identificator')[:36]
-    #
-    # #################################################################################
-    # ####  Add a new betrokkenerelatie - type: toezichter - to OTL-asset
-    # #################################################################################
-    # response = eminfra_client.add_betrokkenerelatie(asset_uuid=asset_uuid_otl, agent_uuid=agent_uuid_lgc,
-    #                                                 rol='toezichter')
-    # betrokkenerelatie_uuid_otl_new = response.get('uuid')
-    #
-    # #################################################################################
-    # ####  Remove betrokkenerelatie toezichter from OTL-asset
-    # #################################################################################
-    # response = eminfra_client.remove_betrokkenerelatie(betrokkenerelatie_uuid_otl)
-    #
