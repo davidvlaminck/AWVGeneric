@@ -1,6 +1,7 @@
 import json
 import logging
 from collections.abc import Generator
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from pathlib import Path
@@ -11,12 +12,20 @@ from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO
     PostitDTO, LogicalOpEnum, BestekCategorieEnum, BestekKoppelingStatusEnum, AssetDocumentDTO, LocatieKenmerk, \
     LogicalOpEnum, ToezichterKenmerk, IdentiteitKenmerk, AssetTypeKenmerkTypeDTO, KenmerkTypeDTO, \
     AssetTypeKenmerkTypeAddDTO, ResourceRefDTO, Eigenschap, Event, EventType, ObjectType, EventContext, ExpansionsDTO, \
-    RelatieTypeDTO, KenmerkType, EigenschapValueDTO, RelatieTypeDTOList, BeheerobjectDTO
+    RelatieTypeDTO, KenmerkType, EigenschapValueDTO, RelatieTypeDTOList, BeheerobjectDTO, BaseDataclass
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 from utils.date_helpers import validate_dates, format_datetime
 from utils.query_dto_helpers import add_expression
 import os
+
+
+@dataclass
+class Query(BaseDataclass):
+    size: int
+    filters: dict
+    orderByProperty: str
+    fromCursor: str | None = None
 
 
 class EMInfraClient:
@@ -346,6 +355,9 @@ class EMInfraClient:
         json_dict = self.requester.get(url).json()
         return BeheerobjectDTO.from_dict(json_dict)
 
+    def get_assets_by_filter(self, filter: dict, size: int = 100, order_by_property: str = None) -> Generator[dict]:
+        """filter for otl/assets/search"""
+        yield from self.get_objects_from_oslo_search_endpoint(url_part='assets', filter_dict=filter, size=size)
 
     def _search_assets_helper(self, query_dto: QueryDTO) -> Generator[AssetDTO]:
         query_dto.from_ = 0
