@@ -1,4 +1,6 @@
 import logging
+from typing import OrderedDict
+
 from more_itertools import batched
 
 from API.EMInfraClient import EMInfraClient
@@ -25,3 +27,32 @@ class PatternVisualiser:
                 starting_uuids=uuids,
                 pattern = pattern
             )
+            
+    @classmethod
+    def generate_pattern_from_dicts(cls, dicts):
+        pattern = []
+        assets = {}
+        relations = {}
+        for d in dicts:
+            if 'bronAssetId' in d:
+                relations[d['assetId']['identificator']] = d
+            else:
+                assets[d['assetId']['identificator']] = d
+        for relation_key in list(relations.keys()):
+            relation = relations[relation_key]
+            source_id = relation['bronAssetId']['identificator']
+            target_id = relation['doelAssetId']['identificator']
+            if source_id not in assets or target_id not in assets:
+                relations.pop(relation_key)
+
+        used_assets = {}
+        for relation in relations.values():
+            source_id = relation['bronAssetId']['identificator']
+            target_id = relation['doelAssetId']['identificator']
+            used_assets[source_id] = assets[source_id]
+            used_assets[target_id] = assets[target_id]
+
+
+
+
+        return pattern
