@@ -31,15 +31,13 @@ if __name__ == '__main__':
                ('d', 'type_of', ['onderdeel#Netwerkelement']),
                ('e', 'type_of', ['installatie#MIVMeetpunt']),
                ('r1', 'type_of', ['onderdeel#Bevestiging']),
-               ('r2', 'type_of', ['onderdeel#Sturing']),
-
+               ('r2', 'type_of', ['onderdeel#Sturing'])
                ]
 
-
     chosen_assets = syncer.em_infra_client.get_assets_by_filter(filter={
-        'typeUri': 'https://wegenenverkeer.data.vlaanderen.be/ns/installatie#MIVModule', 'naam' : 'MIV230'})
+        'typeUri': 'https://wegenenverkeer.data.vlaanderen.be/ns/installatie#MIVModule', 'naam' : 'MIV231'})
     l = (list(chosen_assets))
     syncer.collect_info_given_asset_uuids(asset_uuids=[x['@id'][39:75] for x in l],
                                           asset_info_collector=syncer.collector, pattern=pattern)
-    print(syncer.collector.collection.object_dict)
+    print(len(syncer.collector.collection.object_dict))
     PyVisWrapper().show(syncer.collector.collection.object_dict.values(), launch_html=True, notebook_mode=False)

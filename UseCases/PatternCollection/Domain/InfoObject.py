@@ -16,6 +16,7 @@ directional_relations = {
     "onderdeel#HeeftNetwerktoegang",
     "onderdeel#HeeftToegangsprocedure",
     "onderdeel#LigtOp",
+    "onderdeel#DeelVan",
     "onderdeel#IsSWOnderdeelVan",
     "onderdeel#IsSWGehostOp",
 }

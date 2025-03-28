@@ -1,4 +1,5 @@
 import logging
+from lib2to3.pygram import pattern_grammar
 from typing import OrderedDict
 
 from more_itertools import batched
@@ -55,24 +56,50 @@ class PatternVisualiser:
             used_assets[source_id] = assets[source_id]
             used_assets[target_id] = assets[target_id]
 
-        relation_types = {relation['typeURI'] for relation in relations.values()}
+        relation_types = sorted({relation['typeURI'] for relation in relations.values()})
         relation_types_dict = {relation_type: f'r{i+1}' for i, relation_type in enumerate(relation_types)}
 
-        asset_types = list({asset['typeURI'] for asset in used_assets.values()})
+        asset_types = sorted({asset['typeURI'] for asset in used_assets.values()})
         asset_types_dict = {asset_type: f'{chr(i+97)}' for i, asset_type in enumerate(asset_types)}
 
+        pattern = []
 
         for relation in relations.values():
             relation_type = relation['typeURI']
             relation_id = relation_types_dict[relation_type]
-
-
             directed = (relation_type in directional_relations)
-
             source_id = relation['bronAssetId']['identificator']
             target_id = relation['doelAssetId']['identificator']
+            source_char = asset_types_dict[used_assets[source_id]['typeURI']]
+            target_char = asset_types_dict[used_assets[target_id]['typeURI']]
+            pattern_part = (source_char, f'-[{relation_id}]' + ('->' if directed else '-'), target_char)
+            if not directed and source_char > target_char:
+                pattern_part = (target_char, f'-[{relation_id}]' + ('->' if directed else '-'), source_char)
+            if pattern_part not in pattern:
+                pattern.append(pattern_part)
 
+            source_used = False
+            target_used = False
+            for part in pattern:
+                if part[1] != 'type_of':
+                    continue
+                if not source_used and part[0] == source_char:
+                    source_used = True
+                if not target_used and part[2] == target_char:
+                    target_used = True
+                if source_used and target_used:
+                    break
+            if not source_used:
+                pattern_part = (source_char, 'type_of', [used_assets[source_id]['typeURI']])
+                if pattern_part not in pattern:
+                    pattern.append(pattern_part)
+            if not target_used:
+                pattern_part = (target_char, 'type_of', [used_assets[target_id]['typeURI']])
+                if pattern_part not in pattern:
+                    pattern.append(pattern_part)
 
+        for relation_type, relation_char in  relation_types_dict.items():
+            pattern.append((relation_char, 'type_of', [relation_type]))
 
-        pattern = []
+        pattern.append(('uuids', 'of', 'a'))
         return pattern
