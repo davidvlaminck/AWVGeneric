@@ -9,7 +9,7 @@ if __name__ == '__main__':
     settings_path = Path('/home/davidlinux/Documents/AWV/resources/settings_SyncOTLDataToLegacy.json')
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
 
-    generator_assets = eminfra_client.get_objects_from_oslo_search_endpoint(url_part='assets', filter_string={
+    generator_assets = eminfra_client.get_objects_from_oslo_search_endpoint(url_part='assets', filter_dict={
         "typeUri": 'https://lgc.data.wegenenverkeer.be/ns/installatie#SeinbrugDVM',
         # uri uit https://apps.mow.vlaanderen.be/eminfra/admin/installatietypes/6f66dad8-8290-4d07-8e8b-6add6c7fe723
         'actief': True})

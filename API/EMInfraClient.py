@@ -1,6 +1,7 @@
 import json
 import logging
 from collections.abc import Generator
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from pathlib import Path
@@ -18,6 +19,14 @@ from API.RequesterFactory import RequesterFactory
 from utils.date_helpers import validate_dates, format_datetime
 from utils.query_dto_helpers import add_expression
 import os
+
+
+@dataclass
+class Query(BaseDataclass):
+    size: int
+    filters: dict
+    orderByProperty: str
+    fromCursor: str | None = None
 
 
 class EMInfraClient:
@@ -347,6 +356,9 @@ class EMInfraClient:
         json_dict = self.requester.get(url).json()
         return BeheerobjectDTO.from_dict(json_dict)
 
+    def get_assets_by_filter(self, filter: dict, size: int = 100, order_by_property: str = None) -> Generator[dict]:
+        """filter for otl/assets/search"""
+        yield from self.get_objects_from_oslo_search_endpoint(url_part='assets', filter_dict=filter, size=size)
 
     def _search_assets_helper(self, query_dto: QueryDTO) -> Generator[AssetDTO]:
         query_dto.from_ = 0
@@ -732,21 +744,21 @@ class EMInfraClient:
         return response
 
     def get_objects_from_oslo_search_endpoint(self, url_part: str,
-                                              filter_string: dict = '{}', size: int = 100,
+                                              filter_dict: dict = '{}', size: int = 100,
                                               expansions_fields: [str] = None) -> Generator:
         """Returns Generator objects for each OSLO endpoint
 
         :param url_part: keyword to complete the url
         :type url_part: str
-        :param filter_string: filter condition
-        :type filter_string: dict
+        :param filter_dict: filter condition
+        :type filter_dict: dict
         :param size: amount of objects to return in 1 page or request
         :type size: int
         :param expansions_fields: additional fields to append to the results
         :type expansions_fields: [str]
         :return: Generator
         """
-        body = {'size': size, 'fromCursor': None, 'filters': filter_string}
+        body = {'size': size, 'fromCursor': None, 'filters': filter_dict}
         if expansions_fields:
             body['expansion']['fields'] = expansions_fields
         paging_cursor = None

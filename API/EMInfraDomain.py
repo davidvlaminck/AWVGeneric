@@ -1,4 +1,5 @@
 import dataclasses
+import json
 from dataclasses import dataclass
 from enum import Enum
 from json import dumps
@@ -92,6 +93,10 @@ class BaseDataclass:
             attr = getattr(self, field_tuple[0])
             if attr is not None and isinstance(attr, list) and len(attr) > 0 and isinstance(attr[0], dict):
                 setattr(self, field_tuple[0], [field_tuple[1].from_dict(a) for a in attr])
+
+
+    def __str__(self):
+        return json.dumps(self.asdict(), indent=4, sort_keys=True)
 
     # needs enum fix
     # needs to call from_dict for nested classes

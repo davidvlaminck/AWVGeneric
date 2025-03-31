@@ -73,7 +73,6 @@ class EMSONClient:
             if response.status_code != 200:
                 print(response)
                 raise ProcessLookupError(response.content.decode("utf-8"))
-            print('fetched 100 results')
             yield from response.json()['@graph']
             paging_cursor = response.headers.get('em-paging-next-cursor')
             if paging_cursor is None:
@@ -98,7 +97,7 @@ class EMSONClient:
             if response.status_code != 200:
                 print(response)
                 raise ProcessLookupError(response.content.decode("utf-8"))
-            print('fetched 100 results')
+
             yield from response.json()['@graph']
             paging_cursor = response.headers.get('em-paging-next-cursor')
             if paging_cursor is None:
