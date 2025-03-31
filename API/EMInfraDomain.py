@@ -514,6 +514,9 @@ class ProvincieEnum(Enum):
     LIMBURG = 'limburg'
     BRUSSEL = 'brussel'
 
+class ToezichtgroepTypeEnum(Enum):
+    INTERN = 'INTERN'
+    EXTERN = 'EXTERN'
 
 @dataclass
 class ResourceRefDTO(BaseDataclass):
@@ -638,6 +641,22 @@ class KenmerkType(BaseDataclass):
     bestekKoppelingen: dict | None = None
     toezichter: dict | None =  None
     toezichtGroep: dict | None = None
+
+    def __post_init__(self):
+        self._fix_nested_list_classes({('links', Link)})
+
+@dataclass
+class ToezichtgroepDTO(BaseDataclass):
+    _type: str
+    naam: str
+    uuid: str
+    referentie: str
+    actiefInterval: str
+    contactFiche: dict
+    links: [Link]
+    omschrijving: str | None = None
+    createdOn: str | None = None
+    modifiedOn: str | None = None
 
     def __post_init__(self):
         self._fix_nested_list_classes({('links', Link)})
