@@ -13,7 +13,7 @@ from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO
     LogicalOpEnum, ToezichterKenmerk, IdentiteitKenmerk, AssetTypeKenmerkTypeDTO, KenmerkTypeDTO, \
     AssetTypeKenmerkTypeAddDTO, ResourceRefDTO, Eigenschap, Event, EventType, ObjectType, EventContext, ExpansionsDTO, \
     RelatieTypeDTO, KenmerkType, EigenschapValueDTO, RelatieTypeDTOList, BeheerobjectDTO, ToezichtgroepTypeEnum, \
-    ToezichtgroepDTO
+    ToezichtgroepDTO, BaseDataclass
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 from utils.date_helpers import validate_dates, format_datetime
