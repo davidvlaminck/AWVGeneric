@@ -1,6 +1,4 @@
 import logging
-from lib2to3.pygram import pattern_grammar
-from typing import OrderedDict
 
 from more_itertools import batched
 
