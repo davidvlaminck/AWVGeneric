@@ -24,7 +24,7 @@ def read_report(downloads_subpath: str, sheet_name: str = 'Resultaat', usecols: 
 def construct_full_name(first_name: str, last_name: str) -> str | None:
     return " ".join([first_name, last_name]) if first_name and last_name else None
 
-def create_betrokkenerelatie(source: AssetDTO, agent_naam :str, rol: str) -> RelatieObject | None:
+def build_betrokkenerelatie(source: AssetDTO, agent_naam :str, rol: str) -> RelatieObject | None:
     generator_agents = eminfra_client.get_objects_from_oslo_search_endpoint(
         url_part='agents'
         , filter_string={"naam": agent_naam})
@@ -56,7 +56,6 @@ def get_bestaande_betrokkenerelaties(asset: AssetDTO, rol: str, isActief: bool) 
             target_uuid=item['RelatieObject.doelAssetId']['DtcIdentificator.identificator'][:36],
         )
         relatie.assetId.identificator = betrokkenerelatie_uuid  # Assign existing UUID
-        relatie.assetId.identificator = betrokkenerelatie_uuid  # take the uuid of the existing relatie_toezichter
         relatie.isActief = isActief
         yield relatie
             
@@ -123,7 +122,7 @@ if __name__ == '__main__':
 
         if toezichter_naam:
             print(f'\t\tToezichter: {toezichter_naam}')
-            nieuwe_relatie = create_betrokkenerelatie(source=otl_asset, agent_naam=toezichter_naam, rol='toezichter')
+            nieuwe_relatie = build_betrokkenerelatie(source=otl_asset, agent_naam=toezichter_naam, rol='toezichter')
             nieuwe_relatie.assetId.identificator = f'HeeftBetrokkene_{index}_toezichter'
             created_assets.append(nieuwe_relatie)
 
@@ -131,7 +130,8 @@ if __name__ == '__main__':
             toezichtgroep_naam = map_toezichtgroep(toezichtgroep_naam)
 
             print(f'\t\tToezichtsgroep: {toezichtgroep_naam}')
-            nieuwe_relatie = create_betrokkenerelatie(source=otl_asset, agent_naam=toezichtgroep_naam, rol='toezichtsgroep')
+            nieuwe_relatie = build_betrokkenerelatie(source=otl_asset, agent_naam=toezichtgroep_naam,
+                                                     rol='toezichtsgroep')
             nieuwe_relatie.assetId.identificator = f'HeeftBetrokkene_{index}_toezichtsgroep'
             created_assets.append(nieuwe_relatie)
 
