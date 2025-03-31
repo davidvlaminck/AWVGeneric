@@ -17,6 +17,7 @@ def read_report(downloads_subpath: str, sheet_name: str = 'Resultaat', usecols: 
     filepath = Path().home() / 'Downloads' / downloads_subpath
     df_assets = pd.read_excel(filepath, sheet_name=sheet_name, header=2, usecols=usecols)
     df_assets = df_assets.where(pd.notna(df_assets), None)
+    df_assets.fillna(value='', inplace=True)
     df_assets.drop_duplicates(inplace=True)
     return df_assets
 
@@ -59,20 +60,42 @@ def get_bestaande_betrokkenerelaties(asset: AssetDTO, rol: str, isActief: bool) 
         relatie.isActief = isActief
         yield relatie
             
+def map_toezichtgroep(existing_toezichtgroep, json_file = 'mapping_toezichtsgroepen.json') -> str:
+    """
+    Maps the input value to a new value, based on a mapping file
+    If the record is missing in the mapping-file, returns the input.
+    
+    :param existing_toezichtgroep: the actual value that will be mapped
+    :param json_file: external mapping file, in a json-structure
+    :return: the mapped value, or the initial value if the mapping can not be effected
+    """
+    df_mapping = pd.read_json(json_file)
 
+    return next(
+        iter(
+            df_mapping.loc[
+                df_mapping['toezichtsgroep_existing'] == existing_toezichtgroep,
+                'toezichtsgroep_new',
+            ].values
+        ),
+        existing_toezichtgroep,
+    )
 
 if __name__ == '__main__':
     settings_path = load_settings()
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
 
+    # assettype = 'Beschermbuis'
+    # assettype = 'Signaalkabel'
+    assettype = 'Voedingskabel'
     df_assets = read_report(
-        downloads_subpath='toezichter/[RSA] Bijhorende assets hebben een verschillende toezichtshouder (assettype = Beschermbuis).xlsx',
+        downloads_subpath=f'toezichter/input/[RSA] Bijhorende assets hebben een verschillende toezichtshouder (assettype = {assettype}).xlsx',
         usecols=["otl_uuid", "otl_uri", "lgc_uuid", "lgc_toezichthouder_gebruikersnaam", "lgc_toezichtsgroep_naam",
                  "lgc_toezichthouder_voornaam", "lgc_toezichthouder_naam"])
 
     existing_assets = []
     created_assets = []
-    for index, asset in df_assets.iloc[:30].iterrows():  # todo remove slicing of the dataframe
+    for index, asset in df_assets.iterrows():
         print(f'Processing asset: {asset.otl_uuid}')
         #################################################################################
         ####  Ophalen van de bestaande asset
@@ -105,15 +128,15 @@ if __name__ == '__main__':
             created_assets.append(nieuwe_relatie)
 
         if toezichtgroep_naam:
+            toezichtgroep_naam = map_toezichtgroep(toezichtgroep_naam)
+
             print(f'\t\tToezichtsgroep: {toezichtgroep_naam}')
             nieuwe_relatie = create_betrokkenerelatie(source=otl_asset, agent_naam=toezichtgroep_naam, rol='toezichtsgroep')
             nieuwe_relatie.assetId.identificator = f'HeeftBetrokkene_{index}_toezichtsgroep'
             created_assets.append(nieuwe_relatie)
 
-    # todo: apply mapping on toezichtgroep_naam, conform issue#36
-
-    OtlmowConverter.from_objects_to_file(file_path=Path(Path().home() / 'Downloads' / 'toezichter' / 'assets_delete_toezichter_toezichtsgroep.xlsx'),
+    OtlmowConverter.from_objects_to_file(file_path=Path(Path().home() / 'Downloads' / 'toezichter' / 'output' / f'{assettype}' / 'assets_delete_toezichter_toezichtsgroep.xlsx'),
                                          sequence_of_objects=existing_assets)
-    OtlmowConverter.from_objects_to_file(file_path=Path(Path().home() / 'Downloads' / 'toezichter' / 'assets_update_toezichter_toezichtsgroep.xlsx'),
+    OtlmowConverter.from_objects_to_file(file_path=Path(Path().home() / 'Downloads' / 'toezichter' / 'output' / f'{assettype}' / 'assets_update_toezichter_toezichtsgroep.xlsx'),
                                          sequence_of_objects=created_assets)
 
