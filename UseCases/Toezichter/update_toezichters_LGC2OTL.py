@@ -27,7 +27,7 @@ def construct_full_name(first_name: str, last_name: str) -> str | None:
 def build_betrokkenerelatie(source: AssetDTO, agent_naam :str, rol: str) -> RelatieObject | None:
     generator_agents = eminfra_client.get_objects_from_oslo_search_endpoint(
         url_part='agents'
-        , filter_string={"naam": agent_naam})
+        , filter_dict={"naam": agent_naam})
     agents = list(generator_agents)
     if len(agents) != 1:
         print('Agent was not found or returned multiple results.')
@@ -44,7 +44,7 @@ def build_betrokkenerelatie(source: AssetDTO, agent_naam :str, rol: str) -> Rela
 def get_bestaande_betrokkenerelaties(asset: AssetDTO, rol: str, isActief: bool) -> Generator[RelatieObject]:
     generator = eminfra_client.get_objects_from_oslo_search_endpoint(
         url_part='betrokkenerelaties'
-        , filter_string={"bronAsset": asset.uuid, 'rol': rol})
+        , filter_dict={"bronAsset": asset.uuid, 'rol': rol})
 
     for item in generator:
         betrokkenerelatie_uuid = item['RelatieObject.assetId']['DtcIdentificator.identificator']
@@ -139,4 +139,3 @@ if __name__ == '__main__':
                                          sequence_of_objects=existing_assets)
     OtlmowConverter.from_objects_to_file(file_path=Path(Path().home() / 'Downloads' / 'toezichter' / 'output' / f'{assettype}' / 'assets_update_toezichter_toezichtsgroep.xlsx'),
                                          sequence_of_objects=created_assets)
-
