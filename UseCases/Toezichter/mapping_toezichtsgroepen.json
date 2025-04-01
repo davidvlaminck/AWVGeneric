@@ -18,5 +18,9 @@
   {
     "toezichtsgroep_existing": "AWV_EW_WV",
     "toezichtsgroep_new": "V&W West-Vlaanderen"
+  },
+  {
+    "toezichtsgroep_existing": "AWV_414_SINT-NIKLAAS",
+    "toezichtsgroep_new": "District St-Niklaas"
   }
 ]
