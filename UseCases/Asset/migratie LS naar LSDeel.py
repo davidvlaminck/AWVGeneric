@@ -8,6 +8,15 @@ from API.Enums import AuthType, Environment
 
 from pathlib import Path
 
+def log_action(uuid: str, message: str = ""):
+    """Logs an action into the DataFrame."""
+    global log_df
+    # Initialize an empty DataFrame for logging
+    log_df = pd.DataFrame(columns=["uuid", "message"])
+    log_df = pd.concat([log_df, pd.DataFrame([{
+        "uuid": uuid,
+        "message": message
+    }])], ignore_index=True)
 
 def return_beheerobject(asset: AssetDTO, depth=0):
     # beheerobject
@@ -30,7 +39,7 @@ if __name__ == '__main__':
     settings_path = Path(os.environ["OneDrive"]) / 'projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
 
-    filepath = Path().home() / 'Downloads' / 'MigratieLS' / 'RSA Laagspanningsaansluiting (Legacy) keuringsinfo.xlsx'
+    filepath = Path().home() / 'Downloads' / 'LS_Keuringsinfo_eigenschappen' / '[RSA] Laagspanningsaansluiting (Legacy) keuringsinfo.xlsx'
     df_ls_assets = pd.read_excel(filepath, sheet_name='Resultaat', header=2,
                                  usecols=["uuid", "naampad", "bevat_keuringsinfo"])
 
@@ -70,7 +79,8 @@ if __name__ == '__main__':
         lst_lsdeel_asset = list(child_asset for child_asset in child_assets if child_asset.type.uuid == lsdeel_type_uuid)
 
         if len(lst_lsdeel_asset) > 2:
-            raise ValueError(f'Multiple assets LSDeel present in tree of: {parent_asset.uuid}.')
+            log_action(parent_asset.uuid, "f'Multiple assets LSDeel present in tree of: {parent_asset.uuid}.'")
+            # raise ValueError(f'Multiple assets LSDeel present in tree of: {parent_asset.uuid}.')
         elif len(lst_lsdeel_asset) == 1:
             lsdeel_asset = lst_lsdeel_asset[0]
         else:
@@ -144,12 +154,22 @@ if __name__ == '__main__':
                                        ):
                 eigenschappen_ls_keuring.append(item)
 
+        eigenschappen_ls_keuring_naam = [item.eigenschap.naam for item in eigenschappen_ls_keuring]
+        eigenschappen_lsdeel_naam = [item.eigenschap.naam for item in eigenschappen_lsdeel]
+
         # controleer welke van deze drie eigenschappen nog niet bestaan bij LSDeel
         new_eigenschappen = []
-        new_eigenschappen.extend(item for item in eigenschappen_ls_keuring if item not in eigenschappen_lsdeel)
+        new_eigenschappen.extend(item for item in eigenschappen_ls_keuring if item.eigenschap.naam not in eigenschappen_ls_keuring_naam)
 
-        kenmerken = eminfra_client.get_kenmerken(assetId=lsdeel_asset.uuid)
-        kenmerk_uuid = next(kenmerk.type.get('uuid') for kenmerk in kenmerken if kenmerk.type.get('naam').startswith('Eigenschappen'))
         # Loop over het resultaat en genereer de eigenschappen voor het LSDeel
         for new_eigenschap in new_eigenschappen:
             eminfra_client.update_eigenschap(assetId=lsdeel_asset.uuid, eigenschap=new_eigenschap)
+
+        # Wissen van de eigenschappen bij de oorspronkelijke asset LS
+        for existing_eigenschap in eigenschappen_ls_keuring:
+            existing_eigenschap.typedValue['value'] = None
+            eminfra_client.update_eigenschap(assetId=ls_asset.uuid, eigenschap=existing_eigenschap)
+
+    # Save log DataFrame at the end
+    log_df.to_excel("log.xlsx", index=False)
+    print("Log saved to log.xlsx")
