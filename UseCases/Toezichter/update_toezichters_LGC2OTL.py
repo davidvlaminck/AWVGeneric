@@ -123,7 +123,7 @@ if __name__ == '__main__':
         if toezichter_naam:
             print(f'\t\tToezichter: {toezichter_naam}')
             nieuwe_relatie = build_betrokkenerelatie(source=otl_asset, agent_naam=toezichter_naam, rol='toezichter')
-            nieuwe_relatie.assetId.identificator = f'HeeftBetrokkene_{index}_toezichter'
+            nieuwe_relatie.assetId.identificator = f'HeeftBetrokkene_{index}_toezichter_{assettype}'
             created_assets.append(nieuwe_relatie)
 
         if toezichtgroep_naam:
@@ -132,7 +132,7 @@ if __name__ == '__main__':
             print(f'\t\tToezichtsgroep: {toezichtgroep_naam}')
             nieuwe_relatie = build_betrokkenerelatie(source=otl_asset, agent_naam=toezichtgroep_naam,
                                                      rol='toezichtsgroep')
-            nieuwe_relatie.assetId.identificator = f'HeeftBetrokkene_{index}_toezichtsgroep'
+            nieuwe_relatie.assetId.identificator = f'HeeftBetrokkene_{index}_toezichtsgroep_{assettype}'
             created_assets.append(nieuwe_relatie)
 
     OtlmowConverter.from_objects_to_file(file_path=Path(Path().home() / 'Downloads' / 'toezichter' / 'output' / f'{assettype}' / f'assets_delete_toezichter_toezichtsgroep_{assettype}.xlsx'),
