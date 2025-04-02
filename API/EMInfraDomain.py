@@ -334,6 +334,7 @@ class ToezichterKenmerk(BaseDataclass):
     type: dict
     links: [Link]
     toezichter: dict | None = None
+    toezichtGroep: dict | None = None
 
     def __post_init__(self):
          self._fix_nested_list_classes({('links', Link)})
@@ -607,8 +608,8 @@ class AgentDTO(BaseDataclass):
     modifiedOn: str
     naam: str
     actief: bool
-    contactInfo: [dict]
     links: [Link]
+    contactInfo: [dict] = None
     voId: str | None = None
     ovoCode: str | None = None
 
