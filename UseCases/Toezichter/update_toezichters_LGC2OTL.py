@@ -135,7 +135,7 @@ if __name__ == '__main__':
             nieuwe_relatie.assetId.identificator = f'HeeftBetrokkene_{index}_toezichtsgroep'
             created_assets.append(nieuwe_relatie)
 
-    OtlmowConverter.from_objects_to_file(file_path=Path(Path().home() / 'Downloads' / 'toezichter' / 'output' / f'{assettype}' / 'assets_delete_toezichter_toezichtsgroep.xlsx'),
+    OtlmowConverter.from_objects_to_file(file_path=Path(Path().home() / 'Downloads' / 'toezichter' / 'output' / f'{assettype}' / f'assets_delete_toezichter_toezichtsgroep_{assettype}.xlsx'),
                                          sequence_of_objects=existing_assets)
-    OtlmowConverter.from_objects_to_file(file_path=Path(Path().home() / 'Downloads' / 'toezichter' / 'output' / f'{assettype}' / 'assets_update_toezichter_toezichtsgroep.xlsx'),
+    OtlmowConverter.from_objects_to_file(file_path=Path(Path().home() / 'Downloads' / 'toezichter' / 'output' / f'{assettype}' / f'assets_update_toezichter_toezichtsgroep_{assettype}.xlsx'),
                                          sequence_of_objects=created_assets)
