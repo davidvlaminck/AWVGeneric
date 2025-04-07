@@ -803,10 +803,28 @@ class EMInfraClient:
         if response.status_code != 202:
             ProcessLookupError(f'Failed to remove parent from asset: {response.text}')
 
-    def search_agent(self, query_dto: QueryDTO) -> Generator[AgentDTO]:
-        query_dto.from_ = 0
-        if query_dto.size is None:
-            query_dto.size = 100
+    def search_agent(self, naam: str, ovoCode: str = None, actief: bool = True) -> Generator[AgentDTO]:
+        query_dto = QueryDTO(
+            size=100,
+            from_=0,
+            pagingMode=PagingModeEnum.OFFSET,
+            expansions={"fields": ["contactInfo"]},
+            selection=SelectionDTO(
+                expressions=[
+                    ExpressionDTO(terms=[TermDTO(property='naam', operator=OperatorEnum.EQ, value=naam)])
+                ]
+            )
+        )
+        if ovoCode:
+            query_dto.selection.expressions.append(
+                ExpressionDTO(terms=[TermDTO(property='ovoCode', operator=OperatorEnum.EQ, value=ovoCode)]
+                              , logicalOp=LogicalOpEnum.AND)
+            )
+        if actief is not None:
+            query_dto.selection.expressions.append(
+                ExpressionDTO(terms=[TermDTO(property='actief', operator=OperatorEnum.EQ, value=actief)]
+                              , logicalOp=LogicalOpEnum.AND)
+            )
         url = "core/api/agents/search"
         while True:
             json_dict = self.requester.post(url, data=query_dto.json()).json()

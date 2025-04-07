@@ -4,7 +4,6 @@ import pandas as pd
 from pathlib import Path
 
 from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum
 from API.Enums import AuthType, Environment
 
 
@@ -14,19 +13,7 @@ if __name__ == '__main__':
     settings_path = Path.home() / 'OneDrive - Nordend' / 'projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
     eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=settings_path)
 
-    query_dto = QueryDTO(
-        size=100,
-        from_=0,
-        pagingMode=PagingModeEnum.OFFSET,
-        expansions={"fields": ["contactInfo"]},
-        selection=SelectionDTO(
-            expressions=[
-                ExpressionDTO(terms=[TermDTO(property='actief', operator=OperatorEnum.EQ, value=True)])
-            ]
-        )
-    )
-
-    generator_agents = eminfra_client.search_agent(query_dto=query_dto)
+    generator_agents = eminfra_client.search_agent(naam='John Cleese')
     agents = list(generator_agents) # convert generator to a list
     print(f"Found a total of:\t{len(agents)} agents.")
 

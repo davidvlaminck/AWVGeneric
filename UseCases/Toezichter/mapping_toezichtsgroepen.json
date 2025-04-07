@@ -1,26 +1,26 @@
 [
-  {
-    "toezichtsgroep_existing": "AWV_EW_AN",
-    "toezichtsgroep_new": "V&W Antwerpen"
-  },
-  {
-    "toezichtsgroep_existing": "AWV_EW_VB",
-    "toezichtsgroep_new": "V&W Vlaams-Brabant"
-  },
-  {
-    "toezichtsgroep_existing": "AWV_EW_LI",
-    "toezichtsgroep_new": "V&W Limburg"
-  },
-  {
-    "toezichtsgroep_existing": "AWV_EW_OV",
-    "toezichtsgroep_new": "V&W Oost-Vlaanderen"
-  },
-  {
-    "toezichtsgroep_existing": "AWV_EW_WV",
-    "toezichtsgroep_new": "V&W West-Vlaanderen"
-  },
-  {
-    "toezichtsgroep_existing": "AWV_414_SINT-NIKLAAS",
-    "toezichtsgroep_new": "District St-Niklaas"
-  }
+    {
+        "toezichtsgroep_existing": "EMT_VHS",
+        "toezichtsgroep_new": "EMT_VHS"
+    },
+    {
+        "toezichtsgroep_existing": "AWV_EW_AN",
+        "toezichtsgroep_new": "V&W-WA"
+    },
+    {
+        "toezichtsgroep_existing": "AWV_EW_VB",
+        "toezichtsgroep_new": "V&W-WVB"
+    },
+    {
+        "toezichtsgroep_existing": "AWV_EW_LB",
+        "toezichtsgroep_new": "V&W-WL"
+    },
+    {
+        "toezichtsgroep_existing": "AWV_EW_OV",
+        "toezichtsgroep_new": "V&W-WO"
+    },
+    {
+        "toezichtsgroep_existing": "AWV_EW_WV",
+        "toezichtsgroep_new": "V&W-WW"
+    }
 ]
