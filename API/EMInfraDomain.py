@@ -351,9 +351,9 @@ class IdentiteitKenmerk(BaseDataclass):
     voornaam: str
     account: dict
     contactFiche: dict
-    voId: str
-    bron: str
-    gebruikersrechtOrganisaties: [str]
+    voId: str | None = None
+    bron: str | None = None
+    gebruikersrechtOrganisaties: [str] = None
     ldapId: str | None = None
     functie: str | None = None
     links: list[Link] | None = None
