@@ -80,13 +80,31 @@ def map_toezichtgroep(existing_toezichtgroep, json_file = 'mapping_toezichtsgroe
         existing_toezichtgroep,
     )
 
+dict_toezichtsgroepen = {
+    "V&W-WA": "V&W Antwerpen",
+    "V&W-WVB": "V&W Vlaams-Brabant",
+    "V&W-WL": "V&W Limburg",
+    "V&W-WO": "V&W Oost-Vlaanderen",
+    "V&W-WW": "V&W West-Vlaanderen",
+    "EMT_TELE": "EMT_TELE"
+}
+
+def map_toezichtsgroep(toezichtsgroep: str) -> str:
+    """
+    Map toezichtsgroep naam van LGC naar OTL
+    :param toezichtsgroep: Legacy
+    :return: naam toezichtsgroep OTL
+    """
+    return dict_toezichtsgroepen[toezichtsgroep]
+
+
 if __name__ == '__main__':
     settings_path = load_settings()
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
 
-    # assettype = 'Beschermbuis'
     # assettype = 'Signaalkabel'
-    assettype = 'Voedingskabel'
+    # assettype = 'Voedingskabel'
+    assettype = 'Beschermbuis'
     df_assets = read_report(
         downloads_subpath=f'toezichter/input/[RSA] Bijhorende assets hebben een verschillende toezichtshouder (assettype = {assettype}).xlsx',
         usecols=["otl_uuid", "otl_uri", "lgc_uuid", "lgc_toezichthouder_gebruikersnaam", "lgc_toezichtsgroep_naam",
@@ -130,7 +148,7 @@ if __name__ == '__main__':
             toezichtgroep_naam = map_toezichtgroep(toezichtgroep_naam)
 
             print(f'\t\tToezichtsgroep: {toezichtgroep_naam}')
-            nieuwe_relatie = build_betrokkenerelatie(source=otl_asset, agent_naam=toezichtgroep_naam,
+            nieuwe_relatie = build_betrokkenerelatie(source=otl_asset, agent_naam=map_toezichtsgroep(toezichtgroep_naam),
                                                      rol='toezichtsgroep')
             nieuwe_relatie.assetId.identificator = f'HeeftBetrokkene_{index}_toezichtsgroep_{assettype}'
             created_assets.append(nieuwe_relatie)
