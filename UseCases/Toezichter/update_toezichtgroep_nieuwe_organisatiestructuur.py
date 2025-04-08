@@ -216,7 +216,7 @@ if __name__ == '__main__':
             ######################################
             ### Wegschrijven van de LGC-data per 1000 assets
             ######################################
-                if idx+1 % 1000 == 0:
+                if (idx+1) % 1000 == 0:
                     df_assets_lgc.to_excel(
                         excel_path / f'map_toezichtsgroep_lgc_{toezichtgroep_bestaand.naam}_update{idx}.xlsx',
                         sheet_name='toezichtsgroep (Legacy)', index=False, freeze_panes=(1, 1))
