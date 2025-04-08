@@ -72,7 +72,7 @@ if __name__ == '__main__':
             eigenschap_uuid = next(eigenschap.uuid for eigenschap in eigenschap_generator if eigenschap.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/abstracten#SerienummerObject.serienummer')
         elif asset.otl_vs_lgc == 'LGC':
             eigenschap_generator = eminfra_client.search_eigenschappen(eigenschap_naam='serienummer segment controller')
-            eigenschap_uuid = next(eigenschap.uuid for eigenschap in eigenschap_generator if eigenschap.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/abstracten#SerienummerObject.serienummer')
+            eigenschap_uuid = next(eigenschap.uuid for eigenschap in eigenschap_generator if eigenschap.uri == 'https://lgc.data.wegenenverkeer.be/ns/attribuut#SegC.serienummerSegmentController')
         else:
             raise ValueError('Undefined asset type, OTL or LGC')
 
