@@ -184,6 +184,16 @@ class PyVisWrapper:
     def create_nodes(self, g, list_of_objects: [InfoObject]) -> [InfoObject]:
         list_of_objects = remove_duplicates_in_iterable_based_on_asset_id(list_of_objects)
 
+        level_dict = {'installatie#MIVModule': 0,
+                      'installatie#MIVMeetpunt': 1,
+                      'lgc:installatie#MIVLVE': -1,
+                      'onderdeel#Netwerkpoort': 1,
+                      'onderdeel#MIVProcessorkaart': 2,
+                      'onderdeel#Netwerkelement': 2,
+                      'installatie#VLAN': 2
+                      }
+
+
         nodes = []
         for index, info_object in enumerate(list_of_objects):
             naam = f'{info_object.__class__.__name__}_{info_object.uuid}'
@@ -202,7 +212,10 @@ class PyVisWrapper:
                 size = 20
 
             node_id = info_object.uuid
+
+            # add level
             g.add_node(node_id,
+                       level=level_dict[info_object.short_type] if info_object.short_type in level_dict else None,
                        label=naam,
                        shape=shape,
                        size=size,
