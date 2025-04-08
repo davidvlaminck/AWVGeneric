@@ -81,7 +81,7 @@ class EMInfraClient:
 
     def update_kenmerk_locatie_by_asset_uuid(self, asset_uuid: str, wkt_geom: str) -> dict:
         json_body = {"geometrie": f"{wkt_geom}"}
-        print(f'json_body: {json_body}')
+        logging.debug(f'json_body: {json_body}')
         response = self.requester.put(
             url=f'core/api/assets/{asset_uuid}/kenmerken/80052ed4-2f91-400c-8cba-57624653db11/geometrie'
             , data=json.dumps(json_body)
