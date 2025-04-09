@@ -123,11 +123,13 @@ if __name__ == '__main__':
         ####  Wis de bestaande betrokkenerelatie. Set isActief = False
         #################################################################################
         print('\tListing existing relations toezichter and toezichtsgroep')
-        existing_assets.extend(
-            list(get_bestaande_betrokkenerelaties(asset=otl_asset, rol='toezichter', isActief=False)))
+        bestaande_relatie_toezichter = list(get_bestaande_betrokkenerelaties(asset=otl_asset, rol='toezichter', isActief=False))
+        # existing_assets.extend(
+        #     list(get_bestaande_betrokkenerelaties(asset=otl_asset, rol='toezichter', isActief=False)))
 
-        existing_assets.extend(
-            list(get_bestaande_betrokkenerelaties(asset=otl_asset, rol='toezichtsgroep', isActief=False)))
+        bestaande_relatie_toezichtsgroep = list(get_bestaande_betrokkenerelaties(asset=otl_asset, rol='toezichtsgroep', isActief=False))
+        # existing_assets.extend(
+        #     list(get_bestaande_betrokkenerelaties(asset=otl_asset, rol='toezichtsgroep', isActief=False)))
 
         #################################################################################
         ####  Maak nieuwe BetrokkeneRelaties
@@ -140,19 +142,27 @@ if __name__ == '__main__':
 
         if toezichter_naam:
             print(f'\t\tToezichter: {toezichter_naam}')
-            nieuwe_relatie = build_betrokkenerelatie(source=otl_asset, agent_naam=toezichter_naam, rol='toezichter')
-            nieuwe_relatie.assetId.identificator = f'HeeftBetrokkene_{index}_toezichter_{assettype}'
-            created_assets.append(nieuwe_relatie)
+            nieuwe_relatie_toezichter = build_betrokkenerelatie(source=otl_asset, agent_naam=toezichter_naam, rol='toezichter')
+            if nieuwe_relatie_toezichter is None:
+                continue
+            nieuwe_relatie_toezichter.assetId.identificator = f'HeeftBetrokkene_{index}_toezichter_{assettype}'
+
 
         if toezichtgroep_naam:
             toezichtgroep_naam = map_toezichtgroep(toezichtgroep_naam)
 
             print(f'\t\tToezichtsgroep: {toezichtgroep_naam}')
-            nieuwe_relatie = build_betrokkenerelatie(source=otl_asset, agent_naam=map_toezichtsgroep(toezichtgroep_naam),
-                                                     rol='toezichtsgroep')
-            nieuwe_relatie.assetId.identificator = f'HeeftBetrokkene_{index}_toezichtsgroep_{assettype}'
-            created_assets.append(nieuwe_relatie)
+            nieuwe_relatie_toezichtsgroep = build_betrokkenerelatie(source=otl_asset, agent_naam=map_toezichtsgroep(toezichtgroep_naam),
+                                                                    rol='toezichtsgroep')
+            if nieuwe_relatie_toezichtsgroep is None:
+                continue
+            nieuwe_relatie_toezichtsgroep.assetId.identificator = f'HeeftBetrokkene_{index}_toezichtsgroep_{assettype}'
 
+        existing_assets.extend(bestaande_relatie_toezichter)
+        existing_assets.extend(bestaande_relatie_toezichtsgroep)
+        created_assets.extend(
+            (nieuwe_relatie_toezichter, nieuwe_relatie_toezichtsgroep)
+        )
     OtlmowConverter.from_objects_to_file(file_path=Path(Path().home() / 'Downloads' / 'toezichter' / 'output' / f'{assettype}' / f'assets_delete_toezichter_toezichtsgroep_{assettype}.xlsx'),
                                          sequence_of_objects=existing_assets)
     OtlmowConverter.from_objects_to_file(file_path=Path(Path().home() / 'Downloads' / 'toezichter' / 'output' / f'{assettype}' / f'assets_update_toezichter_toezichtsgroep_{assettype}.xlsx'),
