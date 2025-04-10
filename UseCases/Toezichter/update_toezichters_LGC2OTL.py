@@ -86,7 +86,8 @@ dict_toezichtsgroepen = {
     "V&W-WL": "V&W Limburg",
     "V&W-WO": "V&W Oost-Vlaanderen",
     "V&W-WW": "V&W West-Vlaanderen",
-    "EMT_TELE": "EMT_TELE"
+    "EMT_TELE": "EMT_TELE",
+    "EMT_VHS": "EMT_VHS"
 }
 
 def map_toezichtsgroep(toezichtsgroep: str) -> str:
