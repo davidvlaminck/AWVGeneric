@@ -13,7 +13,7 @@ from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO
     LogicalOpEnum, ToezichterKenmerk, IdentiteitKenmerk, AssetTypeKenmerkTypeDTO, KenmerkTypeDTO, \
     AssetTypeKenmerkTypeAddDTO, ResourceRefDTO, Eigenschap, Event, EventType, ObjectType, EventContext, ExpansionsDTO, \
     RelatieTypeDTO, KenmerkType, EigenschapValueDTO, RelatieTypeDTOList, BeheerobjectDTO, ToezichtgroepTypeEnum, \
-    ToezichtgroepDTO, BaseDataclass, BeheerobjectTypeDTO
+    ToezichtgroepDTO, BaseDataclass, BeheerobjectTypeDTO, BoomstructuurAssetTypeEnum
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 from utils.date_helpers import validate_dates, format_datetime
@@ -397,22 +397,66 @@ class EMInfraClient:
         )
         yield from self._search_assets_helper(query_dto)
 
-    def search_parent_asset(self, asset_uuid: str) -> Generator[AssetDTO] | None:
-        query_dto = QueryDTO(size=1, from_=0, pagingMode=PagingModeEnum.OFFSET,
-                             expansions=ExpansionsDTO(fields=['parent']),
-                             selection=SelectionDTO(
-                                 expressions=[ExpressionDTO(
-                                     terms=[
-                                         TermDTO(property='id', operator=OperatorEnum.EQ, value=asset_uuid)
-                                     ])]))
+    def search_parent_asset(
+            self,
+            asset_uuid: str,
+            recursive: bool = False,
+            return_all_parents: bool = False
+    ) -> AssetDTO | list[AssetDTO] | None:
+        """
+        Search for the parent asset(s) of a given asset UUID.
+
+        :param asset_uuid: UUID of the asset to search the parent for.
+        :param recursive: If True, search recursively up the parent chain.
+        :param return_all_parents: If True, return a list of all parents; if False, return only the final parent.
+        :return: A single AssetDTO, a list of AssetDTOs, or None if no parent found.
+        """
+        query_dto = QueryDTO(
+            size=1,
+            from_=0,
+            pagingMode=PagingModeEnum.OFFSET,
+            expansions=ExpansionsDTO(fields=['parent']),
+            selection=SelectionDTO(
+                expressions=[ExpressionDTO(
+                    terms=[
+                        TermDTO(property='id', operator=OperatorEnum.EQ, value=asset_uuid)
+                    ])
+                ])
+        )
         url = "core/api/assets/search"
         json_dict = self.requester.post(url, data=query_dto.json()).json()
-        # The Generator is limited to one object, since there is only one parent-asset.
-        if json_dict['data']:
-            yield from [AssetDTO.from_dict(json_dict['data'][0]['parent'])]
 
+        if not json_dict['data']:
+            return None  # No data found
 
-    def search_child_assets(self, asset_uuid: str) -> Generator[AssetDTO] | None:
+        asset_data = json_dict['data'][0]
+        parent_data = asset_data.get('parent')
+
+        if parent_data is None:
+            return None  # No parent found
+
+        parent_asset = AssetDTO.from_dict(parent_data)
+
+        if not recursive:
+            # Only return the immediate parent
+            return parent_asset
+
+        # Recursive case
+        parents = [parent_asset]
+        next_parent = self.search_parent_asset(parent_asset.uuid, recursive=True, return_all_parents=True)
+
+        if next_parent:
+            if isinstance(next_parent, list):
+                parents.extend(next_parent)
+            else:
+                parents.append(next_parent)
+
+        if return_all_parents:
+            return parents
+        else:
+            return parents[-1]  # Return only the last parent (the top-most one)
+
+    def search_child_assets(self, asset_uuid: str, recursive: bool = False) -> Generator[AssetDTO] | None:
         query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              expansions=ExpansionsDTO(fields=['parent']),
                              selection=SelectionDTO(
@@ -423,7 +467,12 @@ class EMInfraClient:
         url = f"core/api/assets/{asset_uuid}/assets/search"
         while True:
             json_dict = self.requester.post(url, data=query_dto.json()).json()
-            yield from [AssetDTO.from_dict(item) for item in json_dict['data']]
+            assets = [AssetDTO.from_dict(item) for item in json_dict['data']]
+            for asset in assets:
+                yield asset # yield the current asset
+                # If recursive, call recursively for each asset's uuid
+                if recursive:
+                    yield from self.search_child_assets(asset_uuid=asset.uuid, recursive=True)
             dto_list_total = json_dict['totalCount']
             query_dto.from_ = json_dict['from'] + query_dto.size
             if query_dto.from_ >= dto_list_total:
@@ -1088,3 +1137,54 @@ class EMInfraClient:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
         return response.json()
+
+    def activeer_asset(self, asset: AssetDTO) -> dict:
+        json_body = {
+            "actief": True
+            , "naam": asset.naam
+        }
+        response = self.requester.put(
+            url=f'core/api/assets/{asset.uuid}'
+            , json=json_body
+        )
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return response.json()
+
+    def deactiveer_asset(self, asset: AssetDTO) -> dict:
+        json_body = {
+            "actief": False
+            , "naam": asset.naam
+        }
+        response = self.requester.put(
+            url=f'core/api/assets/{asset.uuid}'
+            , json=json_body
+        )
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return response.json()
+
+    def reorganize_beheerobject(self, parentAsset: AssetDTO, childAsset: AssetDTO, parentType:BoomstructuurAssetTypeEnum = BoomstructuurAssetTypeEnum.ASSET) -> dict:
+        """
+        Assets verplaatsen in de boomstructuur met 1 parent en 1 child-asset.
+
+        :param parentAsset:
+        :param childAsset:
+        :return:
+        """
+        json_body = {
+            "name":"reorganize",
+            "moveOperations":
+                [{"assetsUuids":[f'{childAsset.uuid}']
+                  ,"targetType":parentType.value
+                  ,"targetUuid":f'{parentAsset.uuid}'}]
+        }
+        response = self.requester.put(
+            url='core/api/beheerobjecten/ops/reorganize'
+            , json=json_body
+        )
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
