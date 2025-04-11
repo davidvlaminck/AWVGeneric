@@ -226,6 +226,11 @@ class BestekKoppelingStatusEnum(Enum):
     INACTIEF = 'INACTIEF'
     TOEKOMSTIG = 'TOEKOMSTIG'
 
+
+class BoomstructuurAssetTypeEnum(Enum):
+    ASSET = 'asset'
+    BEHEEROBJECT = 'beheerobject'
+
 @dataclass
 class QueryDTO(BaseDataclass):
     size: int
