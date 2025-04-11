@@ -12,9 +12,9 @@ from API.Enums import AuthType, Environment
 
 def collect_child_assets(asset_uuid, eminfra_client, all_assets=None, all_uuids=None):
     """
-    Collects all assets from a beheerobject in a recursive function call.
+    Collects all assets from a Beheerobject in a recursive function call.
 
-    :param asset_uuid: parent asset uuid, this is typically the uuid of the "beheerobject"
+    :param asset_uuid: parent asset uuid, this is typically the uuid of the "Beheerobject"
     :param eminfra_client:
     :param all_assets: list to collect all the asset objects
     :param all_uuids:  list to collect all the uuids
@@ -38,7 +38,7 @@ def log_action(beheerobject: str, uuid: str, message: str = ""):
     """Logs an action into the DataFrame."""
     global log_df
     log_df = pd.concat([log_df, pd.DataFrame([{
-        "beheerobject": beheerobject,
+        "Beheerobject": beheerobject,
         "uuid": uuid,
         "message": message
     }])], ignore_index=True)
@@ -46,7 +46,7 @@ def log_action(beheerobject: str, uuid: str, message: str = ""):
 if __name__ == '__main__':
     # initialize variables
     # Initialize an empty DataFrame for logging
-    log_df = pd.DataFrame(columns=["beheerobject", "uuid", "message"])
+    log_df = pd.DataFrame(columns=["Beheerobject", "uuid", "message"])
 
     start_datetime = datetime(2025, 3, 1)
     eDelta_dossiernummer_new = 'INTERN-5904'
@@ -62,14 +62,14 @@ if __name__ == '__main__':
 
     print(f"Initializing an EMInfraClient on the {environment} environment")
 
-    # ophalen van de het beheerobject op basis van de naam.
+    # ophalen van de het Beheerobject op basis van de naam.
 
-    # beheerojbect ophalen op basis van het de uuid van het beheerobject
+    # beheerojbect ophalen op basis van het de uuid van het Beheerobject
 
     for beheerobject in beheerobjecten:
         beheerobject_uuid = beheerobject.get("uuid")
         beheerobject_asset = eminfra_client.get_beheerobject_by_uuid(beheerobject_uuid=beheerobject_uuid)
-        log_action(beheerobject_asset.naam, beheerobject_uuid, f"Wijzigen bestekkoppelingen voor alle assets in de boomstructuur van beheerobject: {beheerobject_asset.naam}")
+        log_action(beheerobject_asset.naam, beheerobject_uuid, f"Wijzigen bestekkoppelingen voor alle assets in de boomstructuur van Beheerobject: {beheerobject_asset.naam}")
 
         # verzamel alle child assets in de boomstructuur
         all_assets = collect_child_assets(beheerobject_uuid, eminfra_client)
