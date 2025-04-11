@@ -13,7 +13,7 @@ from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO
     LogicalOpEnum, ToezichterKenmerk, IdentiteitKenmerk, AssetTypeKenmerkTypeDTO, KenmerkTypeDTO, \
     AssetTypeKenmerkTypeAddDTO, ResourceRefDTO, Eigenschap, Event, EventType, ObjectType, EventContext, ExpansionsDTO, \
     RelatieTypeDTO, KenmerkType, EigenschapValueDTO, RelatieTypeDTOList, BeheerobjectDTO, ToezichtgroepTypeEnum, \
-    ToezichtgroepDTO, BaseDataclass
+    ToezichtgroepDTO, BaseDataclass, BeheerobjectTypeDTO
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 from utils.date_helpers import validate_dates, format_datetime
@@ -1029,3 +1029,62 @@ class EMInfraClient:
         url = f'core/api/assets/{assetId}/eigenschapwaarden'
         json_dict = self.requester.get(url).json()
         return [EigenschapValueDTO.from_dict(item) for item in json_dict['data']]
+
+    def search_beheerobjecten(self, naam: str, beheerobjecttype: BeheerobjectTypeDTO = None, actief: bool = None) -> Generator[BeheerobjectDTO]:
+        query_dto = QueryDTO(
+            size=100, from_=0, pagingMode=PagingModeEnum.OFFSET,
+            selection=SelectionDTO(
+                expressions=[ExpressionDTO(
+                    terms=[TermDTO(property='naam', operator=OperatorEnum.CONTAINS, value=naam)])]))
+
+        if beheerobjecttype:
+            query_dto.selection.expressions.append(
+                ExpressionDTO(
+                    logicalOp=LogicalOpEnum.AND
+                    , terms=[TermDTO(property='type',operator=OperatorEnum.EQ,value=beheerobjecttype.uuid)])
+            )
+
+        if actief or not actief:
+            query_dto.selection.expressions.append(
+                ExpressionDTO(
+                    logicalOp=LogicalOpEnum.AND
+                    , terms=[TermDTO(property='actief', operator=OperatorEnum.EQ, value=actief)])
+            )
+
+        url = 'core/api/beheerobjecten/search'
+        while True:
+            json_dict = self.requester.post(url, data=query_dto.json()).json()
+            yield from [BeheerobjectDTO.from_dict(item) for item in json_dict['data']]
+            dto_list_total = json_dict['totalCount']
+            query_dto.from_ = json_dict['from'] + query_dto.size
+            if query_dto.from_ >= dto_list_total:
+                break
+
+    def get_beheerobjecttypes(self) -> list[BeheerobjectTypeDTO]:
+        url = 'core/api/beheerobjecttypes'
+        json_dict = self.requester.get(url).json()
+        return [BeheerobjectTypeDTO.from_dict(item) for item in json_dict['data']]
+
+    def create_beheerobject(self, naam: str, beheerobjecttype: BeheerobjectTypeDTO = None) -> dict | None:
+        """
+
+        :param naam:
+        :param beheerobjecttype: Optional parameter. Set default value to installatie when missing
+        :return:
+        """
+        if beheerobjecttype is None:
+            beheerobjecttypes = self.get_beheerobjecttypes()
+            default_beheerobjecttype = [item for item in beheerobjecttypes if item.naam == 'INSTAL (Beheerobject)']
+            if not default_beheerobjecttype:
+                raise ValueError("Default beheerobjecttype 'INSTAL (Beheerobject)' not found")
+            beheerobjecttype = default_beheerobjecttype[0]
+        json_body = {
+            "naam": naam,
+            "typeUuid": beheerobjecttype.uuid
+        }
+        url = 'core/api/beheerobjecten'
+        response = self.requester.post(url, json=json_body)
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return response.json()
