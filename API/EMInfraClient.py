@@ -1177,8 +1177,7 @@ class EMInfraClient:
         json_body = {
             "name":"reorganize",
             "moveOperations":
-                [{"targetType":"asset"
-                  ,"assetsUuids":[f'{childAsset.uuid}']
+                [{"assetsUuids":[f'{childAsset.uuid}']
                   ,"targetType":parentType.value
                   ,"targetUuid":f'{parentAsset.uuid}'}]
         }
