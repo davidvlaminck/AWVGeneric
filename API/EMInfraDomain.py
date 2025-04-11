@@ -474,6 +474,19 @@ class BeheerobjectDTO(BaseDataclass):
     def __post_init__(self):
         self._fix_nested_list_classes({('links', Link)})
 
+@dataclass
+class BeheerobjectTypeDTO(BaseDataclass):
+    uuid: str
+    createdOn: str
+    modifiedOn: str
+    naam: str
+    afkorting: str
+    actief: bool
+    definitie: str
+    links: [Link]
+
+    def __post_init__(self):
+        self._fix_nested_list_classes({('links', Link)})
 
 class DocumentCategorieEnum(Enum):
     AANGEBODEN_SERVICES = 'AANGEBODEN_SERVICES'
@@ -716,7 +729,7 @@ def construct_naampad(asset: AssetDTO) -> str:
     naampad = asset.naam
     parent = asset.parent
     while parent is not None:
-        # parent is dictionary (beheerobject)
+        # parent is dictionary (Beheerobject)
         if isinstance(parent, dict):
             naampad = parent.get("naam") + '/' + naampad
             parent = parent.get("parent")
@@ -725,3 +738,4 @@ def construct_naampad(asset: AssetDTO) -> str:
             naampad = f'{parent.naam}/{naampad}'
             parent = parent.parent
     return naampad
+
