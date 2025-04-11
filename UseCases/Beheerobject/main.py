@@ -32,8 +32,8 @@ if __name__ == '__main__':
     ##########################################
     # Ophalen van een specifiek beheerobject. Op basis van een uuid
     ##########################################
-    myDummyBeheeroject_uuid = 'ded9c5bb-cafc-40a0-8816-9e679dde98df'
-    myDummyBeheerobject = eminfra_client.get_beheerobject_by_uuid(beheerobject_uuid=myDummyBeheeroject_uuid)
+    myDummyBeheerobject_uuid = 'ded9c5bb-cafc-40a0-8816-9e679dde98df'
+    myDummyBeheerobject = eminfra_client.get_beheerobject_by_uuid(beheerobject_uuid=myDummyBeheerobject_uuid)
 
     ##########################################
     # Wijzigen beheerobject

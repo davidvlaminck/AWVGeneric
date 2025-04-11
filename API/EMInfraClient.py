@@ -1044,7 +1044,7 @@ class EMInfraClient:
                     , terms=[TermDTO(property='type',operator=OperatorEnum.EQ,value=beheerobjecttype.uuid)])
             )
 
-        if actief is True or actief is False:
+        if actief or not actief:
             query_dto.selection.expressions.append(
                 ExpressionDTO(
                     logicalOp=LogicalOpEnum.AND
@@ -1061,7 +1061,7 @@ class EMInfraClient:
                 break
 
     def get_beheerobjecttypes(self) -> list[BeheerobjectTypeDTO]:
-        url = f'core/api/beheerobjecttypes'
+        url = 'core/api/beheerobjecttypes'
         json_dict = self.requester.get(url).json()
         return [BeheerobjectTypeDTO.from_dict(item) for item in json_dict['data']]
 
@@ -1074,8 +1074,10 @@ class EMInfraClient:
         """
         if beheerobjecttype is None:
             beheerobjecttypes = self.get_beheerobjecttypes()
-            beheerobjecttype = [item for item in beheerobjecttypes if item.naam == 'INSTAL (Beheerobject)'][0]
-
+            default_beheerobjecttype = [item for item in beheerobjecttypes if item.naam == 'INSTAL (Beheerobject)']
+            if not default_beheerobjecttype:
+                raise ValueError("Default beheerobjecttype 'INSTAL (Beheerobject)' not found")
+            beheerobjecttype = default_beheerobjecttype[0]
         json_body = {
             "naam": naam,
             "typeUuid": beheerobjecttype.uuid
