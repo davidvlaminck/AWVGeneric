@@ -13,7 +13,7 @@ from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO
     LogicalOpEnum, ToezichterKenmerk, IdentiteitKenmerk, AssetTypeKenmerkTypeDTO, KenmerkTypeDTO, \
     AssetTypeKenmerkTypeAddDTO, ResourceRefDTO, Eigenschap, Event, EventType, ObjectType, EventContext, ExpansionsDTO, \
     RelatieTypeDTO, KenmerkType, EigenschapValueDTO, RelatieTypeDTOList, BeheerobjectDTO, ToezichtgroepTypeEnum, \
-    ToezichtgroepDTO, BaseDataclass, BeheerobjectTypeDTO, BoomstructuurAssetTypeEnum
+    ToezichtgroepDTO, BaseDataclass, BeheerobjectTypeDTO, BoomstructuurAssetTypeEnum, KenmerkTypeEnum
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 from utils.date_helpers import validate_dates, format_datetime
@@ -1056,13 +1056,22 @@ class EMInfraClient:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-    def get_kenmerken(self, assetId: str) -> list[KenmerkType]:
+    def get_kenmerken(self, assetId: str, naam: KenmerkTypeEnum = None) -> list[KenmerkType] | KenmerkType:
+        """
+
+        :param assetId:
+        :param naam: Naam van het kenmerk. Default None, returns all Kenmerken.
+        :return:
+        """
         url = f'core/api/assets/{assetId}/kenmerken'
         response = self.requester.get(url)
         if response.status_code != 200:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
-        return [KenmerkType.from_dict(item) for item in response.json()['data']]
+        all_kenmerken = [KenmerkType.from_dict(item) for item in response.json()['data']]
+        if naam:
+            all_kenmerken = [item for item in all_kenmerken if item.type.get("naam") == naam.value][0]
+        return all_kenmerken
 
     def get_eigenschappen(self, assetId: str) -> list[EigenschapValueDTO]:
         # ophalen kenmerk_uuid
