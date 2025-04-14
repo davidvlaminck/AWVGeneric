@@ -43,6 +43,24 @@ class LogicalOpEnum(Enum):
     AND = 'AND'
     OR = 'OR'
 
+class KenmerkTypeEnum(Enum):
+    HEEFTBIJLAGEBRON = 'HeeftBijlageBron'
+    HEEFTTOEGANGSPROCEDUREBRON = 'HeeftToegangsprocedureBron'
+    HEEFTAANVULLENDEGEOMETRIEBRON = 'HeeftAanvullendeGeometrieBron'
+    GEOMETRIE = 'Geometrie'
+    AGENTS = 'Agents'
+    SLUITAANOPDOEL = 'SluitAanOpDoel'
+    SLUITAANOPBRON = 'SluitAanOpBron'
+    LIGTOPDOEL = 'LigtOpDoel'
+    LIGTOPBRON = 'LigtOpBron'
+    BESTEK = 'Bestek'
+    LOCATIE = 'Locatie'
+    BEVESTIGD_AAN = 'Bevestigd aan'
+    GEEFT_BEVESTIGING_AAN = 'Geeft bevestiging aan'
+    GEVOED_DOOR = 'Gevoed door'
+    GEEFT_VOEDING_AAN = 'Geeft voeding aan'
+    AANGESTUURD_DOOR = 'Aangestuurd door'
+    GEEFT_STURING_AAN = 'Geeft sturing aan'
 
 RESERVED_WORD_LIST = ('from_', '_next')
 
