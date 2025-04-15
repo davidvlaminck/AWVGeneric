@@ -131,6 +131,8 @@ if __name__ == '__main__':
     settings_path = load_settings()
     eminfra_client = EMInfraClient(env=Environment.DEV, auth_type=AuthType.JWT, settings_path=settings_path)
 
+    # todo: opsplitsen validatie en inlezen in 2 aparte stappen. Eerst de validatie van alle sheets, nadien het inlezen van een specifieke sheet.
+    
     # Read input data
     df_asset_MIVLVE = import_data_as_dataframe(
         filepath = Path(__file__).resolve().parent / 'data' / 'input' / 'Componentenlijst_20250410.xlsx'
