@@ -4,5 +4,6 @@ requests
 jwt>=1.3.1
 pyjwt
 pandas
+geopandas
 openpyxl
 tqdm

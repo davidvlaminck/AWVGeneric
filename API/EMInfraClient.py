@@ -79,7 +79,7 @@ class EMInfraClient:
             raise ProcessLookupError(response.content.decode("utf-8"))
         return LocatieKenmerk.from_dict(response.json())
 
-    def update_kenmerk_locatie_by_asset_uuid(self, asset_uuid: str, wkt_geom: str) -> dict:
+    def update_kenmerk_locatie_by_asset_uuid(self, asset_uuid: str, wkt_geom: str) -> None:
         json_body = {"geometrie": f"{wkt_geom}"}
         logging.debug(f'json_body: {json_body}')
         response = self.requester.put(
@@ -89,7 +89,6 @@ class EMInfraClient:
         if response.status_code != 202:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
-        return response.json()
 
     def get_kenmerk_toezichter_by_asset_uuid(self, asset_uuid: str) -> ToezichterKenmerk:
         response = self.requester.get(
