@@ -31,7 +31,7 @@ if __name__ == '__main__':
     settings_path = load_settings()
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
 
-    json_path = Path().home() / 'Downloads' / 'Beheersegment' / 'input' / 'beheersegmentenGeometrieVTC_20250416_met_nieuwe_id.geojson'
+    json_path = Path().home()
     df_assets: GeoDataFrame = read_json(filepath=json_path, usecols=["id", "naampad", "geometry"])
 
     for idx, asset in df_assets.iterrows():
