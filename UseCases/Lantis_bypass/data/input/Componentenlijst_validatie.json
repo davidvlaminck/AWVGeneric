@@ -58,6 +58,7 @@
             "Positie Z (Lambert 72, optioneel)",
             "Type",
             "CLID",
+            "Installatie naam",
             "Voedingsrelatie assetId.identificator",
             "Voedingsrelatie typeURI",
             "Voedinsgsrelatie bronAssetId.identificator",
