@@ -31,7 +31,7 @@ if __name__ == '__main__':
     settings_path = load_settings()
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
 
-    json_path = Path().home()
+    json_path = Path().home() / 'Downloads' / 'Beheersegment' / 'input' / 'beheersegmentenGeometrieVTC_20250416_met_nieuwe_id.geojson'
     df_assets: GeoDataFrame = read_json(filepath=json_path, usecols=["id", "naampad", "geometry"])
 
     for idx, asset in df_assets.iterrows():
@@ -47,4 +47,4 @@ if __name__ == '__main__':
 
         else:
             print("\tUpdate geometry")
-            eminfra_client.update_kenmerk_locatie_by_asset_uuid(asset_uuid=asset.id, wkt_geom=asset.geometry)
+            eminfra_client.update_kenmerk_locatie_by_asset_uuid(asset_uuid=asset.id, wkt_geom=asset.geometry.wkt)
