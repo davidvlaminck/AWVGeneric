@@ -1,8 +1,9 @@
 import json
 import logging
 from datetime import datetime
+import re
 
-from API.EMInfraDomain import KenmerkTypeEnum, BeheerobjectTypeDTO, OperatorEnum
+from API.EMInfraDomain import KenmerkTypeEnum, BeheerobjectTypeDTO, OperatorEnum, BoomstructuurAssetTypeEnum
 from API.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 import pandas as pd
@@ -34,6 +35,9 @@ def import_data_as_dataframe(filepath: Path, sheet_name: str = None):
     # drop the first row of the dataframe "in te vullen door: ... and the first columns of the dataframe
     sheet_df = sheet_df.drop(index=sheet_df.index[0], columns=sheet_df.columns[0])
 
+    sheet_df.drop(columns=[col for col in sheet_df.columns if col.startswith('Comments')], inplace=True)
+    sheet_df.drop(columns=[col for col in sheet_df.columns if col.startswith('Unnamed')], inplace=True)
+
     # convert NaN to None
     sheet_df = sheet_df.where(pd.notna(sheet_df), None)
 
@@ -51,7 +55,7 @@ def import_data_as_dataframe(filepath: Path, sheet_name: str = None):
         # Raise if errors exist
         raise ValueError("Validation of DataFrame structure failed. See logs for details.")
     else:
-        logging.info("All validation checks passed")
+        logging.info(f"All validation checks passed for sheet: {sheet_name}")
 
     return sheet_df
 
@@ -102,23 +106,87 @@ def validate_dataframe_columns(df: pd.DataFrame, schema_path: Path, schema_key: 
     }
 
 
-def get_beheerobject_uuid(asset_row_installatie_naam) -> str:
+def create_installatie(naam: str) -> str:
     """
-    Geef de uuid terug op basis van de naam van een installatie.
-    Maak het beheerobject aan indien het nog niet bestaat
+    Maak de installatie (beheerobject) aan indien onbestaande
 
-    :param asset_row_installatie_naam:
-    :return: uuid van een beheerobject (installatie)
+    :param naam: naam van de installatie
+    :return: uuid van de installatie
     """
-    installatie = next(eminfra_client.search_beheerobjecten(naam=asset_row_installatie_naam, actief=True, operator=OperatorEnum.EQ), None)
+    installatie = next(eminfra_client.search_beheerobjecten(naam=naam, actief=True, operator=OperatorEnum.EQ), None)
     if installatie is None:
-        logging.info(f'Installatie "{asset_row_installatie_naam}" bestaat nog niet, wordt aangemaakt')
-        response_beheerobject = eminfra_client.create_beheerobject(naam=asset_row_installatie_naam)
-        asset_row_installatie_uuid = response_beheerobject.uuid
+        logging.info(f'Installatie "{naam}" bestaat nog niet, wordt aangemaakt')
+        response_beheerobject = eminfra_client.create_beheerobject(naam=naam)
+        asset_row_installatie_uuid = response_beheerobject.get("uuid")
     else:
         asset_row_installatie_uuid = installatie.uuid
     logging.info(f'Installatie uuid: {asset_row_installatie_uuid}')
     return asset_row_installatie_uuid
+
+
+def get_assettype_uuid(mapping_key: str) -> str:
+    """
+    Returns the assettype uuid of a Legacy assettype. The keys of the mapping file correspond with the names in the Excel-file.
+    :param mapping_key:
+    :return:
+    """
+    mapping_assettypes = {
+        "Wegkantkasten": "10377658-776f-4c21-a294-6c740b9f655e",
+        "HSCabines-CC-SC-HS-LS-Switch-WV": "1cf24e76-5bf3-44b0-8332-a47ab126b87e",
+        "Openbare verlichting": "4dfad588-277c-480f-8cdc-0889cfaf9c78",
+        "MIVLVE": "a4c75282-972a-4132-ad72-0d0de09dbdb8",
+        "MIVMeetpunten": "dc3db3b7-7aad-4d7f-a788-a4978f803021",
+        "RSS-borden": "1496b2fd-0742-44a9-a3b4-e994bd5af8af",
+        "(R)VMS-borden": "5b44cb96-3edf-4ef5-bc85-ec4d5c5152a3",
+        "Cameras": "f66d1ad1-4247-4d99-80bb-5a2e6331eb96",
+        "Portieken-Seinbruggen": "",
+        "Galgpaal": ""
+    }
+    return mapping_assettypes[mapping_key]
+
+
+def construct_installatie_naam(kastnaam: str) -> str:
+    """
+    Bouw de installatie naam op basis van de kastnaam.
+    Verwijder suffix ".K".
+    Hernoem letter P/N/M door X. Deze letter duidt de rijrichting aan (Positief, Negatief, Middenberm) en volgt net na de naam van de rijweg.
+    Voorbeeld:
+    kastnaam: A13M0.5.K
+    installatie_naam: A13X0.5
+
+    :param kastnaam:
+    :return: installatie_naam
+    """
+    # Step 1: Remove suffix ".K" if present
+    if kastnaam.endswith('.K'):
+        temp_installatie_naam = kastnaam[:-2]
+    else:
+        raise ValueError(f"Kastnaam {kastnaam} eindigt niet op '.K'")
+
+    if match := re.search(r'(.*)([MPN])(?!.*[MPN])', temp_installatie_naam):
+        installatie_naam = match.group(1) + 'X' + temp_installatie_naam[match.end():]
+    else:
+        raise ValueError("De syntax van de kast bevat geen letter 'P', 'N' of 'M'.")
+
+    return installatie_naam
+
+
+def validate_asset(uuid: str = None, naam: str = None, stop_on_error: bool = True) -> None:
+    logging.debug('Valideer of een asset reeds bestaat en of diens naam overeenkomt.')
+    asset = next(eminfra_client.search_asset_by_uuid(uuid), None)
+
+    if asset is None:
+        logging.error(f'Asset {uuid} werd niet teruggevonden in em-infra. Dit zou moeten bestaan.')
+        if stop_on_error:
+            raise ValueError(f'Asset {asset_row_uuid} werd niet teruggevonden in em-infra. Dit zou moeten bestaan.')
+
+    if naam != asset.naam:
+        logging.error(
+            f'Asset {uuid} naam {naam} komt niet overeen met de bestaande naam {asset.naam}.')
+        if stop_on_error:
+            raise ValueError(
+                f'Asset {asset_row_uuid} naam {asset_row_naam} komt niet overeen met de bestaande naam {asset.naam}.')
+    return None
 
 
 if __name__ == '__main__':
@@ -126,83 +194,77 @@ if __name__ == '__main__':
     logging.info('Lantis Bypass: \tAanmaken van assets en relaties voor de Bypass van de Oosterweelverbinding')
 
     settings_path = load_settings()
-    eminfra_client = EMInfraClient(env=Environment.DEV, auth_type=AuthType.JWT, settings_path=settings_path)
+    environment = Environment.DEV
+    eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=settings_path)
+    logging.info(f'Omgeving: {environment.name}')
 
     excel_file = Path(__file__).resolve().parent / 'data' / 'input' / 'Componentenlijst_20250417.xlsx'
-
-    df_assets = import_data_as_dataframe(
+    logging.info(f"Excel file wordt ingelezen en gevalideerd: {excel_file}")
+    df_assets_wegkantkasten = import_data_as_dataframe(
         filepath=excel_file
         , sheet_name="Wegkantkasten"
     )
 
-    for idx, asset_row in df_assets.iterrows():
+    df_assets_mivlve = import_data_as_dataframe(
+        filepath=excel_file
+        , sheet_name="MIVLVE"
+    )
+
+    df_assets_mivmeetpunten = import_data_as_dataframe(
+        filepath=excel_file
+        , sheet_name="MIVMeetpunten"
+    )
+
+    # Aanmaken van de Installaties (beheerobject)
+    logging.info('Aanmaken van installaties op basis van de kastnamen')
+    installaties = []
+    for idx, asset_row in df_assets_wegkantkasten.iterrows():
+        asset_row_naam = asset_row.get("Object assetId.identificator")
+        installatie_naam = construct_installatie_naam(kastnaam=asset_row_naam)
+        installaties.append(installatie_naam)
+        asset_row_installatie_uuid = create_installatie(naam=installatie_naam)
+    logging.info(f'Installaties aangemaakt: {installaties}')
+
+
+    # Aanmaken van de Wegkantkasten
+    logging.info('Aanmaken van Wegkantkasten onder installaties')
+    wegkantkasten = []
+    for idx, asset_row in df_assets_wegkantkasten.iterrows():
         asset_row_uuid = asset_row.get("UUID Object")
         asset_row_typeURI = asset_row.get("Object typeURI")
-        asset_row_naam = asset_row.get("Object naam ROCO")
-        asset_row_installatie_naam = asset_row.get("Installatie naam")
-        asset_row_installatie_uuid = get_beheerobject_uuid(asset_row_installatie_naam)
+        asset_row_naam = asset_row.get("Object assetId.identificator")
 
         logging.debug(f'Processing asset: {asset_row_uuid}')
 
-        if asset_row_uuid:
-            logging.debug('Controle op het feit dat voor een bepaalde uuid, er al een asset bestaat.')
-            asset = next(eminfra_client.search_asset_by_uuid(asset_row_uuid), None)
-            if asset is None:
-                logging.critical(f'Asset {asset_row_uuid} werd niet teruggevonden in em-infra. Dit zou moeten bestaan.')
-                # raise ValueError(f'Asset {asset_row_uuid} werd niet teruggevonden in em-infra. Dit zou moeten bestaan.')
-        else:
-            logging.debug(f'Asset met de naam "{asset_row_naam}" ontbreekt')
-            assettype_uuid = [item.uuid for item in eminfra_client.get_all_assettypes() if item.uri == f'{asset_row_typeURI}'][0]
-            # todo Legacy asset aangemaakt in de root van de installatie. Later verplaatsen naar de juiste locatie of op de juiste locatie aanmaken
-            # Test: kan men dit aanmaken in de root? Zoniet, een andere methode implementeren om een asset aan te maken, en dan nadien op de juiste plaats in de boom hangen.
-            asset_dict = eminfra_client.create_lgc_asset(parent_uuid=asset_row_installatie_uuid, naam=asset_row_naam, typeUuid=assettype_uuid)
-            logging.debug(f'Asset met de naam "{asset_row_naam}" is aangemaakt en heeft uuid: {asset.uuid}')
+        if asset_row_uuid and asset_row_naam:
+            logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is, en skip het verder proces om de asset aan te maken.')
+            validate_asset(uuid=asset_row_naam, naam=asset_row_naam, stop_on_error=False)
+            continue
 
+        logging.debug(f'Asset met de naam "{asset_row_naam}" wordt aangemaakt, met toestand: "in-opbouw"')
+        assettype_uuid = get_assettype_uuid(mapping_key='Wegkantkasten')
 
-        # Indien de asset-eigenschappen niet bestaan >> aanmaken
-        # Indien de asset-relaties niet bestaan >> aanmaken
+        installatie_naam = construct_installatie_naam(kastnaam=asset_row_naam)
+        installatie = next(eminfra_client.search_beheerobjecten(naam=installatie_naam, actief=True, operator=OperatorEnum.EQ))
 
+        asset_dict = eminfra_client.create_asset(
+            parent_uuid=installatie.uuid
+            , naam=asset_row_naam
+            , typeUuid=assettype_uuid
+            , parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT
+        )
+        # todo: update de status naar 'in-opbouw' # todo log de uuid naar de log-file, samen met de asset_naam, om later te copy-pasten in de Excel-file.
+        logging.debug(f'Asset met de naam "{asset_row_naam}" is aangemaakt en heeft uuid: {asset_dict.get("uuid")}')
+        wegkantkasten.append(f'{asset_row_naam}: {asset_dict.get("uuid")}')
+    logging.info('Wegkantkasten aangemaakt: {wegkantkasten}')
 
-    #     kenmerken = eminfra_client.get_kenmerken(assetId=asset.get("uuid_PT-verwerkingseenheid"))
-    #     kenmerk_bevestiging = eminfra_client.get_kenmerken(assetId=asset.get("uuid_PT-verwerkingseenheid"),
-    #                                                        naam=KenmerkTypeEnum.BEVESTIGD_AAN)
-    #
-    #     # Query asset
-    #     relatieTypeId = '3ff9bf1c-d852-442e-a044-6200fe064b20'
-    #     bestaande_relaties = eminfra_client.search_relaties(
-    #         assetId=asset.get("uuid_PT-verwerkingseenheid")
-    #         , kenmerkTypeId=kenmerk_bevestiging.type.get("uuid")
-    #         , relatieTypeId=relatieTypeId
-    #     )
-    #
-    #     # Query asset-relaties. Als de relatie al bestaat, continue
-    #     if next(bestaande_relaties, None):
-    #         print(
-    #             f'''Bevestiging-relatie reeds bestaande tussen PT-Verwerkingseenheid ({asset.get(
-    #                 "uuid_PT-verwerkingseenheid")}) en PT-Demodulator ({asset.get("uuid_PT-demodulator")})''')
-    #         continue
-    #
-    #     # Genereer relatie volgens het OTLMOW-model
-    #     # todo vervang parameter target_typeURI door de juiste URI. Momenteel tijdelijk assettype PTRegelaar gebruikt ter afwachting van de release van de nieuwe OTL.
-    #     nieuwe_relatie = create_relation(
-    #         relation_type=Bevestiging()
-    #         , source_typeURI='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#PTVerwerkingseenheid'
-    #         , source_uuid=asset.get("uuid_PT-verwerkingseenheid")
-    #         , target_typeURI='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#PTRegelaar'
-    #         # 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#PTDemodulatoren'
-    #         , target_uuid=asset.get("uuid_PT-demodulator")
-    #     )
-    #     nieuwe_relatie.isActief = True
-    #     nieuwe_relatie.assetId.identificator = f'Bevestiging_{asset.get("uuid_PT-verwerkingseenheid")}_{asset.get("uuid_PT-demodulator")}'
-    #     bevestiging_relaties.append(nieuwe_relatie)
-    #
-    # ######################################
-    # ### Wegschrijven van de OTL-data naar een DAVIE-conform bestand.
-    # ######################################
-    # if bevestiging_relaties:
-    #     filepath = Path().home() / 'Downloads' / 'Assetrelaties' / f'BevestigingRelatie_PT-verwerkingseenheid_PT-demodulator_{datetime.now().strftime("%Y%m%d")}.xlsx'
-    #     OtlmowConverter.from_objects_to_file(
-    #         file_path=filepath
-    #         , sequence_of_objects=bevestiging_relaties
-    #     )
-    #     print(f"DAVIE-file weggeschreven naar:\n\t{filepath}")
+    # Aanmaken van de MIVLVE
+    logging.info('Aanmaken van MIVLVE onder Wegkantkasten')
+    logging.info('MIVLVE aangemaakt')
+
+    # Aanmaken van de MIVMeetpunten
+    logging.info('Aanmaken van MIVMeetpunten onder MIVLVE')
+    logging.info('MIVMeetpunten aangemaakt')
+
+    # Aanmaken of updaten van de eigenschappen
+    # Aanmaken of updaten van de relaties
