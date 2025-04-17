@@ -1088,12 +1088,12 @@ class EMInfraClient:
         json_dict = self.requester.get(url).json()
         return [EigenschapValueDTO.from_dict(item) for item in json_dict['data']]
 
-    def search_beheerobjecten(self, naam: str, beheerobjecttype: BeheerobjectTypeDTO = None, actief: bool = None) -> Generator[BeheerobjectDTO]:
+    def search_beheerobjecten(self, naam: str, beheerobjecttype: BeheerobjectTypeDTO = None, actief: bool = None, operator: OperatorEnum = OperatorEnum.CONTAINS) -> Generator[BeheerobjectDTO]:
         query_dto = QueryDTO(
             size=100, from_=0, pagingMode=PagingModeEnum.OFFSET,
             selection=SelectionDTO(
                 expressions=[ExpressionDTO(
-                    terms=[TermDTO(property='naam', operator=OperatorEnum.CONTAINS, value=naam)])]))
+                    terms=[TermDTO(property='naam', operator=operator, value=naam)])]))
 
         if beheerobjecttype:
             query_dto.selection.expressions.append(
