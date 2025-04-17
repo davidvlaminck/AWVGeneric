@@ -497,9 +497,9 @@ class EMInfraClient:
     def search_all_assets(self, query_dto: QueryDTO) -> Generator[AssetDTO]:
         yield from self._search_assets_helper(query_dto)
 
-    def create_lgc_asset(self, parent_uuid: str, naam: str, typeUuid: str) -> dict | None:
+    def create_asset(self, parent_uuid: str, naam: str, typeUuid: str, parent_asset_type:BoomstructuurAssetTypeEnum = BoomstructuurAssetTypeEnum.ASSET) -> dict | None:
         """
-        Create a legacy asset in the arborescence
+        Create an asset in the arborescence
         :param parent_uuid: asset uuid van de parent-asset
         :param naam: naam van de nieuw aan te maken child-asset
         :param typeUuid: assettype van het nieuw aan te maken child-asset
@@ -509,7 +509,16 @@ class EMInfraClient:
             "naam": naam,
             "typeUuid": typeUuid
         }
-        url = f'core/api/assets/{parent_uuid}/assets'
+
+        if parent_asset_type.value == 'asset':
+            prefix = 'assets'
+        elif parent_asset_type.value == 'beheerobject':
+            prefix = 'beheerobjecten'
+        else:
+            raise ValueError(f"Unexpected parent_asset_type: {parent_asset_type.value}")
+
+        url = f'core/api/{prefix}/{parent_uuid}/assets'
+
         response = self.requester.post(url, json=json_body)
         if response.status_code != 202:
             logging.error(response)
