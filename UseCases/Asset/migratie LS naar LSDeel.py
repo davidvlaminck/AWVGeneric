@@ -86,8 +86,8 @@ if __name__ == '__main__':
         else:
             print(f'No asset LSDeel present in tree of: {parent_asset.uuid}.\nCreating instance...')
             # aanmaken LSDeel in de boomstructuur
-            eminfra_client.create_lgc_asset(parent_uuid=parent_asset.uuid, naam=f'{installatie_naam}.LSDeel',
-                                            typeUuid=lsdeel_type_uuid)
+            eminfra_client.create_asset(parent_uuid=parent_asset.uuid, naam=f'{installatie_naam}.LSDeel',
+                                        typeUuid=lsdeel_type_uuid)
             # herinstantiëren van child_assets
             child_assets = list(eminfra_client.search_child_assets(asset_uuid=parent_asset.uuid))
 
