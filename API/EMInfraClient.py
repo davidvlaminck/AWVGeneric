@@ -13,7 +13,7 @@ from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO
     LogicalOpEnum, ToezichterKenmerk, IdentiteitKenmerk, AssetTypeKenmerkTypeDTO, KenmerkTypeDTO, \
     AssetTypeKenmerkTypeAddDTO, ResourceRefDTO, Eigenschap, Event, EventType, ObjectType, EventContext, ExpansionsDTO, \
     RelatieTypeDTO, KenmerkType, EigenschapValueDTO, RelatieTypeDTOList, BeheerobjectDTO, ToezichtgroepTypeEnum, \
-    ToezichtgroepDTO, BaseDataclass, BeheerobjectTypeDTO, BoomstructuurAssetTypeEnum, KenmerkTypeEnum
+     ToezichtgroepDTO, BaseDataclass, BeheerobjectTypeDTO, BoomstructuurAssetTypeEnum, KenmerkTypeEnum, AssetDTOToestand
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 from utils.date_helpers import validate_dates, format_datetime
@@ -79,9 +79,8 @@ class EMInfraClient:
             raise ProcessLookupError(response.content.decode("utf-8"))
         return LocatieKenmerk.from_dict(response.json())
 
-    def update_kenmerk_locatie_by_asset_uuid(self, asset_uuid: str, wkt_geom: str) -> dict:
+    def update_kenmerk_locatie_by_asset_uuid(self, asset_uuid: str, wkt_geom: str) -> None:
         json_body = {"geometrie": f"{wkt_geom}"}
-        logging.debug(f'json_body: {json_body}')
         response = self.requester.put(
             url=f'core/api/assets/{asset_uuid}/kenmerken/80052ed4-2f91-400c-8cba-57624653db11/geometrie'
             , data=json.dumps(json_body)
@@ -89,7 +88,6 @@ class EMInfraClient:
         if response.status_code != 202:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
-        return response.json()
 
     def get_kenmerk_toezichter_by_asset_uuid(self, asset_uuid: str) -> ToezichterKenmerk:
         response = self.requester.get(
@@ -386,15 +384,16 @@ class EMInfraClient:
             if query_dto.from_ >= dto_list_total:
                 break
 
-    def search_assets(self, query_dto: QueryDTO) -> Generator[AssetDTO]:
-        query_dto.selection.expressions.append(
+    def search_assets(self, query_dto: QueryDTO, actief:bool = None) -> Generator[AssetDTO]:
+        if actief is not None:
+            query_dto.selection.expressions.append(
             ExpressionDTO(
                 terms=[TermDTO(property='actief',
                                operator=OperatorEnum.EQ,
-                               value=True)
+                               value=actief)
                        ]
                 , logicalOp=LogicalOpEnum.AND)
-        )
+            )
         yield from self._search_assets_helper(query_dto)
 
     def search_parent_asset(
@@ -484,6 +483,12 @@ class EMInfraClient:
         yield from [RelatieTypeDTO.from_dict(item) for item in json_dict['data']]
 
     def search_asset_by_uuid(self, asset_uuid: str) -> Generator[AssetDTO]:
+        """
+        Search active and inactive assets by its name.
+
+        :param asset_uuid:
+        :return:
+        """
         query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              expansions=ExpansionsDTO(fields=['parent']),
                              selection=SelectionDTO(
@@ -493,6 +498,24 @@ class EMInfraClient:
                                      ])]))
         yield from self._search_assets_helper(query_dto)
 
+    def search_asset_by_name(self, asset_name: str, exact_search: bool = True) -> Generator[AssetDTO]:
+        """
+        Search active and inactive assets by its name.
+        Exact_search (default True) searches for an exact match operator EQUALS, while exact_search = False loosely searches using operator CONTAINS.
+
+        :param name:
+        :param exact_search:
+        :return:
+        """
+        operator = OperatorEnum.EQ if exact_search else OperatorEnum.CONTAINS
+        query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
+                             expansions=ExpansionsDTO(fields=['parent']),
+                             selection=SelectionDTO(
+                                 expressions=[ExpressionDTO(
+                                     terms=[
+                                         TermDTO(property='naam', operator=operator, value=asset_name)
+                                     ])]))
+        yield from self._search_assets_helper(query_dto)
 
     def search_all_assets(self, query_dto: QueryDTO) -> Generator[AssetDTO]:
         yield from self._search_assets_helper(query_dto)
@@ -1038,6 +1061,16 @@ class EMInfraClient:
 
     def update_kenmerk(self, asset_uuid: str, kenmerk_uuid: str, request_body: dict) -> None:
         response = self.requester.put(url=f'core/api/assets/{asset_uuid}/kenmerken/{kenmerk_uuid}', json=request_body)
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+
+    def update_toestand(self, asset_uuid: str, asset_naam: str, toestand: AssetDTOToestand = AssetDTOToestand.IN_ONTWERP) -> None:
+        request_body = {
+            "naam": asset_naam, # mandatory element
+            "toestand": toestand.value
+        }
+        response = self.requester.put(url=f'core/api/assets/{asset_uuid}', json=request_body)
         if response.status_code != 202:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
