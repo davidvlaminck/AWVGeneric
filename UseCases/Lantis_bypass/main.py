@@ -3,7 +3,8 @@ import logging
 from datetime import datetime
 import re
 
-from API.EMInfraDomain import KenmerkTypeEnum, BeheerobjectTypeDTO, OperatorEnum, BoomstructuurAssetTypeEnum
+from API.EMInfraDomain import KenmerkTypeEnum, BeheerobjectTypeDTO, OperatorEnum, BoomstructuurAssetTypeEnum, \
+    AssetDTOToestand, QueryDTO, PagingModeEnum, ExpansionsDTO, SelectionDTO, TermDTO, ExpressionDTO, LogicalOpEnum
 from API.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 import pandas as pd
@@ -172,6 +173,16 @@ def construct_installatie_naam(kastnaam: str) -> str:
 
 
 def validate_asset(uuid: str = None, naam: str = None, stop_on_error: bool = True) -> None:
+    """
+    Controleer het bestaan van een asset op basis van diens uuid.
+    Valideer nadien of de niuewe naam overeenstemt met de naam van de bestaande asset.
+
+    :param uuid: asset uuid
+    :param naam: asset name
+    :param stop_on_error: Raise Error (default True)
+    :type stop_on_error: boolean
+    :return: None
+    """
     logging.debug('Valideer of een asset reeds bestaat en of diens naam overeenkomt.')
     asset = next(eminfra_client.search_asset_by_uuid(uuid), None)
 
@@ -189,6 +200,15 @@ def validate_asset(uuid: str = None, naam: str = None, stop_on_error: bool = Tru
     return None
 
 
+def parse_wkt_geometry(asset_row):
+    asset_row_x = asset_row.get('Positie X (Lambert 72)')
+    asset_row_y = asset_row.get('Positie Y (Lambert 72)')
+    asset_row_z = asset_row.get('Positie Z (Lambert 72, optioneel)')
+    if asset_row_z is None:
+        asset_row_z = 0
+    return f'POINT Z ({asset_row_x} {asset_row_y} {asset_row_z})'
+
+
 if __name__ == '__main__':
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s\t', filemode="w")
     logging.info('Lantis Bypass: \tAanmaken van assets en relaties voor de Bypass van de Oosterweelverbinding')
@@ -198,7 +218,7 @@ if __name__ == '__main__':
     eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=settings_path)
     logging.info(f'Omgeving: {environment.name}')
 
-    excel_file = Path(__file__).resolve().parent / 'data' / 'input' / 'Componentenlijst_20250417.xlsx'
+    excel_file = Path(__file__).resolve().parent / 'data' / 'input' / 'Componentenlijst_20250417_DEV.xlsx'
     logging.info(f"Excel file wordt ingelezen en gevalideerd: {excel_file}")
     df_assets_wegkantkasten = import_data_as_dataframe(
         filepath=excel_file
@@ -233,37 +253,179 @@ if __name__ == '__main__':
         asset_row_uuid = asset_row.get("UUID Object")
         asset_row_typeURI = asset_row.get("Object typeURI")
         asset_row_naam = asset_row.get("Object assetId.identificator")
-
-        logging.debug(f'Processing asset: {asset_row_uuid}')
-
-        if asset_row_uuid and asset_row_naam:
-            logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is, en skip het verder proces om de asset aan te maken.')
-            validate_asset(uuid=asset_row_naam, naam=asset_row_naam, stop_on_error=False)
-            continue
-
-        logging.debug(f'Asset met de naam "{asset_row_naam}" wordt aangemaakt, met toestand: "in-opbouw"')
         assettype_uuid = get_assettype_uuid(mapping_key='Wegkantkasten')
-
         installatie_naam = construct_installatie_naam(kastnaam=asset_row_naam)
         installatie = next(eminfra_client.search_beheerobjecten(naam=installatie_naam, actief=True, operator=OperatorEnum.EQ))
 
-        asset_dict = eminfra_client.create_asset(
-            parent_uuid=installatie.uuid
-            , naam=asset_row_naam
-            , typeUuid=assettype_uuid
-            , parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT
-        )
-        # todo: update de status naar 'in-opbouw' # todo log de uuid naar de log-file, samen met de asset_naam, om later te copy-pasten in de Excel-file.
-        logging.debug(f'Asset met de naam "{asset_row_naam}" is aangemaakt en heeft uuid: {asset_dict.get("uuid")}')
-        wegkantkasten.append(f'{asset_row_naam}: {asset_dict.get("uuid")}')
-    logging.info('Wegkantkasten aangemaakt: {wegkantkasten}')
+        logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_naam}')
+
+        if asset_row_uuid and asset_row_naam:
+            logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
+            validate_asset(uuid=asset_row_uuid, naam=asset_row_naam, stop_on_error=True)
+
+        asset = next(eminfra_client.search_asset_by_name(asset_name=asset_row_naam, exact_search=True), None)
+        if asset is None:
+            logging.debug(f'Asset met als naam "{asset_row_naam}" bestaat niet en wordt aangemaakt')
+            asset_dict = eminfra_client.create_asset(
+                parent_uuid=installatie.uuid
+                , naam=asset_row_naam
+                , typeUuid=assettype_uuid
+                , parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT
+            )
+            asset = next(eminfra_client.search_asset_by_name(asset_name=asset_row_naam, exact_search=True), None)
+
+        if asset is None:
+            logging.critical('Asset werd niet aangemaakt')
+
+        # Update toestand
+        if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
+            logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
+            eminfra_client.update_toestand(asset_uuid=asset.uuid, asset_naam=asset.naam, toestand=AssetDTOToestand.IN_OPBOUW)
+
+        # Update eigenschap locatie
+        asset_locatiekenmerk = eminfra_client.get_kenmerk_locatie_by_asset_uuid(asset_uuid=asset.uuid)
+        if asset_locatiekenmerk.geometrie is None:
+            asset_row_wkt_geometry = parse_wkt_geometry(asset_row = asset_row)
+            logging.debug(f'Update eigenschap locatie: "{asset.uuid}": "{asset_row_wkt_geometry}"')
+            eminfra_client.update_kenmerk_locatie_by_asset_uuid(asset_uuid=asset.uuid, wkt_geom=asset_row_wkt_geometry)
+
+        # Lijst aanvullen met de naam en diens overeenkomstig uuid
+        wegkantkasten.append(f'{asset.uuid}: {asset.naam}')
+
+    logging.info(f'Wegkantkasten aangemaakt: {wegkantkasten}')
+
 
     # Aanmaken van de MIVLVE
     logging.info('Aanmaken van MIVLVE onder Wegkantkasten')
+    mivlve = []
+    for idx, asset_row in df_assets_mivlve.iterrows():
+        asset_row_uuid = asset_row.get("UUID Object")
+        asset_row_typeURI = asset_row.get("Object typeURI")
+        asset_row_naam = asset_row.get("Object assetId.identificator")
+        assettype_uuid = get_assettype_uuid(mapping_key='MIVLVE')
+        asset_row_parent_name = asset_row.get("Bevestigingsrelatie doelAssetId.identificator")
+        asset_row_parent_asset = next(eminfra_client.search_asset_by_name(asset_name=asset_row_parent_name, exact_search=True), None)
+        if asset_row_parent_asset is None:
+            logging.critical(f'Parent asset via de Bevestiging-relatie is onbestaande. Controleer MIVLVE "{asset_row_uuid}" en diens bevestiging-relatie')
+            raise ValueError(f'Parent asset via de Bevestiging-relatie is onbestaande. Controleer MIVLVE "{asset_row_uuid}" en diens bevestiging-relatie')
+        asset_row_parent_asset_uuid = asset_row_parent_asset.uuid
+        asset_row_parent_asset_name = asset_row_parent_asset.naam
+        logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_naam}')
+
+        if asset_row_uuid and asset_row_naam:
+            logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
+            validate_asset(uuid=asset_row_uuid, naam=asset_row_naam, stop_on_error=True)
+
+        asset = next(eminfra_client.search_asset_by_name(asset_name=asset_row_naam, exact_search=True), None)
+        if asset is None:
+            logging.debug(f'Asset met als naam "{asset_row_naam}" bestaat niet en wordt aangemaakt')
+            asset_dict = eminfra_client.create_asset(
+                parent_uuid=asset_row_parent_asset_uuid
+                , naam=asset_row_naam
+                , typeUuid=assettype_uuid
+                , parent_asset_type=BoomstructuurAssetTypeEnum.ASSET
+            )
+            asset = next(eminfra_client.search_asset_by_name(asset_name=asset_row_naam, exact_search=True), None)
+
+        if asset is None:
+            logging.critical('Asset werd niet aangemaakt')
+
+        # Update toestand
+        if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
+            logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
+            eminfra_client.update_toestand(asset_uuid=asset.uuid, asset_naam=asset.naam, toestand=AssetDTOToestand.IN_OPBOUW)
+
+        # Update eigenschap locatie
+        asset_locatiekenmerk = eminfra_client.get_kenmerk_locatie_by_asset_uuid(asset_uuid=asset.uuid)
+        if asset_locatiekenmerk.geometrie is None:
+            asset_row_wkt_geometry = parse_wkt_geometry(asset_row = asset_row)
+            logging.debug(f'Update eigenschap locatie: "{asset.uuid}": "{asset_row_wkt_geometry}"')
+            eminfra_client.update_kenmerk_locatie_by_asset_uuid(asset_uuid=asset.uuid, wkt_geom=asset_row_wkt_geometry)
+
+        # todo tot hier (eigenschappen)
+        # update eigenschap XXX
+
+        # Lijst aanvullen met de naam en diens overeenkomstig uuid
+        mivlve.append(f'{asset.uuid}: {asset.naam}')
     logging.info('MIVLVE aangemaakt')
 
     # Aanmaken van de MIVMeetpunten
     logging.info('Aanmaken van MIVMeetpunten onder MIVLVE')
+    mivmeetpunten = []
+    for idx, asset_row in df_assets_mivmeetpunten.iterrows():
+        asset_row_uuid = asset_row.get("UUID Object")
+        asset_row_typeURI = asset_row.get("Object typeURI")
+        asset_row_naam = asset_row.get("Object assetId.identificator")
+        assettype_uuid = get_assettype_uuid(mapping_key='MIVMeetpunten')
+        assettype_uuid_parent = get_assettype_uuid(mapping_key='MIVLVE')
+        asset_row_parent_name = asset_row.get("Sturingsrelatie bron AssetId.identificator")
+        query_search_parent = QueryDTO(size=5, from_=0, pagingMode=PagingModeEnum.OFFSET,
+                             expansions=ExpansionsDTO(fields=['parent'])
+                             , selection=SelectionDTO(expressions=[
+                    ExpressionDTO(terms=[TermDTO(property='type', operator=OperatorEnum.EQ, value=f'{assettype_uuid_parent}')]),
+                    ExpressionDTO(terms=[TermDTO(property='naam', operator=OperatorEnum.EQ, value=f'{asset_row_parent_name}')], logicalOp=LogicalOpEnum.AND)
+            ]))
+        asset_row_parent_asset = next(eminfra_client.search_assets(query_dto=query_search_parent), None)
+        if asset_row_parent_asset is None:
+            logging.critical(f'Parent asset via de Bevestiging-relatie is onbestaande. Controleer MIVMeetpunt "{asset_row_uuid}" en diens Sturing-relatie')
+            raise ValueError(f'Parent asset via de Bevestiging-relatie is onbestaande. Controleer MIVMeetpunt "{asset_row_uuid}" en diens Sturing-relatie')
+        asset_row_parent_asset_uuid = asset_row_parent_asset.uuid
+        asset_row_parent_asset_name = asset_row_parent_asset.naam
+        logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_naam}')
+
+        if asset_row_uuid and asset_row_naam:
+            logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
+            validate_asset(uuid=asset_row_uuid, naam=asset_row_naam, stop_on_error=True)
+
+        query = QueryDTO(size=5, from_=0, pagingMode=PagingModeEnum.OFFSET,
+                             expansions=ExpansionsDTO(fields=['parent'])
+                             , selection=SelectionDTO(expressions=[
+                    ExpressionDTO(terms=[TermDTO(property='type', operator=OperatorEnum.EQ, value=f'{assettype_uuid}')]),
+                    ExpressionDTO(terms=[TermDTO(property='naam', operator=OperatorEnum.EQ, value=f'{asset_row_naam}')], logicalOp=LogicalOpEnum.AND),
+                    ExpressionDTO(terms=[TermDTO(property='naampad', operator=OperatorEnum.CONTAINS, value=f'{asset_row_parent_asset_name}')], logicalOp=LogicalOpEnum.AND)
+            ]))
+        # todo tot hier. Debug onderstaande functie
+        asset = next(eminfra_client.search_assets(query_dto=query), None)
+        if asset is None:
+            logging.debug(f'Asset met als naam "{asset_row_naam}" bestaat niet en wordt aangemaakt')
+            asset_dict = eminfra_client.create_asset(
+                parent_uuid=asset_row_parent_asset_uuid
+                , naam=asset_row_naam
+                , typeUuid=assettype_uuid
+                , parent_asset_type=BoomstructuurAssetTypeEnum.ASSET
+            )
+            query = QueryDTO(size=5, from_=0, pagingMode=PagingModeEnum.OFFSET,
+                             expansions=ExpansionsDTO(fields=['parent'])
+                             , selection=SelectionDTO(expressions=[
+                    ExpressionDTO(
+                        terms=[TermDTO(property='type', operator=OperatorEnum.EQ, value=f'{assettype_uuid}')]),
+                    ExpressionDTO(terms=[TermDTO(property='naam', operator=OperatorEnum.EQ, value=f'{asset_row_naam}')],
+                                  logicalOp=LogicalOpEnum.AND),
+                    ExpressionDTO(terms=[TermDTO(property='naampad', operator=OperatorEnum.CONTAINS,
+                                                 value=f'{asset_row_parent_asset_name}')], logicalOp=LogicalOpEnum.AND)
+                ]))
+            asset = next(eminfra_client.search_assets(query_dto=query), None)
+
+        if asset is None:
+            logging.critical('Asset werd niet aangemaakt')
+
+        # Update toestand
+        if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
+            logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
+            eminfra_client.update_toestand(asset_uuid=asset.uuid, asset_naam=asset.naam, toestand=AssetDTOToestand.IN_OPBOUW)
+
+        # Update eigenschap locatie
+        asset_locatiekenmerk = eminfra_client.get_kenmerk_locatie_by_asset_uuid(asset_uuid=asset.uuid)
+        if asset_locatiekenmerk.geometrie is None:
+            asset_row_wkt_geometry = parse_wkt_geometry(asset_row = asset_row)
+            logging.debug(f'Update eigenschap locatie: "{asset.uuid}": "{asset_row_wkt_geometry}"')
+            eminfra_client.update_kenmerk_locatie_by_asset_uuid(asset_uuid=asset.uuid, wkt_geom=asset_row_wkt_geometry)
+
+        # todo tot hier (eigenschappen)
+        # update eigenschap XXX
+
+        # Lijst aanvullen met de naam en diens overeenkomstig uuid
+        mivmeetpunten.append(f'{asset.uuid}: {asset.naam}')
     logging.info('MIVMeetpunten aangemaakt')
 
     # Aanmaken of updaten van de eigenschappen
