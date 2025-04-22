@@ -1196,3 +1196,16 @@ class EMInfraClient:
         if response.status_code != 202:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
+
+    def update_asset(self, uuid:str, naam:str, toestand:str, commentaar:str = None, isActief:bool = None):
+        json_body = {
+            "actief": isActief, "naam": naam, "toestand": toestand, "commentaar": commentaar
+        }
+        response = self.requester.put(
+            url=f'core/api/assets/{uuid}'
+            , json=json_body
+        )
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return response.json()
