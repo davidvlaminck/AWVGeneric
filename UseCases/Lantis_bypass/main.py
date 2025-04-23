@@ -251,6 +251,14 @@ if __name__ == '__main__':
         , sheet_name="MIVMeetpunten"
     )
 
+    # Append new columns to the dataframes to fill with information inside the iteration
+    new_columns = ["asset_uuid", "bevestigingsrelatie_uuid"]
+    for col in new_columns:
+        df_assets_wegkantkasten[col] = None
+    new_columns = ["asset_uuid", "sturingsrelatie_uuid"]
+    for col in new_columns:
+        df_assets_mivlve[col] = None
+
     # Aanmaken van de Installaties (beheerobject)
     logging.info('Aanmaken van installaties op basis van de kastnamen')
     installaties = []
