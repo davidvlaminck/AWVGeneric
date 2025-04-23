@@ -1065,12 +1065,22 @@ class EMInfraClient:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-    def update_toestand(self, asset_uuid: str, asset_naam: str, toestand: AssetDTOToestand = AssetDTOToestand.IN_ONTWERP) -> None:
+    def update_toestand(self, asset: AssetDTO, toestand: AssetDTOToestand = AssetDTOToestand.IN_ONTWERP, actief:bool=True) -> None:
+        """
+        Update toestand of an asset. Keep the asset's naam, commentaar.
+        Set default actief = True
+
+        :param asset:
+        :param toestand:
+        :return:
+        """
         request_body = {
-            "naam": asset_naam, # mandatory element
-            "toestand": toestand.value
+            "naam": asset.naam,
+            "actief": actief,
+            "toestand": toestand.value,
+            "commentaar": asset.commentaar
         }
-        response = self.requester.put(url=f'core/api/assets/{asset_uuid}', json=request_body)
+        response = self.requester.put(url=f'core/api/assets/{asset.uuid}', json=request_body)
         if response.status_code != 202:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
