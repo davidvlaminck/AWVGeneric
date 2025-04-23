@@ -1108,6 +1108,28 @@ class EMInfraClient:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
+    def create_assetrelatie(self, bronAsset_uuid: str, doelAsset_uuid: str, relatieType_uuid: str) -> str:
+        json_body = {
+          "bronAsset": {
+            "uuid": f"{bronAsset_uuid}",
+            "_type": "installatie"
+          },
+          "doelAsset": {
+            "uuid": f"{doelAsset_uuid}",
+            "_type": "installatie"
+          },
+          "relatieType": {
+            "uuid": f"{relatieType_uuid}"
+          }
+        }
+        url = 'core/api/assetrelaties'
+        response = self.requester.post(url=url, json=json_body)
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return response.json().get("uuid")
+
+
     def get_kenmerken(self, assetId: str, naam: KenmerkTypeEnum = None) -> list[KenmerkType] | KenmerkType:
         """
 
