@@ -159,19 +159,6 @@ def get_relatietype_uuid(mapping_key: str) -> str:
     }
     return mapping_relatietypes[mapping_key]
 
-def get_kenmerktype_uuid(mapping_key: str) -> str:
-    """
-    Returns the kenmerktype uuid.
-    :param mapping_key:
-    :return:
-    """
-    mapping_kenmerktypes = {
-        "Bevestiging": "",
-        "Voedt": "",
-        "Sturing": ""
-    }
-    return mapping_kenmerktypes[mapping_key]
-
 
 def construct_installatie_naam(kastnaam: str) -> str:
     """
@@ -233,6 +220,8 @@ def parse_wkt_geometry(asset_row):
     asset_row_z = asset_row.get('Positie Z (Lambert 72, optioneel)')
     if asset_row_z is None:
         asset_row_z = 0
+    if asset_row_x is None or asset_row_y is None:
+        return None
     return f'POINT Z ({asset_row_x} {asset_row_y} {asset_row_z})'
 
 
@@ -305,16 +294,18 @@ if __name__ == '__main__':
             logging.critical('Asset werd niet aangemaakt')
 
         # Update toestand
-        # if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
-        logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
-        eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
+        if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
+            logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
+            eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
         # Update eigenschap locatie
-        asset_locatiekenmerk = eminfra_client.get_kenmerk_locatie_by_asset_uuid(asset_uuid=asset.uuid)
-        if asset_locatiekenmerk.geometrie is None:
-            asset_row_wkt_geometry = parse_wkt_geometry(asset_row = asset_row)
+        if asset_row_wkt_geometry := parse_wkt_geometry(asset_row=asset_row):
             logging.debug(f'Update eigenschap locatie: "{asset.uuid}": "{asset_row_wkt_geometry}"')
             eminfra_client.update_kenmerk_locatie_by_asset_uuid(asset_uuid=asset.uuid, wkt_geom=asset_row_wkt_geometry)
+
+        huidige_bestekkoppelingen = eminfra_client.get_bestekkoppelingen_by_asset_uuid(asset_uuid=asset.uuid)
+        if not huidige_bestekkoppelingen: # check if there are currently no bestekkkoppelingen.
+            eminfra_client.add_bestekkoppeling(asset_uuid=asset.uuid, eDelta_dossiernummer='INTERN-059')
 
         # Lijst aanvullen met de naam en diens overeenkomstig uuid
         wegkantkasten.append(f'{asset.uuid}: {asset.naam}')
@@ -358,26 +349,27 @@ if __name__ == '__main__':
             logging.critical('Asset werd niet aangemaakt')
 
         # Update toestand
-        # if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
-        logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
-        eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
+        if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
+            logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
+            eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
         # Update eigenschap locatie
-        asset_locatiekenmerk = eminfra_client.get_kenmerk_locatie_by_asset_uuid(asset_uuid=asset.uuid)
-        if asset_locatiekenmerk.geometrie is None:
-            asset_row_wkt_geometry = parse_wkt_geometry(asset_row = asset_row)
+        if asset_row_wkt_geometry := parse_wkt_geometry(asset_row=asset_row):
             logging.debug(f'Update eigenschap locatie: "{asset.uuid}": "{asset_row_wkt_geometry}"')
             eminfra_client.update_kenmerk_locatie_by_asset_uuid(asset_uuid=asset.uuid, wkt_geom=asset_row_wkt_geometry)
 
-        # todo relaties
         # Bevestiging-relatie
-        relatieTypeId = get_relatietype_uuid(mapping_key='Bevestiging')
-        kenmerkTypeId = get_kenmerktype_uuid(mapping_key='Bevestiging')
-        doel_assetId = asset_row.get('UUID Bevestigingsrelatie doelAsset')
-        eminfra_client.add_relatie(assetId=asset.uuid, relatieTypeId=relatieTypeId, kenmerkTypeId=kenmerkTypeId, doel_assetId=)
+        doelAsset_uuid = asset_row.get('UUID Bevestigingsrelatie doelAsset')
+        if doelAsset_uuid:
+            relatieType_uuid = get_relatietype_uuid(mapping_key='Bevestiging')
+            relatie_uuid = eminfra_client.create_assetrelatie(bronAsset_uuid=asset.uuid, doelAsset_uuid=doelAsset_uuid, relatieType_uuid=relatieType_uuid)
 
         # todo tot hier (eigenschappen)
         # update eigenschap XXX
+
+        huidige_bestekkoppelingen = eminfra_client.get_bestekkoppelingen_by_asset_uuid(asset_uuid=asset.uuid)
+        if not huidige_bestekkoppelingen: # check if there are currently no bestekkkoppelingen.
+            eminfra_client.add_bestekkoppeling(asset_uuid=asset.uuid, eDelta_dossiernummer='INTERN-059')
 
         # Lijst aanvullen met de naam en diens overeenkomstig uuid
         mivlve.append(f'{asset.uuid}: {asset.naam}')
@@ -444,11 +436,15 @@ if __name__ == '__main__':
             eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
         # Update eigenschap locatie
-        asset_locatiekenmerk = eminfra_client.get_kenmerk_locatie_by_asset_uuid(asset_uuid=asset.uuid)
-        if asset_locatiekenmerk.geometrie is None:
-            asset_row_wkt_geometry = parse_wkt_geometry(asset_row = asset_row)
+        if asset_row_wkt_geometry := parse_wkt_geometry(asset_row=asset_row):
             logging.debug(f'Update eigenschap locatie: "{asset.uuid}": "{asset_row_wkt_geometry}"')
             eminfra_client.update_kenmerk_locatie_by_asset_uuid(asset_uuid=asset.uuid, wkt_geom=asset_row_wkt_geometry)
+
+        # Sturing-relatie
+        doelAsset_uuid = asset_row.get('UUID Sturingsrelatie bronAsset')
+        if doelAsset_uuid:
+            relatieType_uuid = get_relatietype_uuid(mapping_key='Sturing')
+            relatie_uuid = eminfra_client.create_assetrelatie(bronAsset_uuid=asset.uuid, doelAsset_uuid=doelAsset_uuid, relatieType_uuid=relatieType_uuid)
 
         # update eigenschappen: Aansluiting, Formaat, Laag, Uitslijprichting, Wegdek
         # eigenschapwaarden_huidig = eminfra_client.get_eigenschapwaarden(assetId=asset.uuid)
@@ -473,9 +469,10 @@ if __name__ == '__main__':
         #
         #         eminfra_client.update_eigenschap(assetId=asset.uuid, eigenschap=eigenschapwaarde_nieuw)
 
+        huidige_bestekkoppelingen = eminfra_client.get_bestekkoppelingen_by_asset_uuid(asset_uuid=asset.uuid)
+        if not huidige_bestekkoppelingen: # check if there are currently no bestekkkoppelingen.
+            eminfra_client.add_bestekkoppeling(asset_uuid=asset.uuid, eDelta_dossiernummer='INTERN-059')
+
         # Lijst aanvullen met de naam en diens overeenkomstig uuid
         mivmeetpunten.append(f'{asset.uuid}: {asset.naam}')
     logging.info('MIVMeetpunten aangemaakt')
-
-    # Aanmaken of updaten van de eigenschappen
-    # Aanmaken of updaten van de relaties
