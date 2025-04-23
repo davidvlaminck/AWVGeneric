@@ -1,3 +1,4 @@
+import copy
 import json
 import logging
 from datetime import datetime
@@ -145,6 +146,32 @@ def get_assettype_uuid(mapping_key: str) -> str:
     }
     return mapping_assettypes[mapping_key]
 
+def get_relatietype_uuid(mapping_key: str) -> str:
+    """
+    Returns the relatietype uuid.
+    :param mapping_key:
+    :return:
+    """
+    mapping_relatietypes = {
+        "Bevestiging": "3ff9bf1c-d852-442e-a044-6200fe064b20",
+        "Voedt": "f2c5c4a1-0899-4053-b3b3-2d662c717b44",
+        "Sturing": "93c88f93-6e8c-4af3-a723-7e7a6d6956ac"
+    }
+    return mapping_relatietypes[mapping_key]
+
+def get_kenmerktype_uuid(mapping_key: str) -> str:
+    """
+    Returns the kenmerktype uuid.
+    :param mapping_key:
+    :return:
+    """
+    mapping_kenmerktypes = {
+        "Bevestiging": "",
+        "Voedt": "",
+        "Sturing": ""
+    }
+    return mapping_kenmerktypes[mapping_key]
+
 
 def construct_installatie_naam(kastnaam: str) -> str:
     """
@@ -278,9 +305,9 @@ if __name__ == '__main__':
             logging.critical('Asset werd niet aangemaakt')
 
         # Update toestand
-        if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
-            logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
-            eminfra_client.update_toestand(asset_uuid=asset.uuid, asset_naam=asset.naam, toestand=AssetDTOToestand.IN_OPBOUW)
+        # if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
+        logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
+        eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
         # Update eigenschap locatie
         asset_locatiekenmerk = eminfra_client.get_kenmerk_locatie_by_asset_uuid(asset_uuid=asset.uuid)
@@ -331,9 +358,9 @@ if __name__ == '__main__':
             logging.critical('Asset werd niet aangemaakt')
 
         # Update toestand
-        if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
-            logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
-            eminfra_client.update_toestand(asset_uuid=asset.uuid, asset_naam=asset.naam, toestand=AssetDTOToestand.IN_OPBOUW)
+        # if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
+        logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
+        eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
         # Update eigenschap locatie
         asset_locatiekenmerk = eminfra_client.get_kenmerk_locatie_by_asset_uuid(asset_uuid=asset.uuid)
@@ -341,6 +368,13 @@ if __name__ == '__main__':
             asset_row_wkt_geometry = parse_wkt_geometry(asset_row = asset_row)
             logging.debug(f'Update eigenschap locatie: "{asset.uuid}": "{asset_row_wkt_geometry}"')
             eminfra_client.update_kenmerk_locatie_by_asset_uuid(asset_uuid=asset.uuid, wkt_geom=asset_row_wkt_geometry)
+
+        # todo relaties
+        # Bevestiging-relatie
+        relatieTypeId = get_relatietype_uuid(mapping_key='Bevestiging')
+        kenmerkTypeId = get_kenmerktype_uuid(mapping_key='Bevestiging')
+        doel_assetId = asset_row.get('UUID Bevestigingsrelatie doelAsset')
+        eminfra_client.add_relatie(assetId=asset.uuid, relatieTypeId=relatieTypeId, kenmerkTypeId=kenmerkTypeId, doel_assetId=)
 
         # todo tot hier (eigenschappen)
         # update eigenschap XXX
@@ -381,11 +415,11 @@ if __name__ == '__main__':
                              expansions=ExpansionsDTO(fields=['parent'])
                              , selection=SelectionDTO(expressions=[
                     ExpressionDTO(terms=[TermDTO(property='type', operator=OperatorEnum.EQ, value=f'{assettype_uuid}')]),
-                    ExpressionDTO(terms=[TermDTO(property='naam', operator=OperatorEnum.EQ, value=f'{asset_row_naam}')], logicalOp=LogicalOpEnum.AND),
-                    ExpressionDTO(terms=[TermDTO(property='naampad', operator=OperatorEnum.CONTAINS, value=f'{asset_row_parent_asset_name}')], logicalOp=LogicalOpEnum.AND)
+                    ExpressionDTO(terms=[TermDTO(property='naam', operator=OperatorEnum.CONTAINS, value=f'{asset_row_naam}')], logicalOp=LogicalOpEnum.AND)
             ]))
-        # todo tot hier. Debug onderstaande functie
-        asset = next(eminfra_client.search_assets(query_dto=query), None)
+        # Het volledige naampad is niet gekend, dus zoek in de resultaten lijst of de uuid van de parent-asset overeenkomt.
+        asset_candidates = eminfra_client.search_assets(query_dto=query)
+        asset = next((asset for asset in asset_candidates if asset.parent.uuid == asset_row_parent_asset_uuid), None)
         if asset is None:
             logging.debug(f'Asset met als naam "{asset_row_naam}" bestaat niet en wordt aangemaakt')
             asset_dict = eminfra_client.create_asset(
@@ -394,17 +428,12 @@ if __name__ == '__main__':
                 , typeUuid=assettype_uuid
                 , parent_asset_type=BoomstructuurAssetTypeEnum.ASSET
             )
-            query = QueryDTO(size=5, from_=0, pagingMode=PagingModeEnum.OFFSET,
-                             expansions=ExpansionsDTO(fields=['parent'])
-                             , selection=SelectionDTO(expressions=[
-                    ExpressionDTO(
-                        terms=[TermDTO(property='type', operator=OperatorEnum.EQ, value=f'{assettype_uuid}')]),
-                    ExpressionDTO(terms=[TermDTO(property='naam', operator=OperatorEnum.EQ, value=f'{asset_row_naam}')],
-                                  logicalOp=LogicalOpEnum.AND),
-                    ExpressionDTO(terms=[TermDTO(property='naampad', operator=OperatorEnum.CONTAINS,
-                                                 value=f'{asset_row_parent_asset_name}')], logicalOp=LogicalOpEnum.AND)
-                ]))
-            asset = next(eminfra_client.search_assets(query_dto=query), None)
+            try:
+                asset_row_uuid = asset_dict.get("uuid")
+                asset = next(eminfra_client.search_asset_by_uuid(asset_uuid=asset_row_uuid), None)
+            except:
+                logging.critical(f'Asset werd niet teruggevonden in em-infra: {asset_row_uuid}')
+                raise ValueError(f'Asset werd niet teruggevonden in em-infra: {asset_row_uuid}')
 
         if asset is None:
             logging.critical('Asset werd niet aangemaakt')
@@ -412,7 +441,7 @@ if __name__ == '__main__':
         # Update toestand
         if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
             logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
-            eminfra_client.update_toestand(asset_uuid=asset.uuid, asset_naam=asset.naam, toestand=AssetDTOToestand.IN_OPBOUW)
+            eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
         # Update eigenschap locatie
         asset_locatiekenmerk = eminfra_client.get_kenmerk_locatie_by_asset_uuid(asset_uuid=asset.uuid)
@@ -421,8 +450,28 @@ if __name__ == '__main__':
             logging.debug(f'Update eigenschap locatie: "{asset.uuid}": "{asset_row_wkt_geometry}"')
             eminfra_client.update_kenmerk_locatie_by_asset_uuid(asset_uuid=asset.uuid, wkt_geom=asset_row_wkt_geometry)
 
-        # todo tot hier (eigenschappen)
-        # update eigenschap XXX
+        # update eigenschappen: Aansluiting, Formaat, Laag, Uitslijprichting, Wegdek
+        # eigenschapwaarden_huidig = eminfra_client.get_eigenschapwaarden(assetId=asset.uuid)
+        # eigenschappen_huidig = eminfra_client.get_eigenschappen(assetId=asset.uuid)
+        #
+        # eigenschapnamen_meetpunt = ['Aansluiting', 'Formaat', 'Laag', 'Uitslijprichting', 'Wegdek']
+        # for eigenschapnaam_meetpunt in eigenschapnamen_meetpunt:
+        #     logging.debug(f'Update eigenschap {eigenschapnaam_meetpunt}')
+        #     asset_row_eigenschap_nieuw = asset_row[f'{eigenschapnaam_meetpunt}']
+        #     # zoek de huidige waarde voor deze eigenschap, indien onbestaande, zoek de Eigenschap en maak er een een Eigenschapwaarde van.
+        #
+        #     eigenschapwaarde_huidig = next((eigenschapwaarde for eigenschapwaarde in eigenschapwaarden_huidig if eigenschapwaarde.eigenschap.naam == eigenschapnaam_meetpunt), None)
+        #     # todo implementeer de situatie waarbij de eigenschap nog niet bestaat. Ophalen van de eigenschap en nadien de waarde toekennen in TypedValue.
+        #     if eigenschapwaarde_huidig is None:
+        #         eigenschap_huidig = eminfra_client.search_eigenschappen(eigenschap_naam=eigenschapnaam_meetpunt)
+        #         eigenschap_huidig = next((eigenschap for eigenschap in eminfra_client.search_eigenschappen(eigenschap_naam=eigenschapnaam_meetpunt) if 'https://lgc.data.wegenenverkeer.be' in eigenschap.uri), None) # beperk de eigenschappen tot de Legacy eigenschappen.
+        #         # todo implement check indien er meerdere gelijknamige eigenschappen bestaan
+        #
+        #     if eigenschapwaarde_huidig and eigenschapwaarde_huidig.typedValue.get('value') != asset_row_eigenschap_nieuw:
+        #         eigenschapwaarde_nieuw = copy.deepcopy(eigenschapwaarde_huidig)
+        #         eigenschapwaarde_nieuw.typedValue['value'] = asset_row_eigenschap_nieuw
+        #
+        #         eminfra_client.update_eigenschap(assetId=asset.uuid, eigenschap=eigenschapwaarde_nieuw)
 
         # Lijst aanvullen met de naam en diens overeenkomstig uuid
         mivmeetpunten.append(f'{asset.uuid}: {asset.naam}')
