@@ -1,4 +1,5 @@
-from unittest.mock import Mock
+from pathlib import Path
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -454,23 +455,14 @@ def fake_eminfra_client() -> EMInfraClient:
         }
     }
 
-    # from mock import patch
-    #
-    #
-    # def test_database_thing(self):
-    #     def __init__(self, dbName, user, password):
-    #         # do something else
-    #     with patch.object(DatabaseThing, '__init__', __init__):
-    #         # assert something
+    def __init__(self, auth_type: AuthType, env: Environment, settings_path: Path = None, cookie: str = None):
+        pass
 
-    orig_create_requester = RequesterFactory.create_requester
-    RequesterFactory.create_requester = Mock()
-    eminfra_client = EMInfraClient(auth_type=AuthType.JWT, env=Environment.DEV, settings_path=None)
-    eminfra_client.requester = Mock(spec=AbstractRequester)
+    with patch.object(EMInfraClient, '__init__', __init__):
+        eminfra_client = EMInfraClient(auth_type=AuthType.JWT, env=Environment.DEV, settings_path=None)
+        eminfra_client.requester = Mock(spec=AbstractRequester)
 
-    yield eminfra_client
-
-    RequesterFactory.create_requester = orig_create_requester
+        yield eminfra_client
 
     #
     # if resource == 'assets':
