@@ -155,11 +155,11 @@ class EMInfraClient:
 
     def get_bestekref_by_eDelta_dossiernummer(self, eDelta_dossiernummer: str) -> BestekRef | None:
         query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
-        selection=SelectionDTO(
-        expressions=[ExpressionDTO(
-        terms=[TermDTO(property='eDeltaDossiernummer',
-        operator=OperatorEnum.EQ,
-        value=eDelta_dossiernummer)])]))
+                             selection=SelectionDTO(
+                                 expressions=[ExpressionDTO(
+                                     terms=[TermDTO(property='eDeltaDossiernummer',
+                                                    operator=OperatorEnum.EQ,
+                                                    value=eDelta_dossiernummer)])]))
 
         response = self.requester.post('core/api/bestekrefs/search', data=query_dto.json())
         if response.status_code != 200:
@@ -193,7 +193,7 @@ class EMInfraClient:
             raise ProcessLookupError(response.content.decode("utf-8"))
 
     def adjust_date_bestekkoppeling(self, asset_uuid: str, bestek_ref_uuid: str, start_datetime: datetime = None,
-                             end_datetime: datetime = None) -> dict | None:
+                                    end_datetime: datetime = None) -> dict | None:
         """
         Adjusts the startdate and/or the enddate of an existing bestekkoppeling.
 
@@ -207,12 +207,12 @@ class EMInfraClient:
 
         bestekkoppelingen = self.get_bestekkoppelingen_by_asset_uuid(asset_uuid)
         if matching_koppeling := next(
-            (
-                k
-                for k in bestekkoppelingen
-                if k.bestekRef.uuid == bestek_ref_uuid
-            ),
-            None,
+                (
+                        k
+                        for k in bestekkoppelingen
+                        if k.bestekRef.uuid == bestek_ref_uuid
+                ),
+                None,
         ):
             if start_datetime:
                 matching_koppeling.startDatum = format_datetime(start_datetime)
@@ -387,12 +387,12 @@ class EMInfraClient:
     def search_assets(self, query_dto: QueryDTO, actief:bool = None) -> Generator[AssetDTO]:
         if actief is not None:
             query_dto.selection.expressions.append(
-            ExpressionDTO(
-                terms=[TermDTO(property='actief',
-                               operator=OperatorEnum.EQ,
-                               value=actief)
-                       ]
-                , logicalOp=LogicalOpEnum.AND)
+                ExpressionDTO(
+                    terms=[TermDTO(property='actief',
+                                   operator=OperatorEnum.EQ,
+                                   value=actief)
+                           ]
+                    , logicalOp=LogicalOpEnum.AND)
             )
         yield from self._search_assets_helper(query_dto)
 
@@ -611,15 +611,15 @@ class EMInfraClient:
 
     def search_identiteit(self, naam: str) -> Generator[IdentiteitKenmerk]:
         query_dto = QueryDTO(size=5, from_=0, pagingMode=PagingModeEnum.OFFSET,
-                 selection=SelectionDTO(
-                     expressions=[
-                         ExpressionDTO(
-                             terms=[TermDTO(property='actief', operator=OperatorEnum.EQ, value=True, logicalOp=None)]
-                         , logicalOp=None
-                         )
-                     ]
-                 )
-            )
+                             selection=SelectionDTO(
+                                 expressions=[
+                                     ExpressionDTO(
+                                         terms=[TermDTO(property='actief', operator=OperatorEnum.EQ, value=True, logicalOp=None)]
+                                         , logicalOp=None
+                                     )
+                                 ]
+                             )
+                             )
 
         naam_parts = naam.split(' ')
         for naam_part in naam_parts:
@@ -651,15 +651,15 @@ class EMInfraClient:
     def search_eventcontexts(self, omschrijving: str = None) -> Generator[EventContext]:
         if omschrijving:
             query_dto = QueryDTO(size=100,
-                             from_=0,
-                             orderByProperty='omschrijving',
-                             pagingMode=PagingModeEnum.OFFSET,
-                             selection=SelectionDTO(
-                                 expressions=[
-                                     ExpressionDTO(
-                                         terms=[TermDTO(property='omschrijving', operator=OperatorEnum.CONTAINS, value=f'{omschrijving}',
-                                                        logicalOp=None)]
-                                         , logicalOp=None)]))
+                                 from_=0,
+                                 orderByProperty='omschrijving',
+                                 pagingMode=PagingModeEnum.OFFSET,
+                                 selection=SelectionDTO(
+                                     expressions=[
+                                         ExpressionDTO(
+                                             terms=[TermDTO(property='omschrijving', operator=OperatorEnum.CONTAINS, value=f'{omschrijving}',
+                                                            logicalOp=None)]
+                                             , logicalOp=None)]))
 
         url = "core/api/eventcontexts/search"
         while True:
@@ -790,20 +790,20 @@ class EMInfraClient:
         actual_commentaar = actual_postit.commentaar
         actual_startDatum = actual_postit.startDatum
         actual_eindDatum = actual_postit.eindDatum
-        
+
         json_body = {}
-        
+
         if commentaar:
             json_body["commentaar"] = commentaar
         else:
             json_body["commentaar"] = actual_commentaar
-            
+
         if startDatum:
             startDatum_str = format_datetime(startDatum)
             json_body["startDatum"] = startDatum_str
         else:
             json_body["startDatum"] = actual_startDatum
-            
+
         if eindDatum:
             eindDatum_str = format_datetime(eindDatum)
             json_body["eindDatum"] = eindDatum_str
@@ -1049,9 +1049,9 @@ class EMInfraClient:
         request_body = {
             "data": [
                 {
-                "eigenschap": eigenschap.eigenschap.asdict(),
-                "typedValue": eigenschap.typedValue
-            }]
+                    "eigenschap": eigenschap.eigenschap.asdict(),
+                    "typedValue": eigenschap.typedValue
+                }]
         }
         kenmerk_uuid = eigenschap.kenmerkType.uuid
         response = self.requester.patch(url=f'core/api/assets/{assetId}/kenmerken/{kenmerk_uuid}/eigenschapwaarden', json=request_body)
@@ -1110,17 +1110,17 @@ class EMInfraClient:
 
     def create_assetrelatie(self, bronAsset_uuid: str, doelAsset_uuid: str, relatieType_uuid: str) -> str:
         json_body = {
-          "bronAsset": {
-            "uuid": f"{bronAsset_uuid}",
-            "_type": "installatie"
-          },
-          "doelAsset": {
-            "uuid": f"{doelAsset_uuid}",
-            "_type": "installatie"
-          },
-          "relatieType": {
-            "uuid": f"{relatieType_uuid}"
-          }
+            "bronAsset": {
+                "uuid": f"{bronAsset_uuid}",
+                "_type": "installatie"
+            },
+            "doelAsset": {
+                "uuid": f"{doelAsset_uuid}",
+                "_type": "installatie"
+            },
+            "relatieType": {
+                "uuid": f"{relatieType_uuid}"
+            }
         }
         url = 'core/api/assetrelaties'
         response = self.requester.post(url=url, json=json_body)
@@ -1128,6 +1128,21 @@ class EMInfraClient:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
         return response.json().get("uuid")
+
+    def search_assetrelaties_OTL(self, bronAsset_uuid: str = None, doelAsset_uuid: str = None):
+        if bronAsset_uuid is None and doelAsset_uuid is None:
+            raise ValueError('At least one optional parameter "bronAsset_uuid" or "doelAsset_uuid" must be provided.')
+        json_body = {"filters": {}}
+        if bronAsset_uuid:
+            json_body["filters"]["bronAsset"] = bronAsset_uuid
+        if doelAsset_uuid:
+            json_body["filters"]["doelAsset"] = doelAsset_uuid
+        url = 'core/api/otl/assetrelaties/search'
+        response = self.requester.post(url=url, json=json_body)
+        if response.status_code != 200:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return response.json().get("@graph")
 
 
     def get_kenmerken(self, assetId: str, naam: KenmerkTypeEnum = None) -> list[KenmerkType] | KenmerkType:
@@ -1261,8 +1276,8 @@ class EMInfraClient:
             "name":"reorganize",
             "moveOperations":
                 [{"assetsUuids":[f'{childAsset.uuid}']
-                  ,"targetType":parentType.value
-                  ,"targetUuid":f'{parentAsset.uuid}'}]
+                     ,"targetType":parentType.value
+                     ,"targetUuid":f'{parentAsset.uuid}'}]
         }
         response = self.requester.put(
             url='core/api/beheerobjecten/ops/reorganize'
