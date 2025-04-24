@@ -1,6 +1,7 @@
 import copy
 import json
 import logging
+import os
 from datetime import datetime
 import re
 
@@ -189,7 +190,7 @@ def construct_installatie_naam(kastnaam: str) -> str:
 def validate_asset(uuid: str = None, naam: str = None, stop_on_error: bool = True) -> None:
     """
     Controleer het bestaan van een asset op basis van diens uuid.
-    Valideer nadien of de niuewe naam overeenstemt met de naam van de bestaande asset.
+    Valideer nadien of de nieuwe naam overeenstemt met de naam van de bestaande asset.
 
     :param uuid: asset uuid
     :param naam: asset name
@@ -205,7 +206,7 @@ def validate_asset(uuid: str = None, naam: str = None, stop_on_error: bool = Tru
         if stop_on_error:
             raise ValueError(f'Asset {asset_row_uuid} werd niet teruggevonden in em-infra. Dit zou moeten bestaan.')
 
-    if naam != asset.naam:
+    if str(naam) != str(asset.naam):
         logging.error(
             f'Asset {uuid} naam {naam} komt niet overeen met de bestaande naam {asset.naam}.')
         if stop_on_error:
@@ -230,11 +231,13 @@ if __name__ == '__main__':
     logging.info('Lantis Bypass: \tAanmaken van assets en relaties voor de Bypass van de Oosterweelverbinding')
 
     settings_path = load_settings()
-    environment = Environment.DEV
+    environment = Environment.PRD
     eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=settings_path)
     logging.info(f'Omgeving: {environment.name}')
+    eDelta_dossiernummer = 'INTERN-059' # todo: wijzigen naar INTERN-059
+    logging.info(f'Bestekkoppeling: {eDelta_dossiernummer}')
 
-    excel_file = Path(__file__).resolve().parent / 'data' / 'input' / 'Componentenlijst_20250417_DEV.xlsx'
+    excel_file = Path(__file__).resolve().parent / 'data' / 'input' / 'Componentenlijst_20250417_PRD.xlsx'
     logging.info(f"Excel file wordt ingelezen en gevalideerd: {excel_file}")
     df_assets_wegkantkasten = import_data_as_dataframe(
         filepath=excel_file
@@ -252,12 +255,22 @@ if __name__ == '__main__':
     )
 
     # Append new columns to the dataframes to fill with information inside the iteration
-    new_columns = ["asset_uuid", "bevestigingsrelatie_uuid"]
+    new_columns = ["asset_uuid"]
     for col in new_columns:
         df_assets_wegkantkasten[col] = None
-    new_columns = ["asset_uuid", "sturingsrelatie_uuid"]
+    new_columns = ["asset_uuid", "bevestigingsrelatie_uuid"]
     for col in new_columns:
         df_assets_mivlve[col] = None
+    new_columns = ["asset_uuid", "sturingsrelatie_uuid"]
+    for col in new_columns:
+        df_assets_mivmeetpunten[col] = None
+
+    output_excel_path = 'data/output/lantis_bypass.xlsx'
+    # Check if the file exists
+    if not os.path.exists(output_excel_path):
+        # Create new file
+        with pd.ExcelWriter(output_excel_path, engine='openpyxl') as writer:
+            df_assets_wegkantkasten.to_excel(writer, sheet_name="Wegkantkasten", index=False, freeze_panes=[1, 1])
 
     # Aanmaken van de Installaties (beheerobject)
     logging.info('Aanmaken van installaties op basis van de kastnamen')
@@ -272,7 +285,6 @@ if __name__ == '__main__':
 
     # Aanmaken van de Wegkantkasten
     logging.info('Aanmaken van Wegkantkasten onder installaties')
-    wegkantkasten = []
     for idx, asset_row in df_assets_wegkantkasten.iterrows():
         asset_row_uuid = asset_row.get("UUID Object")
         asset_row_typeURI = asset_row.get("Object typeURI")
@@ -311,19 +323,20 @@ if __name__ == '__main__':
             logging.debug(f'Update eigenschap locatie: "{asset.uuid}": "{asset_row_wkt_geometry}"')
             eminfra_client.update_kenmerk_locatie_by_asset_uuid(asset_uuid=asset.uuid, wkt_geom=asset_row_wkt_geometry)
 
-        huidige_bestekkoppelingen = eminfra_client.get_bestekkoppelingen_by_asset_uuid(asset_uuid=asset.uuid)
-        if not huidige_bestekkoppelingen: # check if there are currently no bestekkkoppelingen.
-            eminfra_client.add_bestekkoppeling(asset_uuid=asset.uuid, eDelta_dossiernummer='INTERN-059')
+        # huidige_bestekkoppelingen = eminfra_client.get_bestekkoppelingen_by_asset_uuid(asset_uuid=asset.uuid)
+        # if not huidige_bestekkoppelingen: # check if there are currently no bestekkkoppelingen.
+        #     eminfra_client.add_bestekkoppeling(asset_uuid=asset.uuid, eDelta_dossiernummer=eDelta_dossiernummer, start_datetime=datetime(2024, 9,1))
 
         # Lijst aanvullen met de naam en diens overeenkomstig uuid
-        wegkantkasten.append(f'{asset.uuid}: {asset.naam}')
-
-    logging.info(f'Wegkantkasten aangemaakt: {wegkantkasten}')
+        df_assets_wegkantkasten.at[idx, "asset_uuid"] = asset.uuid
+    # Wegschrijven van het dataframe
+    with pd.ExcelWriter(output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
+        df_assets_wegkantkasten.to_excel(writer, sheet_name='Wegkantkasten', columns=["Object assetId.identificator", "asset_uuid"], index=False, freeze_panes=[1, 1])
+    logging.info('Wegkantkasten aangemaakt')
 
 
     # Aanmaken van de MIVLVE
     logging.info('Aanmaken van MIVLVE onder Wegkantkasten')
-    mivlve = []
     for idx, asset_row in df_assets_mivlve.iterrows():
         asset_row_uuid = asset_row.get("UUID Object")
         asset_row_typeURI = asset_row.get("Object typeURI")
@@ -333,9 +346,10 @@ if __name__ == '__main__':
         asset_row_parent_asset = next(eminfra_client.search_asset_by_name(asset_name=asset_row_parent_name, exact_search=True), None)
         if asset_row_parent_asset is None:
             logging.critical(f'Parent asset via de Bevestiging-relatie is onbestaande. Controleer MIVLVE "{asset_row_uuid}" en diens bevestiging-relatie')
-            raise ValueError(f'Parent asset via de Bevestiging-relatie is onbestaande. Controleer MIVLVE "{asset_row_uuid}" en diens bevestiging-relatie')
-        asset_row_parent_asset_uuid = asset_row_parent_asset.uuid
-        asset_row_parent_asset_name = asset_row_parent_asset.naam
+            # raise ValueError(f'Parent asset via de Bevestiging-relatie is onbestaande. Controleer MIVLVE "{asset_row_uuid}" en diens bevestiging-relatie')
+        else:
+            asset_row_parent_asset_uuid = asset_row_parent_asset.uuid
+            asset_row_parent_asset_name = asset_row_parent_asset.naam
         logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_naam}')
 
         if asset_row_uuid and asset_row_naam:
@@ -369,23 +383,32 @@ if __name__ == '__main__':
         # Bevestiging-relatie
         doelAsset_uuid = asset_row.get('UUID Bevestigingsrelatie doelAsset')
         if doelAsset_uuid:
-            relatieType_uuid = get_relatietype_uuid(mapping_key='Bevestiging')
-            relatie_uuid = eminfra_client.create_assetrelatie(bronAsset_uuid=asset.uuid, doelAsset_uuid=doelAsset_uuid, relatieType_uuid=relatieType_uuid)
+            # check of de relatie al bestaat.
+            response = eminfra_client.search_assetrelaties_OTL(bronAsset_uuid=asset.uuid, doelAsset_uuid=doelAsset_uuid)
+            if not response:
+                relatieType_uuid = get_relatietype_uuid(mapping_key='Bevestiging')
+                relatie_uuid = eminfra_client.create_assetrelatie(bronAsset_uuid=asset.uuid, doelAsset_uuid=doelAsset_uuid, relatieType_uuid=relatieType_uuid)
+            else:
+                relatie_uuid = response[0].get("RelatieObject.assetId").get("DtcIdentificator.identificator")[:36] # eerste 36 karakters van de UUID
+        else:
+            relatie_uuid = None
 
         # todo tot hier (eigenschappen)
         # update eigenschap XXX
 
-        huidige_bestekkoppelingen = eminfra_client.get_bestekkoppelingen_by_asset_uuid(asset_uuid=asset.uuid)
-        if not huidige_bestekkoppelingen: # check if there are currently no bestekkkoppelingen.
-            eminfra_client.add_bestekkoppeling(asset_uuid=asset.uuid, eDelta_dossiernummer='INTERN-059')
+        # huidige_bestekkoppelingen = eminfra_client.get_bestekkoppelingen_by_asset_uuid(asset_uuid=asset.uuid)
+        # if not huidige_bestekkoppelingen: # check if there are currently no bestekkkoppelingen.
+        #     eminfra_client.add_bestekkoppeling(asset_uuid=asset.uuid, eDelta_dossiernummer=eDelta_dossiernummer, start_datetime=datetime(2024, 9,1))
 
         # Lijst aanvullen met de naam en diens overeenkomstig uuid
-        mivlve.append(f'{asset.uuid}: {asset.naam}')
+        df_assets_mivlve.at[idx, "asset_uuid"] = asset.uuid
+        df_assets_mivlve.at[idx, "bevestigingsrelatie_uuid"] = relatie_uuid
+    with pd.ExcelWriter(output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
+        df_assets_mivlve.to_excel(writer, sheet_name='MIVLVE', columns=["Object assetId.identificator", "asset_uuid", "bevestigingsrelatie_uuid"], index=False, freeze_panes=[1, 1])
     logging.info('MIVLVE aangemaakt')
 
     # Aanmaken van de MIVMeetpunten
     logging.info('Aanmaken van MIVMeetpunten onder MIVLVE')
-    mivmeetpunten = []
     for idx, asset_row in df_assets_mivmeetpunten.iterrows():
         asset_row_uuid = asset_row.get("UUID Object")
         asset_row_typeURI = asset_row.get("Object typeURI")
@@ -402,9 +425,10 @@ if __name__ == '__main__':
         asset_row_parent_asset = next(eminfra_client.search_assets(query_dto=query_search_parent), None)
         if asset_row_parent_asset is None:
             logging.critical(f'Parent asset via de Bevestiging-relatie is onbestaande. Controleer MIVMeetpunt "{asset_row_uuid}" en diens Sturing-relatie')
-            raise ValueError(f'Parent asset via de Bevestiging-relatie is onbestaande. Controleer MIVMeetpunt "{asset_row_uuid}" en diens Sturing-relatie')
-        asset_row_parent_asset_uuid = asset_row_parent_asset.uuid
-        asset_row_parent_asset_name = asset_row_parent_asset.naam
+            # raise ValueError(f'Parent asset via de Bevestiging-relatie is onbestaande. Controleer MIVMeetpunt "{asset_row_uuid}" en diens Sturing-relatie')
+        else:
+            asset_row_parent_asset_uuid = asset_row_parent_asset.uuid
+            asset_row_parent_asset_name = asset_row_parent_asset.naam
         logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_naam}')
 
         if asset_row_uuid and asset_row_naam:
@@ -449,11 +473,18 @@ if __name__ == '__main__':
             eminfra_client.update_kenmerk_locatie_by_asset_uuid(asset_uuid=asset.uuid, wkt_geom=asset_row_wkt_geometry)
 
         # Sturing-relatie
-        doelAsset_uuid = asset_row.get('UUID Sturingsrelatie bronAsset')
-        if doelAsset_uuid:
-            relatieType_uuid = get_relatietype_uuid(mapping_key='Sturing')
-            relatie_uuid = eminfra_client.create_assetrelatie(bronAsset_uuid=asset.uuid, doelAsset_uuid=doelAsset_uuid, relatieType_uuid=relatieType_uuid)
-
+        # ! De Sturing-relatie loopt van een meetpunt (bron) naar een meetlus MIVLVE (doel)
+        bronAsset_uuid = asset_row.get('UUID Sturingsrelatie bronAsset')
+        if bronAsset_uuid:
+            # check of de relatie al bestaat.
+            response = eminfra_client.search_assetrelaties_OTL(bronAsset_uuid=asset.uuid, doelAsset_uuid=bronAsset_uuid)
+            if not response:
+                relatieType_uuid = get_relatietype_uuid(mapping_key='Sturing')
+                relatie_uuid = eminfra_client.create_assetrelatie(bronAsset_uuid=asset.uuid, doelAsset_uuid=bronAsset_uuid, relatieType_uuid=relatieType_uuid)
+            else:
+                relatie_uuid = response[0].get("RelatieObject.assetId").get("DtcIdentificator.identificator")[:36] # eerste 36 karakters van de UUID
+        else:
+            relatie_uuid = None
         # update eigenschappen: Aansluiting, Formaat, Laag, Uitslijprichting, Wegdek
         # eigenschapwaarden_huidig = eminfra_client.get_eigenschapwaarden(assetId=asset.uuid)
         # eigenschappen_huidig = eminfra_client.get_eigenschappen(assetId=asset.uuid)
@@ -477,10 +508,15 @@ if __name__ == '__main__':
         #
         #         eminfra_client.update_eigenschap(assetId=asset.uuid, eigenschap=eigenschapwaarde_nieuw)
 
-        huidige_bestekkoppelingen = eminfra_client.get_bestekkoppelingen_by_asset_uuid(asset_uuid=asset.uuid)
-        if not huidige_bestekkoppelingen: # check if there are currently no bestekkkoppelingen.
-            eminfra_client.add_bestekkoppeling(asset_uuid=asset.uuid, eDelta_dossiernummer='INTERN-059')
+        # huidige_bestekkoppelingen = eminfra_client.get_bestekkoppelingen_by_asset_uuid(asset_uuid=asset.uuid)
+        # if not huidige_bestekkoppelingen: # check if there are currently no bestekkkoppelingen.
+        #     eminfra_client.add_bestekkoppeling(asset_uuid=asset.uuid, eDelta_dossiernummer=eDelta_dossiernummer, start_datetime=datetime(2024, 9,1))
 
         # Lijst aanvullen met de naam en diens overeenkomstig uuid
-        mivmeetpunten.append(f'{asset.uuid}: {asset.naam}')
+        df_assets_mivmeetpunten.at[idx, "asset_uuid"] = asset.uuid
+        df_assets_mivmeetpunten.at[idx, "sturingsrelatie_uuid"] = relatie_uuid
+    with pd.ExcelWriter(output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
+        df_assets_mivmeetpunten.to_excel(writer, sheet_name='MIVMeetpunten',
+                                  columns=["Object assetId.identificator", "asset_uuid",
+                                           "sturingsrelatie_uuid"], index=False, freeze_panes=[1, 1])
     logging.info('MIVMeetpunten aangemaakt')
