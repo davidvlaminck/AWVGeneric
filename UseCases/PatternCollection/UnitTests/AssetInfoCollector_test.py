@@ -2,27 +2,19 @@
 
 from API.AbstractRequester import AbstractRequester
 from UseCases.PatternCollection.Domain.AssetInfoCollector import AssetInfoCollector
-from ClientFixtures import fake_eminfra_client
+from ClientFixtures import fake_eminfra_client, fake_emson_client
 
 
-def test_asset_info_collector(fake_eminfra_client):
-    fake_requester = Mock(spec=AbstractRequester)
-    fake_requester.first_part_url = ''
-    AssetInfoCollector.create_requester_with_settings = Mock(return_value=fake_requester)
-    collector = AssetInfoCollector(em_infra_client=Mock(), emson_client=Mock())
-    collector.em_infra_importer = fake_eminfra_client
+def test_asset_info_collector(fake_eminfra_client, fake_emson_client):
+    collector = AssetInfoCollector(em_infra_client=fake_eminfra_client, emson_client=fake_emson_client)
 
     collector.collect_asset_info(uuids=['00000000-0000-0000-0000-000000000001'])
     asset_node = collector.collection.get_node_object_by_uuid('00000000-0000-0000-0000-000000000001')
     assert asset_node.uuid == '00000000-0000-0000-0000-000000000001'
 
 
-def test_asset_info_collector_inactive():
-    fake_requester = Mock(spec=AbstractRequester)
-    fake_requester.first_part_url = ''
-    AssetInfoCollector.create_requester_with_settings = Mock(return_value=fake_requester)
-    collector = AssetInfoCollector(em_infra_client=Mock(), emson_client=Mock())
-    collector.em_infra_importer = fake_em_infra_importer
+def test_asset_info_collector_inactive(fake_eminfra_client, fake_emson_client):
+    collector = AssetInfoCollector(em_infra_client=fake_eminfra_client, emson_client=fake_emson_client)
 
     collector.collect_asset_info(uuids=['00000000-0000-0000-0000-000000000010'])
     asset_node = collector.collection.get_node_object_by_uuid('00000000-0000-0000-0000-000000000010')
@@ -30,12 +22,8 @@ def test_asset_info_collector_inactive():
     assert asset_node.active is False
 
 
-def test_start_collecting_from_starting_uuids_using_pattern_giving_uuids_of_a():
-    fake_requester = Mock(spec=AbstractRequester)
-    fake_requester.first_part_url = ''
-    AssetInfoCollector.create_requester_with_settings = Mock(return_value=fake_requester)
-    collector = AssetInfoCollector(em_infra_client=Mock(), emson_client=Mock())
-    collector.em_infra_importer = fake_em_infra_importer
+def test_start_collecting_from_starting_uuids_using_pattern_giving_uuids_of_a(fake_eminfra_client, fake_emson_client):
+    collector = AssetInfoCollector(em_infra_client=fake_eminfra_client, emson_client=fake_emson_client)
 
     collector.start_collecting_from_starting_uuids_using_pattern(
         starting_uuids=['00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000003',
