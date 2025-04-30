@@ -48,5 +48,5 @@ def format_datetime(datetime: datetime) -> str:
     :return: date as string '%Y-%m-%dT00:00:00.000+00:00'
     """
     hour_interval = get_winter_summer_time_interval(date=datetime)
-    return f'{datetime.strftime("%Y-%m-%d")}T00:00:00.000+0{hour_interval}:00'
+    return f'{datetime.strftime("%Y-%m-%dT%H:%M:%S")}.000+0{hour_interval}:00'
 
