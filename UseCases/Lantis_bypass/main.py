@@ -15,14 +15,6 @@ from otlmow_model.OtlmowModel.Helpers.RelationCreator import create_betrokkenere
 from otlmow_converter.OtlmowConverter import OtlmowConverter
 from otlmow_model.OtlmowModel.Classes.Onderdeel.Bevestiging import Bevestiging
 
-def load_settings():
-    """Load API settings from JSON"""
-    return Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
-
-
-def validate_not_null_column(df: pd.DataFrame, column: str):
-    pass
-
 
 def import_data_as_dataframe(filepath: Path, sheet_name: str = None):
     """Import data as a dataframe
@@ -230,31 +222,37 @@ if __name__ == '__main__':
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s\t', filemode="w")
     logging.info('Lantis Bypass: \tAanmaken van assets en relaties voor de Bypass van de Oosterweelverbinding')
 
-    settings_path = load_settings()
+    settings_path = Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
+    logging.info(f'settings_path: {settings_path}')
+
     environment = Environment.PRD
-    eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=settings_path)
     logging.info(f'Omgeving: {environment.name}')
-    eDelta_dossiernummer = 'INTERN-059' # todo: wijzigen naar INTERN-059
+
+    eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=settings_path)
+
+    eDelta_dossiernummer = 'INTERN-059'
     logging.info(f'Bestekkoppeling: {eDelta_dossiernummer}')
 
     excel_file = Path(__file__).resolve().parent / 'data' / 'input' / 'Componentenlijst_20250417_PRD.xlsx'
     logging.info(f"Excel file wordt ingelezen en gevalideerd: {excel_file}")
-    df_assets_wegkantkasten = import_data_as_dataframe(
-        filepath=excel_file
-        , sheet_name="Wegkantkasten"
-    )
 
-    df_assets_mivlve = import_data_as_dataframe(
-        filepath=excel_file
-        , sheet_name="MIVLVE"
-    )
+    output_excel_path = Path(__file__).resolve().parent / 'data' / 'output' / 'lantis_bypass.xlsx'
+    logging.info(f'Output file path: {output_excel_path}')
 
-    df_assets_mivmeetpunten = import_data_as_dataframe(
-        filepath=excel_file
-        , sheet_name="MIVMeetpunten"
-    )
+    # Lees voor de installaties eveneens het tabblad "Wegkantkasten" om de installaties te instantiëren
+    # Iedere wegkantkast maakt deel uit van een installatie. De installatienaam is gebaseerd op de naam van de wegkantkast
+    df_assets_installaties = import_data_as_dataframe(filepath=excel_file, sheet_name="Wegkantkasten")
 
-    # Append new columns to the dataframes to fill with information inside the iteration
+    df_assets_wegkantkasten = import_data_as_dataframe(filepath=excel_file, sheet_name="Wegkantkasten")
+
+    df_assets_mivlve = import_data_as_dataframe(filepath=excel_file, sheet_name="MIVLVE")
+
+    df_assets_mivmeetpunten = import_data_as_dataframe(filepath=excel_file, sheet_name="MIVMeetpunten")
+
+    # Append new columns to the dataframes to fill with information (uuid) inside the iteration
+    new_columns = ["installatie_uuid", "installatie_naam"]
+    for col in new_columns:
+        df_assets_installaties[col] = None
     new_columns = ["asset_uuid"]
     for col in new_columns:
         df_assets_wegkantkasten[col] = None
@@ -265,22 +263,21 @@ if __name__ == '__main__':
     for col in new_columns:
         df_assets_mivmeetpunten[col] = None
 
-    output_excel_path = 'data/output/lantis_bypass.xlsx'
+    # Aanmaken van de Installaties (beheerobject)
+    logging.info('Aanmaken van installaties op basis van de kastnamen')
+    for idx, asset_row in df_assets_installaties.iterrows():
+        asset_row_naam = asset_row.get("Object assetId.identificator")
+        installatie_naam = construct_installatie_naam(kastnaam=asset_row_naam)
+        df_assets_installaties.at[idx, "installatie_naam"] = installatie_naam
+        df_assets_installaties.at[idx, "installatie_uuid"] = create_installatie(naam=installatie_naam)
     # Check if the file exists
     if not os.path.exists(output_excel_path):
         # Create new file
         with pd.ExcelWriter(output_excel_path, engine='openpyxl') as writer:
-            df_assets_wegkantkasten.to_excel(writer, sheet_name="Wegkantkasten", index=False, freeze_panes=[1, 1])
-
-    # Aanmaken van de Installaties (beheerobject)
-    logging.info('Aanmaken van installaties op basis van de kastnamen')
-    installaties = []
-    for idx, asset_row in df_assets_wegkantkasten.iterrows():
-        asset_row_naam = asset_row.get("Object assetId.identificator")
-        installatie_naam = construct_installatie_naam(kastnaam=asset_row_naam)
-        installaties.append(installatie_naam)
-        asset_row_installatie_uuid = create_installatie(naam=installatie_naam)
-    logging.info(f'Installaties aangemaakt: {installaties}')
+            df_assets_installaties.to_excel(writer, sheet_name='Installaties',
+                                            columns=["installatie_uuid", "installatie_naam"], index=False,
+                                            freeze_panes=[1, 1])
+    logging.info('Installaties aangemaakt')
 
 
     # Aanmaken van de Wegkantkasten
@@ -485,6 +482,7 @@ if __name__ == '__main__':
                 relatie_uuid = response[0].get("RelatieObject.assetId").get("DtcIdentificator.identificator")[:36] # eerste 36 karakters van de UUID
         else:
             relatie_uuid = None
+
         # update eigenschappen: Aansluiting, Formaat, Laag, Uitslijprichting, Wegdek
         # eigenschapwaarden_huidig = eminfra_client.get_eigenschapwaarden(assetId=asset.uuid)
         # eigenschappen_huidig = eminfra_client.get_eigenschappen(assetId=asset.uuid)
