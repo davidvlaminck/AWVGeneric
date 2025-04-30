@@ -1,3 +1,5 @@
+import logging
+
 from API.EMInfraClient import EMInfraClient
 from API.EMInfraDomain import AssetDTO
 from API.Enums import AuthType, Environment
@@ -24,6 +26,8 @@ def functie() -> None:
     return None
 
 if __name__ == '__main__':
+    logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s', filemode="w")
+    logging.info('Use case naam:\t use case beschrijving')
     settings_path = load_settings()
     eminfra_client = EMInfraClient(env=Environment.TEI, auth_type=AuthType.JWT, settings_path=settings_path)
 
