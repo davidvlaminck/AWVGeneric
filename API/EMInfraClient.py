@@ -1,5 +1,7 @@
 import json
 import logging
+import uuid
+
 from collections.abc import Generator
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -791,12 +793,7 @@ class EMInfraClient:
         actual_startDatum = actual_postit.startDatum
         actual_eindDatum = actual_postit.eindDatum
 
-        json_body = {}
-
-        if commentaar:
-            json_body["commentaar"] = commentaar
-        else:
-            json_body["commentaar"] = actual_commentaar
+        json_body = {"commentaar": commentaar if commentaar else actual_commentaar}
 
         if startDatum:
             startDatum_str = format_datetime(startDatum)
@@ -1132,6 +1129,16 @@ class EMInfraClient:
     def search_assetrelaties_OTL(self, bronAsset_uuid: str = None, doelAsset_uuid: str = None):
         if bronAsset_uuid is None and doelAsset_uuid is None:
             raise ValueError('At least one optional parameter "bronAsset_uuid" or "doelAsset_uuid" must be provided.')
+        if bronAsset_uuid:
+            try:
+                uuid.UUID(bronAsset_uuid)
+            except ValueError:
+                raise ValueError('Invalid format for bronAsset_uuid; must be a valid UUID string.')
+        if doelAsset_uuid:
+            try:
+                uuid.UUID(doelAsset_uuid)
+            except ValueError:
+                raise ValueError('Invalid format for doelAsset_uuid; must be a valid UUID string.')
         json_body = {"filters": {}}
         if bronAsset_uuid:
             json_body["filters"]["bronAsset"] = bronAsset_uuid
