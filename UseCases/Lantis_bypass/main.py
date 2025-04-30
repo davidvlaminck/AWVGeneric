@@ -1,19 +1,15 @@
-import copy
 import json
 import logging
-import os
 from datetime import datetime
 import re
 
-from API.EMInfraDomain import KenmerkTypeEnum, BeheerobjectTypeDTO, OperatorEnum, BoomstructuurAssetTypeEnum, \
-    AssetDTOToestand, QueryDTO, PagingModeEnum, ExpansionsDTO, SelectionDTO, TermDTO, ExpressionDTO, LogicalOpEnum
+from API.EMInfraDomain import OperatorEnum, BoomstructuurAssetTypeEnum, \
+    AssetDTOToestand, QueryDTO, PagingModeEnum, ExpansionsDTO, SelectionDTO, TermDTO, ExpressionDTO, LogicalOpEnum, \
+    AssetDTO
 from API.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path
-from otlmow_model.OtlmowModel.Helpers.RelationCreator import create_betrokkenerelation, create_relation
-from otlmow_converter.OtlmowConverter import OtlmowConverter
-from otlmow_model.OtlmowModel.Classes.Onderdeel.Bevestiging import Bevestiging
 
 
 def import_data_as_dataframe(filepath: Path, sheet_name: str = None):
@@ -221,6 +217,45 @@ def parse_wkt_geometry(asset_row):
     return f'POINT Z ({asset_row_x} {asset_row_y} {asset_row_z})'
 
 
+def add_bestekkoppeling_if_missing(asset_uuid: str, eDelta_dossiernummer: str, start_datetime: datetime):
+    """
+    Voeg een specifieke bestekkoppeling toe, indien die nog niet bestaat bij een bepaalde asset.
+
+    :param asset_uuid:
+    :param eDelta_dossiernummer:
+    :param start_datetime:
+    :return:
+    """
+    huidige_bestekkoppelingen = eminfra_client.get_bestekkoppelingen_by_asset_uuid(asset_uuid=asset_uuid)
+    # check if there are currently no bestekkkoppelingen.
+    if all(
+            bestekkoppeling.bestekRef.eDeltaDossiernummer
+            != eDelta_dossiernummer
+            for bestekkoppeling in huidige_bestekkoppelingen
+    ):
+        eminfra_client.add_bestekkoppeling(asset_uuid=asset_uuid, eDelta_dossiernummer=eDelta_dossiernummer,
+                                           start_datetime=datetime(2024, 9, 1))
+
+
+def zoek_verweven_asset(bron_uuid: str) -> AssetDTO | None:
+    """
+    Zoek de OTL-asset op basis van een Legacy-asset die verbonden zijn via een Gemigreerd-relatie.
+    Returns None indien de Gemigreerd-relatie ontbreekt.
+
+    :param bron_uuid: uuid van de bron asset (Legacy)
+    :return:
+    """
+    relaties = eminfra_client.search_assetrelaties_OTL(bronAsset_uuid=bron_uuid)
+    relatie_gemigreerd = [item for item in relaties if
+                          item.get('@type') == 'https://lgc.data.wegenenverkeer.be/ns/onderdeel#GemigreerdNaar'][0]
+    asset_uuid_gemigreerd = relatie_gemigreerd.get('RelatieObject.doelAssetId').get('DtcIdentificator.identificator')[
+                            :36]
+    return next(
+        eminfra_client.search_asset_by_uuid(asset_uuid=asset_uuid_gemigreerd),
+        None,
+    )
+
+
 if __name__ == '__main__':
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s\t', filemode="w")
     logging.info('Lantis Bypass: \tAanmaken van assets en relaties voor de Bypass van de Oosterweelverbinding')
@@ -274,7 +309,7 @@ if __name__ == '__main__':
         df_assets_installaties.at[idx, "installatie_naam"] = installatie_naam
         df_assets_installaties.at[idx, "installatie_uuid"] = create_installatie(naam=installatie_naam)
     # Check if the file exists
-    if not os.path.exists(output_excel_path):
+    if not Path(output_excel_path).exists():
         # Create new file
         with pd.ExcelWriter(output_excel_path, engine='openpyxl') as writer:
             df_assets_installaties.to_excel(writer, sheet_name='Installaties',
@@ -323,9 +358,8 @@ if __name__ == '__main__':
             logging.debug(f'Update eigenschap locatie: "{asset.uuid}": "{asset_row_wkt_geometry}"')
             eminfra_client.update_kenmerk_locatie_by_asset_uuid(asset_uuid=asset.uuid, wkt_geom=asset_row_wkt_geometry)
 
-        # huidige_bestekkoppelingen = eminfra_client.get_bestekkoppelingen_by_asset_uuid(asset_uuid=asset.uuid)
-        # if not huidige_bestekkoppelingen: # check if there are currently no bestekkkoppelingen.
-        #     eminfra_client.add_bestekkoppeling(asset_uuid=asset.uuid, eDelta_dossiernummer=eDelta_dossiernummer, start_datetime=datetime(2024, 9,1))
+        add_bestekkoppeling_if_missing(asset_uuid=asset.uuid, eDelta_dossiernummer=eDelta_dossiernummer,
+                                       start_datetime=datetime(2024, 9, 1))
 
         # Lijst aanvullen met de naam en diens overeenkomstig uuid
         df_assets_wegkantkasten.at[idx, "asset_uuid"] = asset.uuid
@@ -396,9 +430,13 @@ if __name__ == '__main__':
         # todo tot hier (eigenschappen)
         # update eigenschap XXX
 
-        # huidige_bestekkoppelingen = eminfra_client.get_bestekkoppelingen_by_asset_uuid(asset_uuid=asset.uuid)
-        # if not huidige_bestekkoppelingen: # check if there are currently no bestekkkoppelingen.
-        #     eminfra_client.add_bestekkoppeling(asset_uuid=asset.uuid, eDelta_dossiernummer=eDelta_dossiernummer, start_datetime=datetime(2024, 9,1))
+        add_bestekkoppeling_if_missing(asset_uuid=asset.uuid, eDelta_dossiernummer=eDelta_dossiernummer,
+                                       start_datetime=datetime(2024, 9, 1))
+
+        verweven_asset = zoek_verweven_asset(bron_uuid=asset.uuid)
+
+        add_bestekkoppeling_if_missing(asset_uuid=verweven_asset.uuid, eDelta_dossiernummer=eDelta_dossiernummer,
+                                       start_datetime=datetime(2024, 9, 1))
 
         # Lijst aanvullen met de naam en diens overeenkomstig uuid
         df_assets_mivlve.at[idx, "asset_uuid"] = asset.uuid
@@ -509,9 +547,13 @@ if __name__ == '__main__':
         #
         #         eminfra_client.update_eigenschap(assetId=asset.uuid, eigenschap=eigenschapwaarde_nieuw)
 
-        # huidige_bestekkoppelingen = eminfra_client.get_bestekkoppelingen_by_asset_uuid(asset_uuid=asset.uuid)
-        # if not huidige_bestekkoppelingen: # check if there are currently no bestekkkoppelingen.
-        #     eminfra_client.add_bestekkoppeling(asset_uuid=asset.uuid, eDelta_dossiernummer=eDelta_dossiernummer, start_datetime=datetime(2024, 9,1))
+        add_bestekkoppeling_if_missing(asset_uuid=asset.uuid, eDelta_dossiernummer=eDelta_dossiernummer,
+                                       start_datetime=datetime(2024, 9, 1))
+
+        verweven_asset = zoek_verweven_asset(bron_uuid=asset.uuid)
+
+        add_bestekkoppeling_if_missing(asset_uuid=verweven_asset.uuid, eDelta_dossiernummer=eDelta_dossiernummer,
+                                       start_datetime=datetime(2024, 9, 1))
 
         # Lijst aanvullen met de naam en diens overeenkomstig uuid
         df_assets_mivmeetpunten.at[idx, "asset_uuid"] = asset.uuid
