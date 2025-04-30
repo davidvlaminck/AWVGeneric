@@ -1126,7 +1126,7 @@ class EMInfraClient:
             raise ProcessLookupError(response.content.decode("utf-8"))
         return response.json().get("uuid")
 
-    def search_assetrelaties_OTL(self, bronAsset_uuid: str = None, doelAsset_uuid: str = None):
+    def search_assetrelaties_OTL(self, bronAsset_uuid: str = None, doelAsset_uuid: str = None) -> dict:
         if bronAsset_uuid is None and doelAsset_uuid is None:
             raise ValueError('At least one optional parameter "bronAsset_uuid" or "doelAsset_uuid" must be provided.')
         if bronAsset_uuid:
