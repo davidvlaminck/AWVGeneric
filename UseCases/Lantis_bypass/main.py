@@ -137,7 +137,10 @@ def get_assettype_uuid(mapping_key: str) -> str:
         "Portieken-Seinbruggen": "",
         "Galgpaal": ""
     }
-    return mapping_assettypes[mapping_key]
+    assettype_uuid = mapping_assettypes[mapping_key]
+    if assettype_uuid == "":
+        logging.warning(f"Mapping for asset types for key '{mapping_key}' is empty.")
+    return assettype_uuid
 
 def get_relatietype_uuid(mapping_key: str) -> str:
     """
@@ -172,7 +175,7 @@ def construct_installatie_naam(kastnaam: str) -> str:
         raise ValueError(f"Kastnaam {kastnaam} eindigt niet op '.K'")
 
     if match := re.search(r'(.*)([MPN])(?!.*[MPN])', temp_installatie_naam):
-        installatie_naam = match.group(1) + 'X' + temp_installatie_naam[match.end():]
+        installatie_naam = match[1] + 'X' + temp_installatie_naam[match.end():]
     else:
         raise ValueError("De syntax van de kast bevat geen letter 'P', 'N' of 'M'.")
 
@@ -196,14 +199,14 @@ def validate_asset(uuid: str = None, naam: str = None, stop_on_error: bool = Tru
     if asset is None:
         logging.error(f'Asset {uuid} werd niet teruggevonden in em-infra. Dit zou moeten bestaan.')
         if stop_on_error:
-            raise ValueError(f'Asset {asset_row_uuid} werd niet teruggevonden in em-infra. Dit zou moeten bestaan.')
+            raise ValueError(f'Asset {uuid} werd niet teruggevonden in em-infra. Dit zou moeten bestaan.')
 
     if str(naam) != str(asset.naam):
         logging.error(
             f'Asset {uuid} naam {naam} komt niet overeen met de bestaande naam {asset.naam}.')
         if stop_on_error:
             raise ValueError(
-                f'Asset {asset_row_uuid} naam {asset_row_naam} komt niet overeen met de bestaande naam {asset.naam}.')
+                f'Asset {uuid} naam {naam} komt niet overeen met de bestaande naam {asset.naam}.')
     return None
 
 
