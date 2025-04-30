@@ -116,7 +116,7 @@ def add_bestekkoppeling_if_missing(asset_uuid: str, eDelta_dossiernummer: str, s
                                            start_datetime=datetime(2024, 9, 1))
 
 
-def zoek_gemigreerde_asset(bron_uuid) -> AssetDTO | None:
+def zoek_gemigreerde_asset(bron_uuid: str) -> AssetDTO | None:
     """
     Zoek de OTL-asset op basis van een Legacy-asset die verbonden zijn via een Gemigreerd-relatie.
     Returns None indien de Gemigreerd-relatie ontbreekt.
@@ -124,7 +124,7 @@ def zoek_gemigreerde_asset(bron_uuid) -> AssetDTO | None:
     :param bron_uuid: uuid van de bron asset (Legacy)
     :return: 
     """
-    relaties = eminfra_client.search_assetrelaties_OTL(bronAsset_uuid=asset.uuid)
+    relaties = eminfra_client.search_assetrelaties_OTL(bronAsset_uuid=bron_uuid)
     relatie_gemigreerd = [item for item in relaties if item.get('@type') == 'https://lgc.data.wegenenverkeer.be/ns/onderdeel#GemigreerdNaar'][0]
     asset_uuid_gemigreerd = relatie_gemigreerd.get('RelatieObject.doelAssetId').get('DtcIdentificator.identificator')[:36]
     return next(
