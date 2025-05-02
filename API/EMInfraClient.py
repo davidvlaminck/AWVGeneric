@@ -108,6 +108,13 @@ class EMInfraClient:
             raise ProcessLookupError(response.content.decode("utf-8"))
         return IdentiteitKenmerk.from_dict(response.json())
 
+    def get_toezichtgroep(self, toezichtGroep_uuid: str) -> ToezichtgroepDTO:
+        response = self.requester.get(
+            url=f'identiteit/api/toezichtgroepen/{toezichtGroep_uuid}')
+        if response.status_code != 200:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return ToezichtgroepDTO.from_dict(response.json())
 
     def search_documents_by_asset_uuid(self, asset_uuid: str, query_dto: QueryDTO) -> Generator[AssetDocumentDTO]:
         """Search documents by asset uuid
