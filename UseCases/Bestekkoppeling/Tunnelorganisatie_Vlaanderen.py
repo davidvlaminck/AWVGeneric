@@ -1,12 +1,15 @@
 import logging
-from datetime import datetime
+from datetime import datetime, date
+from dateutil.parser import isoparse
 
 import pandas as pd
 from pathlib import Path
+
+from Generic.ExcelModifier import ExcelModifier
 from utils.date_helpers import format_datetime
 from API.EMInfraClient import EMInfraClient
 from API.EMInfraDomain import QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum, \
-    BestekKoppelingStatusEnum, BestekCategorieEnum, BestekKoppeling
+    BestekKoppelingStatusEnum, BestekCategorieEnum, BestekKoppeling, ExpansionsDTO, ApplicationEnum
 from API.Enums import AuthType, Environment
 
 
@@ -24,17 +27,16 @@ if __name__ == '__main__':
     eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=settings_path)
 
     eDelta_dossiernummers = ['INTERN-009', 'INTERN-1804', 'INTERN-2050', 'INTERN-2051', 'INTERN-2052', 'INTERN-2055', 'INTERN-2059', 'INTERN-2130', 'INTERN-2131', 'INTERN-2079']
-    eDelta_dossiernummers = ['INTERN-009', 'INTERN-1804'] # TODO wissen op productie. Op TEI-omgeving slechts 1 dossiernummer updaten. Dit zijn ~ 44 assets
     logging.info(f'Huidige bestekkoppelingen: {eDelta_dossiernummers}')
 
-    start_datetime = datetime(2025, 1, 1)
+    start_datetime = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     eDelta_dossiernummer_new = 'INTERN-2129' # bestaat ook op TEI
     logging.info(f'Nieuwe bestekkoppeling: {eDelta_dossiernummer_new} heeft startdatum: {start_datetime}')
 
     output_filepath_excel = Path(__file__).resolve().parent / 'Tunnelorganisatie_Vlaanderen_bestekkoppelingen.xlsx'
     logging.info(f'Output file path: {output_filepath_excel}')
 
-    columns = ["eDelta_dossiernummer", "installatie_uuid", "installatie_naam", "asset_uuid", "asset_naam", "asset_type", "Dossier Nummer", "Bestek Nummer", "Naam aannemer", "Referentie aannemer", "Start koppeling", "Einde koppeling", "Status"]
+    columns = ["eDelta_dossiernummer", "installatie_naam", "asset_uuid", "asset_naam", "asset_type", "asset_status", "toezichter", "toezichtsgroep", "Bestek volgorde", "Dossier Nummer", "Bestek Nummer", "Naam aannemer", "Referentie aannemer", "Start koppeling", "Einde koppeling", "Status"]
     row_list = []
 
 
@@ -48,7 +50,6 @@ if __name__ == '__main__':
                 size=100,
                 from_=0,
                 pagingMode=PagingModeEnum.OFFSET,
-                # expansions=ExpansionsDTO(fields=['parent']),
                 selection=SelectionDTO(
                     expressions=[ExpressionDTO(
                         terms=[
@@ -67,6 +68,32 @@ if __name__ == '__main__':
 
             # zoek de top-most-parent-asset, de top van de boomstructuur in het geval van een Legacy-asset.
             installatie = eminfra_client.search_parent_asset(asset_uuid=asset.uuid, recursive=True, return_all_parents=False)
+            logging.debug(f'Asset behoort tot de installatie: {installatie.naam}')
+
+            # zoek de toezichter en de toezichtsgroep (Legacy) of de Agent (OTL)
+            if 'https://lgc.data.wegenenverkeer.be' in asset.type.uri:
+                logging.debug('Asset (Legacy)')
+                toezichter_kenmerk = eminfra_client.get_kenmerk_toezichter_by_asset_uuid(asset_uuid=asset.uuid)
+                if toezichter_kenmerk.toezichter:
+                    toezichter_identiteit = eminfra_client.get_identiteit(toezichter_uuid=toezichter_kenmerk.toezichter.get("uuid"))
+                    toezichter_naam = f'{toezichter_identiteit.voornaam} {toezichter_identiteit.naam}'
+                else:
+                    toezichter_naam = None
+                if toezichter_kenmerk.toezichtGroep:
+                    toezichtGroep = eminfra_client.get_toezichtgroep(toezichtGroep_uuid=toezichter_kenmerk.toezichtGroep.get("uuid"))
+                    toezichtgroep_naam = toezichtGroep.naam
+                else:
+                    toezichtgroep_naam = None
+            elif 'https://wegenenverkeer.data.vlaanderen.be' in asset.type.uri:
+                logging.debug('Asset (OTL)')
+                logging.debug('OTL-assets vormen een uitzondering, laat toezichter leeg')
+                toezichter_naam, toezichtgroep_naam = None, None
+            else:
+                raise ValueError('Inspect assettype. Assettype is not Legacy or OTL')
+
+            logging.debug(f'De toezichter heet: {toezichter_naam}')
+            logging.debug(f'De toezichtgroep heet: {toezichtgroep_naam}')
+
 
             # search all bestekkoppelingen
             bestekkoppelingen = eminfra_client.get_bestekkoppelingen_by_asset_uuid(asset_uuid=asset.uuid)
@@ -79,6 +106,7 @@ if __name__ == '__main__':
                 bestekkoppeling_old = bestekkoppelingen[index]
                 if bestekkoppeling_old.eindDatum is None:
                     bestekkoppeling_old.eindDatum = format_datetime(start_datetime)
+                    bestekkoppeling_old.status = BestekKoppelingStatusEnum.INACTIEF  # todo test dit stuk code
 
             # Check if the new bestekkoppeling doesn't exist and append at the correct index position, else do nothing
             if not (matching_koppeling := next(
@@ -92,25 +120,38 @@ if __name__ == '__main__':
                     eindDatum=None,
                     categorie=BestekCategorieEnum.WERKBESTEK
                 )
-                # Insert the new bestekkoppeling at the first index position.
+                # Insert the new bestekkoppeling at the index position.
                 bestekkoppelingen.insert(index, bestekkoppeling_new)
-            # Check if it's active
             else:
-                logging.debug(f'Bestekkoppeling "{matching_koppeling.bestekRef.eDeltaDossiernummer}" bestaat al, status: {matching_koppeling.status.value}')
+                logging.debug(f'Bestekkoppeling "{matching_koppeling.bestekRef.eDeltaDossiernummer}" bestaat al, '
+                              f'status: {matching_koppeling.status.value}')
                 if matching_koppeling.status.value != 'ACTIEF':
-                    logging.debug('Reset start en einddatum om zo deze bestekkoppeling opnieuw te activeren')
-                    matching_koppeling.startDatum = format_datetime(start_datetime)
-                    matching_koppeling.eindDatum = None
 
+                    if isoparse(matching_koppeling.startDatum).replace(tzinfo=None) > start_datetime:
+                        logging.debug(
+                            'De huidige startdatum van het bestek ligt in de toekomst. Reset de startdatum naar vandaag'
+                        )
+                        matching_koppeling.startDatum = format_datetime(start_datetime)
+                    if matching_koppeling.eindDatum is not None:
+                        logging.debug(f'Wis de eindDatum: {matching_koppeling.eindDatum}. Set None')
+                        matching_koppeling.eindDatum = None
+                    logging.debug('Activeer de bestekkoppeling manueel')
+                    matching_koppeling.status = BestekKoppelingStatusEnum.ACTIEF
 
-            for item in bestekkoppelingen:
+            # Herorden de volgorde van de bestekkoppelingen: alle inactieve onderaan de lijst.
+            bestekkoppelingen_sorted = sorted(bestekkoppelingen, key=lambda x: x.status.value, reverse=False)
+
+            for index, item in enumerate(bestekkoppelingen_sorted):
                 row_data = {
                     "eDelta_dossiernummer": eDelta_dossiernummer,
-                    "installatie_uuid": installatie.uuid,
                     "installatie_naam": installatie.naam,
                     "asset_uuid": asset.uuid,
                     "asset_naam": asset.naam,
                     "asset_type": asset.type.uri,
+                    "asset_status": 'ACTIEF' if asset.actief else 'INACTIEF',
+                    "toezichter": toezichter_naam,
+                    "toezichtsgroep": toezichtgroep_naam,
+                    "Bestek volgorde": index+1 if item.status.value == 'ACTIEF' else None,  # 1-based index voor de actieve bestekkoppelingen
                     "Dossier Nummer": item.bestekRef.eDeltaDossiernummer,
                     "Bestek Nummer": item.bestekRef.eDeltaBesteknummer,
                     "Naam aannemer": item.bestekRef.aannemerNaam,
@@ -123,10 +164,13 @@ if __name__ == '__main__':
 
             # Update all the bestekkoppelingen for this asset
             # todo activeren.
-            # eminfra_client.change_bestekkoppelingen_by_asset_uuid(asset.uuid, bestekkoppelingen)
+            # eminfra_client.change_bestekkoppelingen_by_asset_uuid(asset.uuid, bestekkoppelingen_sorted)
 
     # create dataframe from a list
     df_results = pd.DataFrame(row_list, columns=columns)
 
     # Write to Excel
     df_results.to_excel(output_filepath_excel, index=False, freeze_panes=[1, 1])
+
+    # Installeer een link naar em-infra
+    ExcelModifier(file_path=output_filepath_excel).add_hyperlink(sheet='Sheet1', link_type=ApplicationEnum.EM_INFRA, env=environment)
