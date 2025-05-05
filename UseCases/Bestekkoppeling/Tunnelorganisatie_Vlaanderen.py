@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, date
+from datetime import datetime
 from dateutil.parser import isoparse
 
 import pandas as pd
@@ -9,9 +9,16 @@ from Generic.ExcelModifier import ExcelModifier
 from utils.date_helpers import format_datetime
 from API.EMInfraClient import EMInfraClient
 from API.EMInfraDomain import QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum, \
-    BestekKoppelingStatusEnum, BestekCategorieEnum, BestekKoppeling, ExpansionsDTO, ApplicationEnum
+    BestekKoppelingStatusEnum, BestekCategorieEnum, BestekKoppeling, ApplicationEnum
 from API.Enums import AuthType, Environment
 
+
+def bestekcategorie_is_none(item: BestekKoppeling):
+    return item.categorie is None
+
+def set_default_bestekcategorie(item: BestekKoppeling):
+    item.categorie = BestekCategorieEnum.WERKBESTEK
+    return item
 
 
 if __name__ == '__main__':
@@ -27,13 +34,14 @@ if __name__ == '__main__':
     eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=settings_path)
 
     eDelta_dossiernummers = ['INTERN-009', 'INTERN-1804', 'INTERN-2050', 'INTERN-2051', 'INTERN-2052', 'INTERN-2055', 'INTERN-2059', 'INTERN-2130', 'INTERN-2131', 'INTERN-2079']
+
     logging.info(f'Huidige bestekkoppelingen: {eDelta_dossiernummers}')
 
-    start_datetime = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    start_datetime = datetime.now()
     eDelta_dossiernummer_new = 'INTERN-2129' # bestaat ook op TEI
     logging.info(f'Nieuwe bestekkoppeling: {eDelta_dossiernummer_new} heeft startdatum: {start_datetime}')
 
-    output_filepath_excel = Path(__file__).resolve().parent / 'Tunnelorganisatie_Vlaanderen_bestekkoppelingen.xlsx'
+    output_filepath_excel = Path(__file__).resolve().parent / f'Tunnelorganisatie_Vlaanderen_bestekkoppelingen_{environment.name}.xlsx'
     logging.info(f'Output file path: {output_filepath_excel}')
 
     columns = ["eDelta_dossiernummer", "installatie_naam", "asset_uuid", "asset_naam", "asset_type", "asset_status", "toezichter", "toezichtsgroep", "Bestek volgorde", "Dossier Nummer", "Bestek Nummer", "Naam aannemer", "Referentie aannemer", "Start koppeling", "Einde koppeling", "Status"]
@@ -53,7 +61,7 @@ if __name__ == '__main__':
                 selection=SelectionDTO(
                     expressions=[ExpressionDTO(
                         terms=[
-                            TermDTO(property='bestek', operator=OperatorEnum.EQ, value=bestekRef_old.uuid)
+                            TermDTO(property='actiefBestek', operator=OperatorEnum.EQ, value=bestekRef_old.uuid)
                         ])
                     ])
             )
@@ -106,7 +114,7 @@ if __name__ == '__main__':
                 bestekkoppeling_old = bestekkoppelingen[index]
                 if bestekkoppeling_old.eindDatum is None:
                     bestekkoppeling_old.eindDatum = format_datetime(start_datetime)
-                    bestekkoppeling_old.status = BestekKoppelingStatusEnum.INACTIEF  # todo test dit stuk code
+                    bestekkoppeling_old.status = BestekKoppelingStatusEnum.INACTIEF
 
             # Check if the new bestekkoppeling doesn't exist and append at the correct index position, else do nothing
             if not (matching_koppeling := next(
@@ -126,7 +134,6 @@ if __name__ == '__main__':
                 logging.debug(f'Bestekkoppeling "{matching_koppeling.bestekRef.eDeltaDossiernummer}" bestaat al, '
                               f'status: {matching_koppeling.status.value}')
                 if matching_koppeling.status.value != 'ACTIEF':
-
                     if isoparse(matching_koppeling.startDatum).replace(tzinfo=None) > start_datetime:
                         logging.debug(
                             'De huidige startdatum van het bestek ligt in de toekomst. Reset de startdatum naar vandaag'
@@ -139,9 +146,14 @@ if __name__ == '__main__':
                     matching_koppeling.status = BestekKoppelingStatusEnum.ACTIEF
 
             # Herorden de volgorde van de bestekkoppelingen: alle inactieve onderaan de lijst.
-            bestekkoppelingen_sorted = sorted(bestekkoppelingen, key=lambda x: x.status.value, reverse=False)
+            bestekkoppelingen = sorted(bestekkoppelingen, key=lambda x: x.status.value, reverse=False)
 
-            for index, item in enumerate(bestekkoppelingen_sorted):
+            # Voeg default bestekcategorie toe indien die ontbreekt.
+            for item in bestekkoppelingen:
+                if bestekcategorie_is_none(item):
+                    set_default_bestekcategorie(item)
+
+            for index, item in enumerate(bestekkoppelingen):
                 row_data = {
                     "eDelta_dossiernummer": eDelta_dossiernummer,
                     "installatie_naam": installatie.naam,
@@ -163,8 +175,8 @@ if __name__ == '__main__':
                 row_list.append(row_data)
 
             # Update all the bestekkoppelingen for this asset
-            # todo activeren.
-            # eminfra_client.change_bestekkoppelingen_by_asset_uuid(asset.uuid, bestekkoppelingen_sorted)
+            # eminfra_client.change_bestekkoppelingen_by_asset_uuid(asset.uuid, bestekkoppelingen)
+
 
     # create dataframe from a list
     df_results = pd.DataFrame(row_list, columns=columns)
