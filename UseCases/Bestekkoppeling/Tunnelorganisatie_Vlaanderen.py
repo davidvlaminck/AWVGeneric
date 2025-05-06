@@ -28,7 +28,7 @@ if __name__ == '__main__':
     settings_path = Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
     logging.info(f'settings_path: {settings_path}')
 
-    environment = Environment.TEI
+    environment = Environment.PRD
     logging.info(f'Omgeving: {environment.name}')
 
     eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=settings_path)
@@ -38,7 +38,7 @@ if __name__ == '__main__':
     logging.info(f'Huidige bestekkoppelingen: {eDelta_dossiernummers}')
 
     start_datetime = datetime.now()
-    eDelta_dossiernummer_new = 'INTERN-2129' # bestaat ook op TEI
+    eDelta_dossiernummer_new = 'INTERN-2129'
     logging.info(f'Nieuwe bestekkoppeling: {eDelta_dossiernummer_new} heeft startdatum: {start_datetime}')
 
     output_filepath_excel = Path(__file__).resolve().parent / f'Tunnelorganisatie_Vlaanderen_bestekkoppelingen_{environment.name}.xlsx'
@@ -74,9 +74,17 @@ if __name__ == '__main__':
         for asset in iter(assets):
             logging.debug(f'Processing asset: {asset.uuid}; naam: {asset.naam}; assettype: {asset.type.uri}')
 
-            # zoek de top-most-parent-asset, de top van de boomstructuur in het geval van een Legacy-asset.
-            installatie = eminfra_client.search_parent_asset(asset_uuid=asset.uuid, recursive=True, return_all_parents=False)
-            logging.debug(f'Asset behoort tot de installatie: {installatie.naam}')
+            # Installatie
+            # Door de band genomen zullen alle Legacy-assets tot een installatie behoren en alle OTL-assets niet.
+            # Het komt voor dat OTL-assets ook in een boomstructuur zitten.
+            if installatie := eminfra_client.search_parent_asset(
+                asset_uuid=asset.uuid, recursive=True, return_all_parents=False
+            ):
+                installatie_naam = installatie.naam
+                logging.debug(f'Asset behoort tot de installatie: {installatie.naam}')
+            else:
+                installatie_naam = None
+                logging.debug('Asset behoort niet tot een bepaalde installatie')
 
             # zoek de toezichter en de toezichtsgroep (Legacy) of de Agent (OTL)
             if 'https://lgc.data.wegenenverkeer.be' in asset.type.uri:
@@ -156,7 +164,7 @@ if __name__ == '__main__':
             for index, item in enumerate(bestekkoppelingen):
                 row_data = {
                     "eDelta_dossiernummer": eDelta_dossiernummer,
-                    "installatie_naam": installatie.naam,
+                    "installatie_naam": installatie_naam,
                     "asset_uuid": asset.uuid,
                     "asset_naam": asset.naam,
                     "asset_type": asset.type.uri,
