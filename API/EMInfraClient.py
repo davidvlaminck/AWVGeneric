@@ -175,7 +175,10 @@ class EMInfraClient:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-        return [BestekRef.from_dict(item) for item in response.json()['data']][0]
+        bestekrefs_list = [BestekRef.from_dict(item) for item in response.json()['data']]
+        if len(bestekrefs_list) != 1:
+            raise ValueError(f'Expected one single bestek for {eDelta_dossiernummer}. Got {len(bestekrefs_list)} instead.')
+        return bestekrefs_list[0]
 
     def get_bestekref_by_eDelta_besteknummer(self, eDelta_besteknummer: str) -> BestekRef | None:
         query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
