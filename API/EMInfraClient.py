@@ -193,6 +193,10 @@ class EMInfraClient:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
+        bestekrefs_list = [BestekRef.from_dict(item) for item in response.json()['data']]
+        if len(bestekrefs_list) != 1:
+            raise ValueError(f'Expected one single bestek for {eDelta_besteknummer}. Got {len(bestekrefs_list)} instead.')
+
         return [BestekRef.from_dict(item) for item in response.json()['data']][0]
 
 
