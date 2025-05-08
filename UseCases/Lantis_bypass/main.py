@@ -126,13 +126,12 @@ def create_asset_if_missing(typeURI: str, asset_naam: str, parent_uuid: str, par
     :parent_asset_type:
     :return: asset
     """
-    # ophalen assettype_uuid op basis van de typeURI
-    assettype_uuid = map_assettype_uuid(mapping_key=typeURI)
+    assettype_uuid = get_assettype_uuid(assettype_URI=typeURI)
     query_dto = QueryDTO(size=5, from_=0, pagingMode=PagingModeEnum.OFFSET,
                          expansions=ExpansionsDTO(fields=['parent'])
                          , selection=SelectionDTO(expressions=[
                 ExpressionDTO(terms=[TermDTO(property='type', operator=OperatorEnum.EQ, value=f'{assettype_uuid}')]),
-                ExpressionDTO(terms=[TermDTO(property='naam', operator=OperatorEnum.EQ, value=f'{asset_row_naam}')], logicalOp=LogicalOpEnum.AND)
+                ExpressionDTO(terms=[TermDTO(property='naam', operator=OperatorEnum.EQ, value=f'{asset_naam}')], logicalOp=LogicalOpEnum.AND)
             ]))
     assets_list = list(eminfra_client.search_assets(query_dto=query_dto, actief=True))
 
@@ -155,45 +154,121 @@ def create_asset_if_missing(typeURI: str, asset_naam: str, parent_uuid: str, par
 
     return asset
 
-def map_assettype_uuid(mapping_key: str) -> str:
+def create_relatie_if_missing(bronAsset_uuid: str, doelAsset_uuid: str, relatie_naam: str) -> str:
     """
-    Returns the assettype uuid of a Legacy assettype. The keys of the mapping file correspond with the names in the Excel-file.
-    :param mapping_key:
+    Maak een relatie aan tussen 2 assets indien deze nog niet bestaat.
+    Geeft de relatie-uuid weeer.
+
+    :param bronAsset_uuid:
+    :param doelAsset_uuid:
+    :param relatie_naam:
     :return:
     """
-    # todo aanvullen met de URI's van zowel de LGC als de OTL-assets.
-    mapping_assettypes = {
-        "https://lgc.data.wegenenverkeer.be/ns/installatie#Kast": '',
-        "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Wegkantkast": "10377658-776f-4c21-a294-6c740b9f655e",
-        "Wegkantkasten": "10377658-776f-4c21-a294-6c740b9f655e",
-        "HSCabines-CC-SC-HS-LS-Switch-WV": "1cf24e76-5bf3-44b0-8332-a47ab126b87e",
-        "Openbare verlichting": "4dfad588-277c-480f-8cdc-0889cfaf9c78",
-        "MIVLVE": "a4c75282-972a-4132-ad72-0d0de09dbdb8",
-        "MIVMeetpunten": "dc3db3b7-7aad-4d7f-a788-a4978f803021",
-        "RSS-borden": "1496b2fd-0742-44a9-a3b4-e994bd5af8af",
-        "(R)VMS-borden": "5b44cb96-3edf-4ef5-bc85-ec4d5c5152a3",
-        "Cameras": "f66d1ad1-4247-4d99-80bb-5a2e6331eb96",
-        "Portieken-Seinbruggen": "", # Seinbrug
-        "Galgpaal": "" # Galgpaal
-    }
-    assettype_uuid = mapping_assettypes[mapping_key]
-    if assettype_uuid == "":
-        logging.warning(f"Mapping for asset types for key '{mapping_key}' is empty.")
-    return assettype_uuid
+    if response := eminfra_client.search_assetrelaties_OTL(
+        bronAsset_uuid=asset.uuid, doelAsset_uuid=doelAsset_uuid
+    ):
+        logging.debug(f'{relatie_naam}-relatie tussen {bronAsset_uuid} en {doelAsset_uuid} bestaat al. Returns relatie-uuid')
+        relatie_uuid = response[0].get("RelatieObject.assetId").get("DtcIdentificator.identificator")[:36] # eerste 36 karakters van de UUID
+    else:
+        logging.debug(f'{relatie_naam}-relatie tussen {bronAsset_uuid} en {doelAsset_uuid} wordt aangemaakt. Returns relatie-uuid')
+        relatieType_uuid = get_relatietype_uuid(relatie_naam=relatie_naam)
+        relatie_uuid = eminfra_client.create_assetrelatie(bronAsset_uuid=bronAsset_uuid, doelAsset_uuid=doelAsset_uuid, relatieType_uuid=relatieType_uuid)
+    return relatie_uuid
 
-def get_relatietype_uuid(mapping_key: str) -> str:
+def get_current_typeURI(typeURI: str) -> str:
+    """
+    Retreives the typeURI (OTL or Legacy) that is actually in-place.
+
+    Maps the key (typeURI OTL) to its corresponding value (typeURI Legacy).
+    If the Legacy-asset is no longer in place, the value of the dictionary is empty and the key is returned.
+    :param typeURI:
+    :return:
+    """
+    dict = {
+        "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Wegkantkast": "https://lgc.data.wegenenverkeer.be/ns/installatie#Kast"
+        , "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HSCabine": "https://lgc.data.wegenenverkeer.be/ns/installatie#HSCabineLegacy"
+        , "HS": "https://lgc.data.wegenenverkeer.be/ns/installatie#HS"
+        , "HSDeel": "https://lgc.data.wegenenverkeer.be/ns/installatie#HSDeel"
+        , "LS": "https://lgc.data.wegenenverkeer.be/ns/installatie#LS"
+        , "LSDeel": "https://lgc.data.wegenenverkeer.be/ns/installatie#LSDeel"
+        , "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBHoogspanning": ""
+        , "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBLaagspanning": ""
+        , "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#EnergiemeterDNB": ""
+        , "Switch": "https://lgc.data.wegenenverkeer.be/ns/installatie#Switch"
+        , "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Segmentcontroller": "https://lgc.data.wegenenverkeer.be/ns/installatie#SegC"
+        # , "": "https://lgc.data.wegenenverkeer.be/ns/installatie#WV"
+        , "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#WVLichtmast": "https://lgc.data.wegenenverkeer.be/ns/installatie#VPLMast"
+        , "https://wegenenverkeer.data.vlaanderen.be/ns/installatie#MIVModule": "https://lgc.data.wegenenverkeer.be/ns/installatie#MIVLVE"
+        , "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#MIVLus": "https://lgc.data.wegenenverkeer.be/ns/installatie#Mpt"
+        , "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRSS": "https://lgc.data.wegenenverkeer.be/ns/installatie#RSSBord"
+        , "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRVMS": "https://lgc.data.wegenenverkeer.be/ns/installatie#RVMS"
+        , "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordVMS": "https://lgc.data.wegenenverkeer.be/ns/installatie#VMS"
+        , "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Camera": "https://lgc.data.wegenenverkeer.be/ns/installatie#CameraLegacy"
+        , "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Seinbrug": "https://lgc.data.wegenenverkeer.be/ns/installatie#SeinbrugDVM"
+        , "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Galgpaal": ""
+    }
+    return [dict[typeURI] if dict.get(typeURI) != '' else typeURI for _ in dict.keys()]
+def get_assettype_uuid(assettype_URI: str) -> str:
+    """
+    Returns the assettype_uuid that corresponds with an assettype_URI.
+    The reverse mapping is based on a dictionary.
+    :param assettype_URI:
+    :return:
+    """
+    assettypes_dict = {
+        '10377658-776f-4c21-a294-6c740b9f655e': "https://lgc.data.wegenenverkeer.be/ns/installatie#Kast",
+        "c3601915-3b66-4bde-9728-25c1bbf2f374": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Wegkantkast",
+        "1cf24e76-5bf3-44b0-8332-a47ab126b87e": "https://lgc.data.wegenenverkeer.be/ns/installatie#HSCabineLegacy",
+        "d76cbedd-5488-428c-a221-fe0bc8f74fa2": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HSCabine",
+        "46dcd9b1-f660-4c8c-8e3e-9cf794b4de75": "https://lgc.data.wegenenverkeer.be/ns/installatie#HS",
+        "a9655f50-3de7-4c18-aa25-181c372486b1": "https://lgc.data.wegenenverkeer.be/ns/installatie#HSDeel",
+        "80fdf1b4-e311-4270-92ba-6367d2a42d47": "https://lgc.data.wegenenverkeer.be/ns/installatie#LS",
+        "b4361a72-e1d5-41c5-bfcc-d48f459f4048": "https://lgc.data.wegenenverkeer.be/ns/installatie#LSDeel",
+        "8e9307e2-4dd6-4a46-a298-dd0bc8b34236": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBHoogspanning",
+        "b4ee4ea9-edd1-4093-bce1-d58918aee281": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBLaagspanning",
+        "e77befed-4530-4d57-bdb9-426bdae4775d": "https://lgc.data.wegenenverkeer.be/ns/installatie#Switch",
+        "f625b904-befc-4685-9dd8-15a20b23a58b": "https://lgc.data.wegenenverkeer.be/ns/installatie#SegC",
+        "6c1883d1-7e50-441a-854c-b53552001e5f": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Segmentcontroller",
+        "55362c2a-be7b-4efc-9437-765b351c8c51": "https://lgc.data.wegenenverkeer.be/ns/installatie#WV",
+        "478add39-e6fb-4b0b-b090-9c65e836f3a0": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#WVLichtmast",
+        "4dfad588-277c-480f-8cdc-0889cfaf9c78": "https://lgc.data.wegenenverkeer.be/ns/installatie#VPLMast",
+        "7f59b64e-9d6c-4ac9-8de7-a279973c9210": "https://wegenenverkeer.data.vlaanderen.be/ns/installatie#MIVModule",
+        "a4c75282-972a-4132-ad72-0d0de09dbdb8": "https://lgc.data.wegenenverkeer.be/ns/installatie#MIVLVE",
+        "63b42487-8f07-4d9a-823e-c5a5f3c0aa81": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#MIVLus",
+        "dc3db3b7-7aad-4d7f-a788-a4978f803021": "https://lgc.data.wegenenverkeer.be/ns/installatie#Mpt",
+        "9826b683-02fa-4d97-8680-fbabc91a417f": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRSS",
+        "1496b2fd-0742-44a9-a3b4-e994bd5af8af": "https://lgc.data.wegenenverkeer.be/ns/installatie#RSSBord",
+        "50f7400a-2e67-4550-b135-08cde6f6d64f": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordVMS",
+        "ac837aa9-65bc-4c7c-b1c2-8ec0201a0203": "https://lgc.data.wegenenverkeer.be/ns/installatie#VMS",
+        "0515e9bc-1778-43ae-81a9-44df3e2b7c21": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRVMS",
+        "5b44cb96-3edf-4ef5-bc85-ec4d5c5152a3": "https://lgc.data.wegenenverkeer.be/ns/installatie#RVMS",
+        "3f98f53a-b435-4a69-af3c-cede1cd373a7": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Camera",
+        "f66d1ad1-4247-4d99-80bb-5a2e6331eb96": "https://lgc.data.wegenenverkeer.be/ns/installatie#CameraLegacy",
+        "40b2e487-f4b8-48a2-be9d-e68263bab75a": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Seinbrug",
+        "6f66dad8-8290-4d07-8e8b-6add6c7fe723": "https://lgc.data.wegenenverkeer.be/ns/installatie#SeinbrugDVM",
+        "615356ae-64eb-4a7d-8f40-6e496ec5b8d7": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Galgpaal"
+    }
+    assettype_uuids = [key for key, value in assettypes_dict.items() if value == assettype_URI]
+    if len(assettype_uuids) != 1:
+        logging.critical(f'assettype_URI: {assettype_URI} kon niet worden teruggevonden in de dictionary.')
+    return assettype_uuids[0]
+
+def get_relatietype_uuid(relatie_naam: str) -> str:
     """
     Returns the relatietype uuid.
-    :param mapping_key:
+    :param relatie_naam:
     :return:
     """
-    mapping_relatietypes = {
-        "Bevestiging": "3ff9bf1c-d852-442e-a044-6200fe064b20",
-        "Voedt": "f2c5c4a1-0899-4053-b3b3-2d662c717b44",
-        "Sturing": "93c88f93-6e8c-4af3-a723-7e7a6d6956ac"
+    relatietypes_dict = {
+        "3ff9bf1c-d852-442e-a044-6200fe064b20": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging",
+        "f2c5c4a1-0899-4053-b3b3-2d662c717b44": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt",
+        "93c88f93-6e8c-4af3-a723-7e7a6d6956ac": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Sturing",
+        "812dd4f3-c34e-43d1-88f1-3bcd0b1e89c2": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HoortBij"
     }
-    return mapping_relatietypes[mapping_key]
-
+    relatietype_uuids = [key for key, value in relatietypes_dict.items() if value == relatie_naam]
+    if len(relatietype_uuids) != 1:
+        logging.critical(f'relatietype_uuid: {relatie_naam} kon niet worden teruggevonden in de dictionary.')
+    return relatietype_uuids[0]
 
 def construct_installatie_naam(kastnaam: str) -> str:
     """
@@ -260,7 +335,7 @@ def parse_wkt_geometry(asset_row):
     return f'POINT Z ({asset_row_x} {asset_row_y} {asset_row_z})'
 
 
-def add_bestekkoppeling_if_missing(asset_uuid: str, eDelta_dossiernummer: str, start_datetime: datetime):
+def add_bestekkoppeling_if_missing(asset_uuid: str, eDelta_dossiernummer: str, start_datetime: datetime) -> None:
     """
     Voeg een specifieke bestekkoppeling toe, indien die nog niet bestaat bij een bepaalde asset.
 
@@ -269,6 +344,11 @@ def add_bestekkoppeling_if_missing(asset_uuid: str, eDelta_dossiernummer: str, s
     :param start_datetime:
     :return:
     """
+    # check if the eDelta_dossiernummer is valid.
+    bestekref = eminfra_client.get_bestekref_by_eDelta_dossiernummer(eDelta_dossiernummer=eDelta_dossiernummer)
+    if bestekref is None:
+        logging.critical(f'Bestek met eDelta_dossiernumer {eDelta_dossiernummer} werd niet teruggevonden. Omgeving: {environment.name}')
+
     huidige_bestekkoppelingen = eminfra_client.get_bestekkoppelingen_by_asset_uuid(asset_uuid=asset_uuid)
     # check if there are currently no bestekkkoppelingen.
     if all(
@@ -418,12 +498,12 @@ if __name__ == '__main__':
     settings_path = Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
     logging.info(f'settings_path: {settings_path}')
 
-    environment = Environment.TEI
+    environment = Environment.PRD
     logging.info(f'Omgeving: {environment.name}')
 
     eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=settings_path)
 
-    eDelta_dossiernummer = 'INTERN-059'
+    eDelta_dossiernummer = 'INTERN-095'
     logging.info(f'Bestekkoppeling: {eDelta_dossiernummer}')
 
     excel_file = Path(__file__).resolve().parent / 'data' / 'input' / 'Componentenlijst_20250507.xlsx'
@@ -444,38 +524,26 @@ if __name__ == '__main__':
                                         index=False, freeze_panes=[1, 1])
     logging.info('Installaties aangemaakt')
 
+    # todo wrap alle code tot het wegschrijven naar Excel in een functie: process_wegkantkasten.
     # process_wegkantkasten(df=df_assets_wegkankasten)
     logging.info('Aanmaken van Wegkantkasten onder installaties')
     for idx, asset_row in df_assets_wegkantkasten.iterrows():
         asset_row_uuid = asset_row.get("Wegkantkast_UUID Object")
-        asset_row_typeURI = asset_row.get("Wegkantlast_Object typeURI")
-        asset_row_naam = asset_row.get("Wegkantkast_Object assetId.identificator")
-        assettype_uuid = map_assettype_uuid(mapping_key='Wegkantkasten')
-        installatie_naam = construct_installatie_naam(kastnaam=asset_row_naam)
-        installatie = next(eminfra_client.search_beheerobjecten(naam=installatie_naam, actief=True, operator=OperatorEnum.EQ))
+        asset_row_typeURI = asset_row.get("Wegkantkast_Object typeURI")
+        asset_row_name = asset_row.get("Wegkantkast_Object assetId.identificator")
+        asset_row_parent_name = construct_installatie_naam(kastnaam=asset_row_name)
+        parent_asset = next(eminfra_client.search_beheerobjecten(naam=asset_row_parent_name, actief=True, operator=OperatorEnum.EQ), None)
 
-        logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_naam}')
+        logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_name}')
 
-        if asset_row_uuid and asset_row_naam:
+        if asset_row_uuid and asset_row_name:
             logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
-            validate_asset(uuid=asset_row_uuid, naam=asset_row_naam, stop_on_error=True)
+            validate_asset(uuid=asset_row_uuid, naam=asset_row_name, stop_on_error=True)
 
-        # todo test deze functie
-        asset = create_asset_if_missing(typeURI=asset_row_typeURI, parent_uuid=installatie.uuid, asset_naam=asset_row_naam, parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
-        # # Todo ondestaande code zit in een functie verstopt. Wis de code zodra de functie getest is.
-        # asset = next(eminfra_client.search_asset_by_name(asset_name=asset_row_naam, exact_search=True), None)
-        # if asset is None:
-        #     logging.debug(f'Asset met als naam "{asset_row_naam}" bestaat niet en wordt aangemaakt')
-        #     asset_dict = eminfra_client.create_asset(
-        #         parent_uuid=installatie.uuid
-        #         , naam=asset_row_naam
-        #         , typeUuid=assettype_uuid
-        #         , parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT
-        #     )
-        #     asset = next(eminfra_client.search_asset_by_name(asset_name=asset_row_naam, exact_search=True), None)
-        #
-        # if asset is None:
-        #     logging.critical('Asset werd niet aangemaakt')
+        if parent_asset is None:
+            logging.critical(f'Parent asset is ongekend.')
+
+        asset = create_asset_if_missing(typeURI=asset_row_typeURI, parent_uuid=parent_asset.uuid, asset_naam=asset_row_name, parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
 
         # Update toestand
         if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
@@ -495,7 +563,7 @@ if __name__ == '__main__':
         df_assets_wegkantkasten.at[idx, "asset_uuid"] = asset.uuid
     # Wegschrijven van het dataframe
     with pd.ExcelWriter(output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-        df_assets_wegkantkasten.to_excel(writer, sheet_name='Wegkantkasten', columns=["Object assetId.identificator", "asset_uuid"], index=False, freeze_panes=[1, 1])
+        df_assets_wegkantkasten.to_excel(writer, sheet_name='Wegkantkasten', columns=["Wegkantkast_Object assetId.identificator", "asset_uuid"], index=False, freeze_panes=[1, 1])
     logging.info('Wegkantkasten aangemaakt')
 
 
@@ -504,35 +572,22 @@ if __name__ == '__main__':
     for idx, asset_row in df_assets_mivlve.iterrows():
         asset_row_uuid = asset_row.get("LVE_UUID Object")
         asset_row_typeURI = asset_row.get("LVE_Object typeURI")
-        asset_row_naam = asset_row.get("LVE_Object assetId.identificator")
-        assettype_uuid = map_assettype_uuid(mapping_key='MIVLVE')
+        asset_row_name = asset_row.get("LVE_Object assetId.identificator")
         asset_row_parent_name = asset_row.get("Bevestigingsrelatie doelAssetId.identificator")
-        asset_row_parent_asset = next(eminfra_client.search_asset_by_name(asset_name=asset_row_parent_name, exact_search=True), None)
-        if asset_row_parent_asset is None:
-            logging.critical(f'Parent asset via de Bevestiging-relatie is onbestaande. Controleer MIVLVE "{asset_row_uuid}" en diens bevestiging-relatie')
-            # raise ValueError(f'Parent asset via de Bevestiging-relatie is onbestaande. Controleer MIVLVE "{asset_row_uuid}" en diens bevestiging-relatie')
-        else:
-            asset_row_parent_asset_uuid = asset_row_parent_asset.uuid
-            asset_row_parent_asset_name = asset_row_parent_asset.naam
-        logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_naam}')
+        parent_asset = next(eminfra_client.search_asset_by_name(asset_name=asset_row_parent_name, exact_search=True), None)
 
-        if asset_row_uuid and asset_row_naam:
+        logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_name}')
+
+        if asset_row_uuid and asset_row_name:
             logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
-            validate_asset(uuid=asset_row_uuid, naam=asset_row_naam, stop_on_error=True)
+            validate_asset(uuid=asset_row_uuid, naam=asset_row_name, stop_on_error=True)
 
-        asset = next(eminfra_client.search_asset_by_name(asset_name=asset_row_naam, exact_search=True), None)
-        if asset is None:
-            logging.debug(f'Asset met als naam "{asset_row_naam}" bestaat niet en wordt aangemaakt')
-            asset_dict = eminfra_client.create_asset(
-                parent_uuid=asset_row_parent_asset_uuid
-                , naam=asset_row_naam
-                , typeUuid=assettype_uuid
-                , parent_asset_type=BoomstructuurAssetTypeEnum.ASSET
-            )
-            asset = next(eminfra_client.search_asset_by_name(asset_name=asset_row_naam, exact_search=True), None)
+        if parent_asset is None:
+            logging.critical(f'Parent asset is ongekend.')
 
-        if asset is None:
-            logging.critical('Asset werd niet aangemaakt')
+        asset = create_asset_if_missing(typeURI=asset_row_typeURI, parent_uuid=parent_asset.uuid,
+                                        asset_naam=asset_row_name,
+                                        parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
 
         # Update toestand
         if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
@@ -544,18 +599,21 @@ if __name__ == '__main__':
             logging.debug(f'Update eigenschap locatie: "{asset.uuid}": "{asset_row_wkt_geometry}"')
             eminfra_client.update_kenmerk_locatie_by_asset_uuid(asset_uuid=asset.uuid, wkt_geom=asset_row_wkt_geometry)
 
+        # todo: wrap onderstaand stuk code in een functie
         # Bevestiging-relatie
         doelAsset_uuid = asset_row.get('UUID Bevestigingsrelatie doelAsset')
-        if doelAsset_uuid:
-            # check of de relatie al bestaat.
-            response = eminfra_client.search_assetrelaties_OTL(bronAsset_uuid=asset.uuid, doelAsset_uuid=doelAsset_uuid)
-            if not response:
-                relatieType_uuid = get_relatietype_uuid(mapping_key='Bevestiging')
-                relatie_uuid = eminfra_client.create_assetrelatie(bronAsset_uuid=asset.uuid, doelAsset_uuid=doelAsset_uuid, relatieType_uuid=relatieType_uuid)
-            else:
-                relatie_uuid = response[0].get("RelatieObject.assetId").get("DtcIdentificator.identificator")[:36] # eerste 36 karakters van de UUID
-        else:
-            relatie_uuid = None
+        create_relatie_if_missing(bronAsset_uuid=asset.uuid, doelAsset_uuid=doelAsset_uuid, relatie_naam='Bevestiging')
+        # todo verwijder onderstaande code nadat de functie werd getest.
+        # if doelAsset_uuid:
+        #     # check of de relatie al bestaat.
+        #     response = eminfra_client.search_assetrelaties_OTL(bronAsset_uuid=asset.uuid, doelAsset_uuid=doelAsset_uuid)
+        #     if not response:
+        #         relatieType_uuid = get_relatietype_uuid(relatie_naam='Bevestiging')
+        #         relatie_uuid = eminfra_client.create_assetrelatie(bronAsset_uuid=asset.uuid, doelAsset_uuid=doelAsset_uuid, relatieType_uuid=relatieType_uuid)
+        #     else:
+        #         relatie_uuid = response[0].get("RelatieObject.assetId").get("DtcIdentificator.identificator")[:36] # eerste 36 karakters van de UUID
+        # else:
+        #     relatie_uuid = None
 
         # todo tot hier (eigenschappen)
         # update eigenschap XXX
@@ -571,6 +629,7 @@ if __name__ == '__main__':
         # Lijst aanvullen met de naam en diens overeenkomstig uuid
         df_assets_mivlve.at[idx, "asset_uuid"] = asset.uuid
         df_assets_mivlve.at[idx, "bevestigingsrelatie_uuid"] = relatie_uuid
+
     with pd.ExcelWriter(output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
         df_assets_mivlve.to_excel(writer, sheet_name='MIVLVE', columns=["Object assetId.identificator", "asset_uuid", "bevestigingsrelatie_uuid"], index=False, freeze_panes=[1, 1])
     logging.info('MIVLVE aangemaakt')
@@ -581,8 +640,8 @@ if __name__ == '__main__':
         asset_row_uuid = asset_row.get("UUID Object")
         asset_row_typeURI = asset_row.get("Object typeURI")
         asset_row_naam = asset_row.get("Object assetId.identificator")
-        assettype_uuid = map_assettype_uuid(mapping_key='MIVMeetpunten')
-        assettype_uuid_parent = map_assettype_uuid(mapping_key='MIVLVE')
+        assettype_uuid = get_assettype_uuid(assettype_URI='MIVMeetpunten')
+        assettype_uuid_parent = get_assettype_uuid(assettype_URI='MIVLVE')
         asset_row_parent_name = asset_row.get("Sturingsrelatie bron AssetId.identificator")
         query_search_parent = QueryDTO(size=5, from_=0, pagingMode=PagingModeEnum.OFFSET,
                                        expansions=ExpansionsDTO(fields=['parent'])
@@ -647,7 +706,7 @@ if __name__ == '__main__':
             # check of de relatie al bestaat.
             response = eminfra_client.search_assetrelaties_OTL(bronAsset_uuid=asset.uuid, doelAsset_uuid=bronAsset_uuid)
             if not response:
-                relatieType_uuid = get_relatietype_uuid(mapping_key='Sturing')
+                relatieType_uuid = get_relatietype_uuid(relatie_naam='Sturing')
                 relatie_uuid = eminfra_client.create_assetrelatie(bronAsset_uuid=asset.uuid, doelAsset_uuid=bronAsset_uuid, relatieType_uuid=relatieType_uuid)
             else:
                 relatie_uuid = response[0].get("RelatieObject.assetId").get("DtcIdentificator.identificator")[:36] # eerste 36 karakters van de UUID
