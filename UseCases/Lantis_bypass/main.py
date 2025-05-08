@@ -208,6 +208,7 @@ def get_current_typeURI(typeURI: str) -> str:
         , "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Galgpaal": ""
     }
     return [dict[typeURI] if dict.get(typeURI) != '' else typeURI for _ in dict.keys()]
+
 def get_assettype_uuid(assettype_URI: str) -> str:
     """
     Returns the assettype_uuid that corresponds with an assettype_URI.
