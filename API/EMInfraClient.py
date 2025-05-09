@@ -536,7 +536,7 @@ class EMInfraClient:
     def search_all_assets(self, query_dto: QueryDTO) -> Generator[AssetDTO]:
         yield from self._search_assets_helper(query_dto)
 
-    def create_asset(self, parent_uuid: str, naam: str, typeUuid: str, parent_asset_type:BoomstructuurAssetTypeEnum = BoomstructuurAssetTypeEnum.ASSET) -> dict | None:
+    def create_asset(self, parent_uuid: str, naam: str, typeUuid: str, parent_asset_type:BoomstructuurAssetTypeEnum = BoomstructuurAssetTypeEnum.ASSET) -> AssetDTO | None:
         """
         Create an asset in the arborescence
         :param parent_uuid: asset uuid van de parent-asset
@@ -562,7 +562,8 @@ class EMInfraClient:
         if response.status_code != 202:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
-        return response.json()
+
+        yield from [AssetDTO.from_dict(item) for item in response['data']]
 
 
     def get_all_eventtypes(self) -> Generator[EventType]:
@@ -1320,3 +1321,22 @@ class EMInfraClient:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
         return response.json()
+
+    def zoek_verweven_asset(self, bron_uuid: str) -> AssetDTO | None:
+        """
+        Zoek de OTL-asset op basis van een Legacy-asset die verbonden zijn via een Gemigreerd-relatie.
+        Returns None indien de Gemigreerd-relatie ontbreekt.
+
+        :param bron_uuid: uuid van de bron asset (Legacy)
+        :return:
+        """
+        relaties = self.search_assetrelaties_OTL(bronAsset_uuid=bron_uuid)
+        relatie_gemigreerd = [item for item in relaties if
+                              item.get('@type') == 'https://lgc.data.wegenenverkeer.be/ns/onderdeel#GemigreerdNaar'][0]
+        asset_uuid_gemigreerd = relatie_gemigreerd.get('RelatieObject.doelAssetId').get(
+            'DtcIdentificator.identificator')[
+                                :36]
+        return next(
+            self.search_asset_by_uuid(asset_uuid=asset_uuid_gemigreerd),
+            None,
+        )

@@ -133,7 +133,7 @@ def create_asset_if_missing(typeURI: str, asset_naam: str, parent_uuid: str, par
                 ExpressionDTO(terms=[TermDTO(property='type', operator=OperatorEnum.EQ, value=f'{assettype_uuid}')]),
                 ExpressionDTO(terms=[TermDTO(property='naam', operator=OperatorEnum.EQ, value=f'{asset_naam}')], logicalOp=LogicalOpEnum.AND)
             ]))
-    assets_list = list(eminfra_client.search_assets(query_dto=query_dto, actief=True))
+    assets_list = list(eminfra_client.search_assets(query_dto=query_dto))
 
     nbr_assets = len(assets_list)
     if nbr_assets > 1:
@@ -149,9 +149,9 @@ def create_asset_if_missing(typeURI: str, asset_naam: str, parent_uuid: str, par
                 typeUuid=assettype_uuid,
                 parent_asset_type=parent_asset_type
             ), None)
+
     else:
         logging.critical('Unknown error')
-
     return asset
 
 def create_relatie_if_missing(bronAsset_uuid: str, doelAsset_uuid: str, relatie_naam: str) -> str:
@@ -207,7 +207,7 @@ def get_current_typeURI(typeURI: str) -> str:
         , "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Seinbrug": "https://lgc.data.wegenenverkeer.be/ns/installatie#SeinbrugDVM"
         , "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Galgpaal": ""
     }
-    return [dict[typeURI] if dict.get(typeURI) != '' else typeURI for _ in dict.keys()]
+    return [dict[typeURI] if dict.get(typeURI) != '' else typeURI for _ in dict.keys()][0]
 
 def get_assettype_uuid(assettype_URI: str) -> str:
     """
@@ -361,25 +361,6 @@ def add_bestekkoppeling_if_missing(asset_uuid: str, eDelta_dossiernummer: str, s
                                            start_datetime=datetime(2024, 9, 1))
 
 
-def zoek_verweven_asset(bron_uuid: str) -> AssetDTO | None:
-    """
-    Zoek de OTL-asset op basis van een Legacy-asset die verbonden zijn via een Gemigreerd-relatie.
-    Returns None indien de Gemigreerd-relatie ontbreekt.
-
-    :param bron_uuid: uuid van de bron asset (Legacy)
-    :return:
-    """
-    relaties = eminfra_client.search_assetrelaties_OTL(bronAsset_uuid=bron_uuid)
-    relatie_gemigreerd = [item for item in relaties if
-                          item.get('@type') == 'https://lgc.data.wegenenverkeer.be/ns/onderdeel#GemigreerdNaar'][0]
-    asset_uuid_gemigreerd = relatie_gemigreerd.get('RelatieObject.doelAssetId').get('DtcIdentificator.identificator')[
-                            :36]
-    return next(
-        eminfra_client.search_asset_by_uuid(asset_uuid=asset_uuid_gemigreerd),
-        None,
-    )
-
-
 def append_columns(df: pd.DataFrame, columns: list = ["asset_uuid"]) -> pd.DataFrame:
     """
     Append new columns to the dataframe with default value None.
@@ -492,6 +473,28 @@ def process_installatie(df: pd.DataFrame):
         df.at[idx, "installatie_uuid"] = create_installatie_if_missing(naam=installatie_naam)
 
 
+def build_query_MIVLVE(naam:str) -> QueryDTO:
+    return QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
+                                                                  expansions=ExpansionsDTO(fields=['parent']),
+                                                                  selection=SelectionDTO(
+                                                                      expressions=[ExpressionDTO(
+                                                                          terms=[
+                                                                              TermDTO(property='actief', operator=OperatorEnum.EQ, value=True),
+                                                                              TermDTO(property='naam', operator=OperatorEnum.EQ, value=naam, logicalOp=LogicalOpEnum.AND),
+                                                                              TermDTO(property='type', operator=OperatorEnum.EQ, value=get_assettype_uuid(assettype_URI='https://lgc.data.wegenenverkeer.be/ns/installatie#Kast'), logicalOp=LogicalOpEnum.AND)
+                                                                          ])]))
+
+def build_query_MIVMeetpunten(naam:str) -> QueryDTO:
+    return QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
+                                                                  expansions=ExpansionsDTO(fields=['parent']),
+                                                                  selection=SelectionDTO(
+                                                                      expressions=[ExpressionDTO(
+                                                                          terms=[
+                                                                              TermDTO(property='naam', operator=OperatorEnum.EQ, value=naam),
+                                                                              TermDTO(property='type', operator=OperatorEnum.EQ, value=get_assettype_uuid(assettype_URI='https://lgc.data.wegenenverkeer.be/ns/installatie#MIVLVE'), logicalOp=LogicalOpEnum.AND)
+                                                                          ])]))
+
+
 if __name__ == '__main__':
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s\t', filemode="w")
     logging.info('Lantis Bypass: \tAanmaken van assets en relaties voor de Bypass van de Oosterweelverbinding')
@@ -530,7 +533,7 @@ if __name__ == '__main__':
     logging.info('Aanmaken van Wegkantkasten onder installaties')
     for idx, asset_row in df_assets_wegkantkasten.iterrows():
         asset_row_uuid = asset_row.get("Wegkantkast_UUID Object")
-        asset_row_typeURI = asset_row.get("Wegkantkast_Object typeURI")
+        asset_row_typeURI = get_current_typeURI(asset_row.get("Wegkantkast_Object typeURI"))
         asset_row_name = asset_row.get("Wegkantkast_Object assetId.identificator")
         asset_row_parent_name = construct_installatie_naam(kastnaam=asset_row_name)
         parent_asset = next(eminfra_client.search_beheerobjecten(naam=asset_row_parent_name, actief=True, operator=OperatorEnum.EQ), None)
@@ -572,10 +575,10 @@ if __name__ == '__main__':
     logging.info('Aanmaken van MIVLVE onder Wegkantkasten')
     for idx, asset_row in df_assets_mivlve.iterrows():
         asset_row_uuid = asset_row.get("LVE_UUID Object")
-        asset_row_typeURI = asset_row.get("LVE_Object typeURI")
+        asset_row_typeURI = get_current_typeURI(asset_row.get("LVE_Object typeURI"))
         asset_row_name = asset_row.get("LVE_Object assetId.identificator")
-        asset_row_parent_name = asset_row.get("Bevestigingsrelatie doelAssetId.identificator")
-        parent_asset = next(eminfra_client.search_asset_by_name(asset_name=asset_row_parent_name, exact_search=True), None)
+        asset_row_parent_name = asset_row.get("Bevestigingsrelatie_Bevestigingsrelatie doelAssetId.identificator")
+        parent_asset = next(eminfra_client.search_assets(query_dto=build_query_MIVLVE(naam=asset_row_parent_name)), None)
 
         logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_name}')
 
@@ -600,21 +603,9 @@ if __name__ == '__main__':
             logging.debug(f'Update eigenschap locatie: "{asset.uuid}": "{asset_row_wkt_geometry}"')
             eminfra_client.update_kenmerk_locatie_by_asset_uuid(asset_uuid=asset.uuid, wkt_geom=asset_row_wkt_geometry)
 
-        # todo: wrap onderstaand stuk code in een functie
         # Bevestiging-relatie
-        doelAsset_uuid = asset_row.get('UUID Bevestigingsrelatie doelAsset')
-        create_relatie_if_missing(bronAsset_uuid=asset.uuid, doelAsset_uuid=doelAsset_uuid, relatie_naam='Bevestiging')
-        # todo verwijder onderstaande code nadat de functie werd getest.
-        # if doelAsset_uuid:
-        #     # check of de relatie al bestaat.
-        #     response = eminfra_client.search_assetrelaties_OTL(bronAsset_uuid=asset.uuid, doelAsset_uuid=doelAsset_uuid)
-        #     if not response:
-        #         relatieType_uuid = get_relatietype_uuid(relatie_naam='Bevestiging')
-        #         relatie_uuid = eminfra_client.create_assetrelatie(bronAsset_uuid=asset.uuid, doelAsset_uuid=doelAsset_uuid, relatieType_uuid=relatieType_uuid)
-        #     else:
-        #         relatie_uuid = response[0].get("RelatieObject.assetId").get("DtcIdentificator.identificator")[:36] # eerste 36 karakters van de UUID
-        # else:
-        #     relatie_uuid = None
+        doelAsset_uuid = asset_row.get('Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
+        bevestigingsrelatie_uuid = create_relatie_if_missing(bronAsset_uuid=asset.uuid, doelAsset_uuid=doelAsset_uuid, relatie_naam='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging')
 
         # todo tot hier (eigenschappen)
         # update eigenschap XXX
@@ -622,70 +613,36 @@ if __name__ == '__main__':
         add_bestekkoppeling_if_missing(asset_uuid=asset.uuid, eDelta_dossiernummer=eDelta_dossiernummer,
                                        start_datetime=datetime(2024, 9, 1))
 
-        verweven_asset = zoek_verweven_asset(bron_uuid=asset.uuid)
-
-        add_bestekkoppeling_if_missing(asset_uuid=verweven_asset.uuid, eDelta_dossiernummer=eDelta_dossiernummer,
-                                       start_datetime=datetime(2024, 9, 1))
-
         # Lijst aanvullen met de naam en diens overeenkomstig uuid
         df_assets_mivlve.at[idx, "asset_uuid"] = asset.uuid
-        df_assets_mivlve.at[idx, "bevestigingsrelatie_uuid"] = relatie_uuid
+        df_assets_mivlve.at[idx, "bevestigingsrelatie_uuid"] = bevestigingsrelatie_uuid
 
     with pd.ExcelWriter(output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-        df_assets_mivlve.to_excel(writer, sheet_name='MIVLVE', columns=["Object assetId.identificator", "asset_uuid", "bevestigingsrelatie_uuid"], index=False, freeze_panes=[1, 1])
+        df_assets_mivlve.to_excel(writer, sheet_name='MIVLVE', columns=["LVE_Object assetId.identificator", "asset_uuid", "bevestigingsrelatie_uuid"], index=False, freeze_panes=[1, 1])
     logging.info('MIVLVE aangemaakt')
 
     # Aanmaken van de MIVMeetpunten
     logging.info('Aanmaken van MIVMeetpunten onder MIVLVE')
     for idx, asset_row in df_assets_mivmeetpunten.iterrows():
-        asset_row_uuid = asset_row.get("UUID Object")
-        asset_row_typeURI = asset_row.get("Object typeURI")
-        asset_row_naam = asset_row.get("Object assetId.identificator")
-        assettype_uuid = get_assettype_uuid(assettype_URI='MIVMeetpunten')
-        assettype_uuid_parent = get_assettype_uuid(assettype_URI='MIVLVE')
-        asset_row_parent_name = asset_row.get("Sturingsrelatie bron AssetId.identificator")
-        query_search_parent = QueryDTO(size=5, from_=0, pagingMode=PagingModeEnum.OFFSET,
-                                       expansions=ExpansionsDTO(fields=['parent'])
-                                       , selection=SelectionDTO(expressions=[
-                ExpressionDTO(terms=[TermDTO(property='type', operator=OperatorEnum.EQ, value=f'{assettype_uuid_parent}')]),
-                ExpressionDTO(terms=[TermDTO(property='naam', operator=OperatorEnum.EQ, value=f'{asset_row_parent_name}')], logicalOp=LogicalOpEnum.AND)
-            ]))
-        asset_row_parent_asset = next(eminfra_client.search_assets(query_dto=query_search_parent), None)
-        if asset_row_parent_asset is None:
-            logging.critical(f'Parent asset via de Bevestiging-relatie is onbestaande. Controleer MIVMeetpunt "{asset_row_uuid}" en diens Sturing-relatie')
-            # raise ValueError(f'Parent asset via de Bevestiging-relatie is onbestaande. Controleer MIVMeetpunt "{asset_row_uuid}" en diens Sturing-relatie')
-        else:
-            asset_row_parent_asset_uuid = asset_row_parent_asset.uuid
-            asset_row_parent_asset_name = asset_row_parent_asset.naam
-        logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_naam}')
+        asset_row_uuid = asset_row.get("Meetpunt_UUID Object")
+        asset_row_typeURI = get_current_typeURI(asset_row.get("Meetpunt_Object typeURI"))
+        asset_row_name = asset_row.get("Meetpunt_Object assetId.identificator")
 
-        if asset_row_uuid and asset_row_naam:
+        asset_row_parent_name = asset_row.get("Sturingsrelaties_Sturingsrelatie bron AssetId.identificator")
+        parent_asset = next(eminfra_client.search_assets(query_dto=build_query_MIVMeetpunten(naam=asset_row_parent_name)), None)
+
+        logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_name}')
+
+        if asset_row_uuid and asset_row_name:
             logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
-            validate_asset(uuid=asset_row_uuid, naam=asset_row_naam, stop_on_error=True)
+            validate_asset(uuid=asset_row_uuid, naam=asset_row_name, stop_on_error=True)
 
-        query = QueryDTO(size=5, from_=0, pagingMode=PagingModeEnum.OFFSET,
-                         expansions=ExpansionsDTO(fields=['parent'])
-                         , selection=SelectionDTO(expressions=[
-                ExpressionDTO(terms=[TermDTO(property='type', operator=OperatorEnum.EQ, value=f'{assettype_uuid}')]),
-                ExpressionDTO(terms=[TermDTO(property='naam', operator=OperatorEnum.CONTAINS, value=f'{asset_row_naam}')], logicalOp=LogicalOpEnum.AND)
-            ]))
-        # Het volledige naampad is niet gekend, dus zoek in de resultaten lijst of de uuid van de parent-asset overeenkomt.
-        asset_candidates = eminfra_client.search_assets(query_dto=query)
-        asset = next((asset for asset in asset_candidates if asset.parent.uuid == asset_row_parent_asset_uuid), None)
-        if asset is None:
-            logging.debug(f'Asset met als naam "{asset_row_naam}" bestaat niet en wordt aangemaakt')
-            asset_dict = eminfra_client.create_asset(
-                parent_uuid=asset_row_parent_asset_uuid
-                , naam=asset_row_naam
-                , typeUuid=assettype_uuid
-                , parent_asset_type=BoomstructuurAssetTypeEnum.ASSET
-            )
-            try:
-                asset_row_uuid = asset_dict.get("uuid")
-                asset = next(eminfra_client.search_asset_by_uuid(asset_uuid=asset_row_uuid), None)
-            except:
-                logging.critical(f'Asset werd niet teruggevonden in em-infra: {asset_row_uuid}')
-                raise ValueError(f'Asset werd niet teruggevonden in em-infra: {asset_row_uuid}')
+        if parent_asset is None:
+            logging.critical(f'Parent asset is ongekend.')
+
+        asset = create_asset_if_missing(typeURI=asset_row_typeURI, parent_uuid=parent_asset.uuid,
+                                        asset_naam=asset_row_name,
+                                        parent_asset_type=BoomstructuurAssetTypeEnum.ASSET)
 
         if asset is None:
             logging.critical('Asset werd niet aangemaakt')
@@ -701,55 +658,18 @@ if __name__ == '__main__':
             eminfra_client.update_kenmerk_locatie_by_asset_uuid(asset_uuid=asset.uuid, wkt_geom=asset_row_wkt_geometry)
 
         # Sturing-relatie
-        # ! De Sturing-relatie loopt van een meetpunt (bron) naar een meetlus MIVLVE (doel)
-        bronAsset_uuid = asset_row.get('UUID Sturingsrelatie bronAsset')
-        if bronAsset_uuid:
-            # check of de relatie al bestaat.
-            response = eminfra_client.search_assetrelaties_OTL(bronAsset_uuid=asset.uuid, doelAsset_uuid=bronAsset_uuid)
-            if not response:
-                relatieType_uuid = get_relatietype_uuid(relatie_naam='Sturing')
-                relatie_uuid = eminfra_client.create_assetrelatie(bronAsset_uuid=asset.uuid, doelAsset_uuid=bronAsset_uuid, relatieType_uuid=relatieType_uuid)
-            else:
-                relatie_uuid = response[0].get("RelatieObject.assetId").get("DtcIdentificator.identificator")[:36] # eerste 36 karakters van de UUID
-        else:
-            relatie_uuid = None
-
-        # update eigenschappen: Aansluiting, Formaat, Laag, Uitslijprichting, Wegdek
-        # eigenschapwaarden_huidig = eminfra_client.get_eigenschapwaarden(assetId=asset.uuid)
-        # eigenschappen_huidig = eminfra_client.get_eigenschappen(assetId=asset.uuid)
-        #
-        # eigenschapnamen_meetpunt = ['Aansluiting', 'Formaat', 'Laag', 'Uitslijprichting', 'Wegdek']
-        # for eigenschapnaam_meetpunt in eigenschapnamen_meetpunt:
-        #     logging.debug(f'Update eigenschap {eigenschapnaam_meetpunt}')
-        #     asset_row_eigenschap_nieuw = asset_row[f'{eigenschapnaam_meetpunt}']
-        #     # zoek de huidige waarde voor deze eigenschap, indien onbestaande, zoek de Eigenschap en maak er een een Eigenschapwaarde van.
-        #
-        #     eigenschapwaarde_huidig = next((eigenschapwaarde for eigenschapwaarde in eigenschapwaarden_huidig if eigenschapwaarde.eigenschap.naam == eigenschapnaam_meetpunt), None)
-        #     # todo implementeer de situatie waarbij de eigenschap nog niet bestaat. Ophalen van de eigenschap en nadien de waarde toekennen in TypedValue.
-        #     if eigenschapwaarde_huidig is None:
-        #         eigenschap_huidig = eminfra_client.search_eigenschappen(eigenschap_naam=eigenschapnaam_meetpunt)
-        #         eigenschap_huidig = next((eigenschap for eigenschap in eminfra_client.search_eigenschappen(eigenschap_naam=eigenschapnaam_meetpunt) if 'https://lgc.data.wegenenverkeer.be' in eigenschap.uri), None) # beperk de eigenschappen tot de Legacy eigenschappen.
-        #         # todo implement check indien er meerdere gelijknamige eigenschappen bestaan
-        #
-        #     if eigenschapwaarde_huidig and eigenschapwaarde_huidig.typedValue.get('value') != asset_row_eigenschap_nieuw:
-        #         eigenschapwaarde_nieuw = copy.deepcopy(eigenschapwaarde_huidig)
-        #         eigenschapwaarde_nieuw.typedValue['value'] = asset_row_eigenschap_nieuw
-        #
-        #         eminfra_client.update_eigenschap(assetId=asset.uuid, eigenschap=eigenschapwaarde_nieuw)
+        bronAsset_uuid = asset_row.get('Sturingsrelaties_UUID Sturingsrelatie bronAsset')
+        sturingsrelatie_uuid = create_relatie_if_missing(bronAsset_uuid=bronAsset_uuid, doelAsset_uuid=asset.uuid, relatie_naam='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Sturing')
 
         add_bestekkoppeling_if_missing(asset_uuid=asset.uuid, eDelta_dossiernummer=eDelta_dossiernummer,
                                        start_datetime=datetime(2024, 9, 1))
 
-        verweven_asset = zoek_verweven_asset(bron_uuid=asset.uuid)
-
-        add_bestekkoppeling_if_missing(asset_uuid=verweven_asset.uuid, eDelta_dossiernummer=eDelta_dossiernummer,
-                                       start_datetime=datetime(2024, 9, 1))
-
         # Lijst aanvullen met de naam en diens overeenkomstig uuid
         df_assets_mivmeetpunten.at[idx, "asset_uuid"] = asset.uuid
-        df_assets_mivmeetpunten.at[idx, "sturingsrelatie_uuid"] = relatie_uuid
+        df_assets_mivmeetpunten.at[idx, "sturingsrelatie_uuid"] = sturingsrelatie_uuid
+
     with pd.ExcelWriter(output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
         df_assets_mivmeetpunten.to_excel(writer, sheet_name='MIVMeetpunten',
-                                         columns=["Object assetId.identificator", "asset_uuid",
+                                         columns=["Meetpunten_Object assetId.identificator", "asset_uuid",
                                                   "sturingsrelatie_uuid"], index=False, freeze_panes=[1, 1])
     logging.info('MIVMeetpunten aangemaakt')
