@@ -18,7 +18,7 @@ def load_settings():
     settings_path = Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
     return settings_path
 
-def build_lgc_query(toezichter_uuid: str = '07f9e78f-e341-4324-8c57-d9d2b46932f1') -> None:
+def build_lgc_query(toezichter_uuid: str = '07f9e78f-e341-4324-8c57-d9d2b46932f1') -> QueryDTO:
     """"""
     return QueryDTO(
         size=100
@@ -28,7 +28,7 @@ def build_lgc_query(toezichter_uuid: str = '07f9e78f-e341-4324-8c57-d9d2b46932f1
         , selection=SelectionDTO(
             expressions=[ExpressionDTO(terms=[TermDTO(property='toezichter', operator=OperatorEnum.EQ, value=toezichter_uuid)])]))
 
-def build_otl_query(agent_uuid: str = '8a7c6f90-23b8-4170-b6b7-1517b8c8465b:toezichter') -> None:
+def build_otl_query(agent_uuid: str = '8a7c6f90-23b8-4170-b6b7-1517b8c8465b:toezichter') -> QueryDTO:
     """"""
     return QueryDTO(
         size=100
