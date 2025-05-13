@@ -7,6 +7,7 @@ from Exceptions.AssetsMissingError import AssetsMissingError
 from Exceptions.ObjectAlreadyExistsError import ObjectAlreadyExistsError
 
 from UseCases.PatternCollection.Domain.AssetCollection import AssetCollection
+from UseCases.PatternCollection.Domain.InfoObject import NodeInfoObject
 
 
 class AssetInfoCollector:
@@ -127,3 +128,66 @@ class AssetInfoCollector:
         parts_0 = parts[2].replace('>', '<')[::-1]
 
         return relation_pattern[2], f'{parts_0}[{parts[1]}]{parts_2}', relation_pattern[0]
+
+    def get_level_dict(self, pattern: [tuple[str, str, object]]) -> dict[str, str]:
+        level_statements = [s for s in pattern if s[1] == 'level']
+        level_dict = {}
+        for level_statement in level_statements:
+            for assettype in next(t[2] for t in pattern if t[0] == level_statement[0] and t[1] == 'type_of'):
+                if assettype in level_dict:
+                    raise ValueError(f'Level for {assettype} is already defined in the pattern')
+
+                level_dict[assettype] = level_statement[2]
+        return level_dict
+
+    def filter_collection_by_pattern(self, filter_pattern: [tuple[str, str, object]], starting_uuids: [str]
+                                     ) -> [NodeInfoObject]:
+        uuid_pattern = next((t[2] for t in filter_pattern if t[:2] == ('uuids', 'of')), None)
+        type_of_patterns = [t for t in filter_pattern if t[1] == 'type_of']
+        relation_patterns = [t for t in filter_pattern if re.match('^(<)?-\\[r(\\d)*]-(>)?$', t[1]) is not None]
+        node_info_objects = []
+
+        if uuid_pattern is None:
+            raise ValueError('No uuids pattern found in pattern list. '
+                             'Must contain one tuple with ("uuids", "of", object)')
+        if not type_of_patterns:
+            raise ValueError('No type_of pattern found in pattern list. '
+                             'Must contain at least one tuple with (object, "type_of", object)')
+        if not relation_patterns:
+            raise ValueError('No relation pattern found in pattern list'
+                             'Must contain at least one tuple with (object, "-[r]-", object) where r is followed by a '
+                             'number and relation may or may not be directional (using < and > symbols)')
+        types = next(pattern[2] for pattern in type_of_patterns if pattern[0] == uuid_pattern)
+
+        node_info_objects.extend(self.collection.get_node_objects_by_types(types))
+
+        matching_objects = [uuid_pattern]
+        while relation_patterns:
+            new_matching_objects = []
+            for obj in matching_objects:
+                relation_patterns = self.order_patterns_for_object(obj, relation_patterns)
+
+                for relation_pattern in relation_patterns:
+                    if relation_pattern[0] != obj:
+                        continue
+
+                    new_matching_objects.append(relation_pattern[2])
+
+                    type_of_obj_l = [t[2] for t in type_of_patterns if t[0] == relation_pattern[0]]
+                    type_of_obj = []
+                    for l in type_of_obj_l:
+                        type_of_obj.extend(l)
+                    if type_of_obj is None:
+                        raise ValueError(f'No type_of pattern found for object {relation_pattern[0]}')
+
+                    type_of_uuids = [asset.uuid for asset in self.collection.get_node_objects_by_types(type_of_obj)]
+                    if not type_of_uuids:
+                        continue
+                    try:
+                        self.collect_relation_info_by_sources_or_targets(uuids=type_of_uuids, ignore_duplicates=True)
+                    except AssetsMissingError as e:
+                        self.collect_asset_info(uuids=e.uuids)
+                        self.collect_relation_info_by_sources_or_targets(uuids=type_of_uuids, ignore_duplicates=True)
+
+                relation_patterns = [t for t in relation_patterns if t[0] != obj]
+            matching_objects = new_matching_objects
