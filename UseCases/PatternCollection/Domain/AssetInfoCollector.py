@@ -101,12 +101,9 @@ class AssetInfoCollector:
                         continue
                     try:
                         self.collect_relation_info_by_sources_or_targets(uuids=type_of_uuids, ignore_duplicates=True)
-                        print(len(self.collection.object_dict))
                     except AssetsMissingError as e:
-                        print(len(self.collection.object_dict))
                         self.collect_asset_info(uuids=e.uuids)
                         self.collect_relation_info_by_sources_or_targets(uuids=type_of_uuids, ignore_duplicates=True)
-                        print(len(self.collection.object_dict))
 
                 relation_patterns = [t for t in relation_patterns if t[0] != obj]
             matching_objects = new_matching_objects
