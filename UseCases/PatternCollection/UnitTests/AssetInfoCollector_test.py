@@ -22,23 +22,30 @@ def test_asset_info_collector_inactive(fake_eminfra_client, fake_emson_client):
     assert asset_node.active is False
 
 
-def test_start_collecting_from_starting_uuids_using_pattern_giving_uuids_of_a_small(fake_eminfra_client,
-                                                                                    fake_emson_client):
+def test_small_pattern_get_level_dict_and_filter_collection(fake_eminfra_client, fake_emson_client):
     collector = AssetInfoCollector(em_infra_client=fake_eminfra_client, emson_client=fake_emson_client)
+    pattern = [
+        ('uuids', 'of', 'a'),
+        ('a', 'type_of', ['onderdeel#VerlichtingstoestelLED']),
+        ('a', '-[r1]-', 'b'),
+        ('a', '-[r1]-', 'c'),
+        ('b', 'type_of', ['onderdeel#WVLichtmast', 'onderdeel#WVConsole']),
+        ('c', 'type_of', ['onderdeel#Armatuurcontroller']),
+        ('r1', 'type_of', ['onderdeel#Bevestiging']),
+        ('a', 'level', 0),
+        ('b', 'level', -1),
+        ('c', 'level', 1)]
+    filter_pattern = [
+        ('uuids', 'of', 'a'),
+        ('a', 'type_of', ['onderdeel#VerlichtingstoestelLED']),
+        ('a', '-[r1]-', 'b'),
+        ('b', 'type_of', ['onderdeel#Armatuurcontroller']),
+        ('r1', 'type_of', ['onderdeel#Bevestiging']),
+        ('a', 'level', 0),
+        ('b', 'level', 1)]
 
     collector.start_collecting_from_starting_uuids_using_pattern(
-        starting_uuids=['00000000-0000-0000-0000-000000000002'],
-        pattern=[('uuids', 'of', 'a'),
-                 ('a', 'type_of', ['onderdeel#VerlichtingstoestelLED']),
-                 ('a', '-[r1]-', 'b'),
-                 ('a', '-[r1]-', 'c'),
-                 ('b', 'type_of', ['onderdeel#WVLichtmast', 'onderdeel#WVConsole']),
-                 ('c', 'type_of', ['onderdeel#Armatuurcontroller']),
-                 ('r1', 'type_of', ['onderdeel#Bevestiging']),
-                 ('a', 'level', 0),
-                 ('b', 'level', -1),
-                 ('c', 'level', 1)
-                 ])
+        starting_uuids=['00000000-0000-0000-0000-000000000002'], pattern=pattern)
 
     assert collector.collection.short_uri_dict == {
         'onderdeel#Armatuurcontroller': {'00000000-0000-0000-0000-000000000006',
@@ -48,6 +55,24 @@ def test_start_collecting_from_starting_uuids_using_pattern_giving_uuids_of_a_sm
                                   '000000000006-Bevestigin-000000000002'},
         'onderdeel#VerlichtingstoestelLED': {'00000000-0000-0000-0000-000000000002'},
         'onderdeel#WVLichtmast': {'00000000-0000-0000-0000-000000000004'}}
+
+    assert collector.get_level_dict(pattern) == {
+        'onderdeel#Armatuurcontroller': 1,
+        'onderdeel#VerlichtingstoestelLED': 0,
+        'onderdeel#WVLichtmast': -1,
+        'onderdeel#WVConsole': -1
+    }
+
+    filtered_list = collector.filter_collection_by_pattern(
+        starting_uuids=['00000000-0000-0000-0000-000000000002'], filter_pattern=filter_pattern)
+
+    assert [x['@id'] for x in filtered_list] == [
+        '00000000-0000-0000-0000-000000000002',
+        '00000000-0000-0000-0000-000000000006',
+        '00000000-0000-0000-0000-000000000026',
+        '00000000-0000-0000-0000-000000000002-Bevestigin-00000000-0000-0000-0000-000000000026',
+        '00000000-0000-0000-0000-000000000006-Bevestigin-00000000-0000-0000-0000-000000000002'
+    ]
 
 
 def test_start_collecting_from_starting_uuids_using_pattern_giving_uuids_of_a(fake_eminfra_client, fake_emson_client):
