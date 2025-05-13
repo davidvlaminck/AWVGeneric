@@ -1,3 +1,4 @@
+import copy
 from pathlib import Path
 from typing import Generator
 from unittest.mock import Mock, patch
@@ -465,11 +466,11 @@ def fake_emson_client() -> EMSONClient:
         pass
 
     def get_assets_by_filter(self, filter: dict):
-        return [a for a in fake_assets if ('@id' in a and a['@id'].split('/')[-1][:36] in filter['uuid']) or
+        yield from  [a for a in copy.deepcopy(fake_assets) if ('@id' in a and a['@id'].split('/')[-1][:36] in filter['uuid']) or
                 ('uuid' in a and a['uuid'] in filter['uuid'])]
 
     def get_assetrelaties_by_filter(self, filter: dict):
-        return [a for a in fake_assets if a['@id'].split('/')[-1] in filter['uuid']]
+        yield from [a for a in copy.deepcopy(fake_assets) if a['@id'].split('/')[-1] in filter['uuid']]
 
     with patch.object(EMSONClient, '__init__', __init__):
         emson_client = EMSONClient(auth_type=AuthType.JWT, env=Environment.DEV, settings_path=None)
@@ -486,9 +487,9 @@ def fake_eminfra_client() -> EMInfraClient:
 
     def get_objects_from_oslo_search_endpoint(self, url_part: str,
                                               filter_dict: dict = '{}', size: int = 100,
-                                              expansions_fields: [str] = None) -> Generator:
+                                              expansions_fields: [str] = None) -> list:
         if url_part == 'assetrelaties' and 'asset' in filter_dict:
-            yield from [a for a in fake_assets
+            yield from  [a for a in copy.deepcopy(fake_assets)
                     if '@id' in a and a['@id'].startswith('https://data.awvvlaanderen.be/id/assetrelatie/') and
                     (a['RelatieObject.bron']['@id'].split('/')[-1][:36] in filter_dict['asset'] or
                         a['RelatieObject.doel']['@id'].split('/')[-1][:36] in filter_dict['asset'])]
