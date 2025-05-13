@@ -1334,7 +1334,7 @@ class BypassProcessor:
         :param typeURI:
         :return:
         """
-        typeURI_dict = {
+        typeURI_mapping_dict = {
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Wegkantkast": "https://lgc.data.wegenenverkeer.be/ns/installatie#Kast"
             ,
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HSCabine": "https://lgc.data.wegenenverkeer.be/ns/installatie#HSCabineLegacy"
@@ -1342,9 +1342,9 @@ class BypassProcessor:
             , "lgc:installatie#HSDeel": "https://lgc.data.wegenenverkeer.be/ns/installatie#HSDeel"
             , "lgc:installatie#LS": "https://lgc.data.wegenenverkeer.be/ns/installatie#LS"
             , "lgc:installatie#LSDeel": "https://lgc.data.wegenenverkeer.be/ns/installatie#LSDeel"
-            , "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBHoogspanning": ""
-            , "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBLaagspanning": ""
-            , "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#EnergiemeterDNB": ""
+            , "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBHoogspanning": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBHoogspanning"
+            , "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBLaagspanning": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBLaagspanning"
+            , "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#EnergiemeterDNB": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#EnergiemeterDNB"
             , 'Switch': "https://lgc.data.wegenenverkeer.be/ns/installatie#IP"
             # , "Switch": "https://lgc.data.wegenenverkeer.be/ns/installatie#Switch"
             ,
@@ -1367,9 +1367,9 @@ class BypassProcessor:
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Camera": "https://lgc.data.wegenenverkeer.be/ns/installatie#CameraLegacy"
             ,
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Seinbrug": "https://lgc.data.wegenenverkeer.be/ns/installatie#SeinbrugDVM"
-            , "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Galgpaal": ""
+            , "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Galgpaal": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Galgpaal"
         }
-        return [dict[typeURI] if dict.get(typeURI) != '' else typeURI for _ in typeURI_dict][0]
+        return typeURI_mapping_dict[typeURI]
 
     def get_assettype_uuid(self, assettype_URI: str) -> str:
         """
