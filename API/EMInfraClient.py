@@ -562,8 +562,7 @@ class EMInfraClient:
         if response.status_code != 202:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
-
-        yield from [AssetDTO.from_dict(item) for item in response['data']]
+        return AssetDTO.from_dict(response.json()['data'])
 
 
     def get_all_eventtypes(self) -> Generator[EventType]:
@@ -1331,11 +1330,9 @@ class EMInfraClient:
         :return:
         """
         relaties = self.search_assetrelaties_OTL(bronAsset_uuid=bron_uuid)
-        relatie_gemigreerd = [item for item in relaties if
-                              item.get('@type') == 'https://lgc.data.wegenenverkeer.be/ns/onderdeel#GemigreerdNaar'][0]
+        relatie_gemigreerd = next((r for r in relaties if r.get('@type') == 'https://lgc.data.wegenenverkeer.be/ns/onderdeel#GemigreerdNaar'), None)
         asset_uuid_gemigreerd = relatie_gemigreerd.get('RelatieObject.doelAssetId').get(
-            'DtcIdentificator.identificator')[
-                                :36]
+            'DtcIdentificator.identificator')[:36]
         return next(
             self.search_asset_by_uuid(asset_uuid=asset_uuid_gemigreerd),
             None,

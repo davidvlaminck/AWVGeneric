@@ -1284,12 +1284,11 @@ class BypassProcessor:
             asset = assets_list[0]
         elif nbr_assets == 0:
             logging.debug(f'Asset {asset_naam} ({typeURI}) bestaat nog niet en wordt aangemaakt.')
-            asset = next(self.eminfra_client.create_asset(
+            asset = self.eminfra_client.create_asset(
                 parent_uuid=parent_uuid,
                 naam=asset_naam,
                 typeUuid=assettype_uuid,
-                parent_asset_type=parent_asset_type
-            ), None)
+                parent_asset_type=parent_asset_type)
 
         else:
             logging.critical('Unknown error')
@@ -1336,7 +1335,7 @@ class BypassProcessor:
         :param typeURI:
         :return:
         """
-        dict = {
+        typeURI_dict = {
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Wegkantkast": "https://lgc.data.wegenenverkeer.be/ns/installatie#Kast"
             ,
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HSCabine": "https://lgc.data.wegenenverkeer.be/ns/installatie#HSCabineLegacy"
@@ -1371,7 +1370,7 @@ class BypassProcessor:
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Seinbrug": "https://lgc.data.wegenenverkeer.be/ns/installatie#SeinbrugDVM"
             , "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Galgpaal": ""
         }
-        return [dict[typeURI] if dict.get(typeURI) != '' else typeURI for _ in dict][0]
+        return [dict[typeURI] if dict.get(typeURI) != '' else typeURI for _ in typeURI_dict][0]
 
     def get_assettype_uuid(self, assettype_URI: str) -> str:
         """
