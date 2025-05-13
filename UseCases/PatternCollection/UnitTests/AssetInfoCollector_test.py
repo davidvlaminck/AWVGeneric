@@ -66,12 +66,8 @@ def test_start_collecting_from_starting_uuids_using_pattern_giving_uuids_of_a(fa
  'onderdeel#WVLichtmast': {'00000000-0000-0000-0000-000000000004'}}
 
 
-def test_start_collecting_from_starting_uuids_using_pattern_giving_uuids_of_c():
-    fake_requester = Mock(spec=AbstractRequester)
-    fake_requester.first_part_url = ''
-    AssetInfoCollector.create_requester_with_settings = Mock(return_value=fake_requester)
-    collector = AssetInfoCollector(em_infra_client=Mock(), emson_client=Mock())
-    collector.em_infra_importer = fake_em_infra_importer
+def test_start_collecting_from_starting_uuids_using_pattern_giving_uuids_of_c(fake_eminfra_client, fake_emson_client):
+    collector = AssetInfoCollector(em_infra_client=fake_eminfra_client, emson_client=fake_emson_client)
 
     collector.start_collecting_from_starting_uuids_using_pattern(
         starting_uuids=['00000000-0000-0000-0000-000000000008', '00000000-0000-0000-0000-000000000009'],
@@ -111,12 +107,9 @@ def test_start_collecting_from_starting_uuids_using_pattern_giving_uuids_of_c():
         'onderdeel#WVLichtmast': {'00000000-0000-0000-0000-000000000004'}}
 
 
-def test_start_collecting_from_starting_uuids_using_pattern_giving_uuids_of_d_multiple_types():
-    fake_requester = Mock(spec=AbstractRequester)
-    fake_requester.first_part_url = ''
-    AssetInfoCollector.create_requester_with_settings = Mock(return_value=fake_requester)
-    collector = AssetInfoCollector(em_infra_client=Mock(), emson_client=Mock())
-    collector.em_infra_importer = fake_em_infra_importer
+def test_start_collecting_from_starting_uuids_using_pattern_giving_uuids_of_d_multiple_types(fake_eminfra_client,
+                                                                                             fake_emson_client):
+    collector = AssetInfoCollector(em_infra_client=fake_eminfra_client, emson_client=fake_emson_client)
 
     collector.start_collecting_from_starting_uuids_using_pattern(
         starting_uuids=['00000000-0000-0000-0000-000000000006', '00000000-0000-0000-0000-000000000007'],
@@ -157,12 +150,8 @@ def test_start_collecting_from_starting_uuids_using_pattern_giving_uuids_of_d_mu
         'onderdeel#WVLichtmast': {'00000000-0000-0000-0000-000000000004'}}
 
 
-def test_start_collecting_from_starting_uuids_using_pattern_giving_uuids_of_d():
-    fake_requester = Mock(spec=AbstractRequester)
-    fake_requester.first_part_url = ''
-    AssetInfoCollector.create_requester_with_settings = Mock(return_value=fake_requester)
-    collector = AssetInfoCollector(em_infra_client=Mock(), emson_client=Mock())
-    collector.em_infra_importer = fake_em_infra_importer
+def test_start_collecting_from_starting_uuids_using_pattern_giving_uuids_of_d(fake_eminfra_client, fake_emson_client):
+    collector = AssetInfoCollector(em_infra_client=fake_eminfra_client, emson_client=fake_emson_client)
 
     collector.start_collecting_from_starting_uuids_using_pattern(
         starting_uuids=['00000000-0000-0000-0000-000000000006', '00000000-0000-0000-0000-000000000007'],
@@ -202,12 +191,8 @@ def test_start_collecting_from_starting_uuids_using_pattern_giving_uuids_of_d():
         'onderdeel#WVLichtmast': {'00000000-0000-0000-0000-000000000004'}}
 
 
-def test_start_collecting_from_starting_uuids_using_pattern_giving_uuids_of_b():
-    fake_requester = Mock(spec=AbstractRequester)
-    fake_requester.first_part_url = ''
-    AssetInfoCollector.create_requester_with_settings = Mock(return_value=fake_requester)
-    collector = AssetInfoCollector(em_infra_client=Mock(), emson_client=Mock())
-    collector.em_infra_importer = fake_em_infra_importer
+def test_start_collecting_from_starting_uuids_using_pattern_giving_uuids_of_b(fake_eminfra_client, fake_emson_client):
+    collector = AssetInfoCollector(em_infra_client=fake_eminfra_client, emson_client=fake_emson_client)
 
     collector.start_collecting_from_starting_uuids_using_pattern(
         starting_uuids=['00000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000005'],
