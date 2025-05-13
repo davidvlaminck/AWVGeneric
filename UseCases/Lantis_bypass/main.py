@@ -15,8 +15,7 @@ from pathlib import Path
 class BypassProcessor:
     def __init__(self
                  , environment: Environment = Environment.TEI
-                 ,
-                 settings_path: Path = Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
+                 , settings_path: Path = Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
                  , eDelta_dossiernummer: str = 'INTERN-095'
                  , input_path_componentenlijst: Path = Path(
                 __file__).resolve().parent / 'data' / 'input' / 'Componentenlijst_20250507.xlsx'
@@ -176,8 +175,8 @@ class BypassProcessor:
 
         self.df_assets_mivmeetpunten = self.append_columns(df=self.df_assets_mivmeetpunten,
                                                            columns=["asset_uuid", "sturingsrelatie_uuid"])
-        self.df_assets_RRS_borden = self.import_data_as_dataframe(filepath=self.excel_file, sheet_name="RSS-borden")
-        self.df_assets_RSS_borden = self.append_columns(df=self.df_assets_RRS_borden,
+        self.df_assets_RSS_borden = self.import_data_as_dataframe(filepath=self.excel_file, sheet_name="RSS-borden")
+        self.df_assets_RSS_borden = self.append_columns(df=self.df_assets_RSS_borden,
                                                         columns=["asset_uuid", "hoortbijrelatie_uuid",
                                                                  "bevestigingsrelatie_uuid",
                                                                  "voedingsrelatie_uuid"])
