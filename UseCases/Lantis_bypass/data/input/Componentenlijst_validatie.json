@@ -90,7 +90,7 @@
         {"name": "Segmentcontroller_UUID SC","type": "object", "nullable": true},
         {"name": "Wegverlichtingsgroep_WV aanwezig (Ja/Nee)","type": "object", "nullable": true},
         {"name": "Wegverlichtingsgroep_Naam WV","type": "object", "nullable": true},
-        {"name": "Wegverlichtingsgroep_WV  lgc:installatie","type": "object", "nullable": true},
+        {"name": "Wegverlichtingsgroep_WV lgc:installatie","type": "object", "nullable": true},
         {"name": "Wegverlichtingsgroep_UUID WV","type": "object", "nullable": true},
         {"name": "Switch gegevens_Switch aanwezig (Ja/Nee)","type": "object", "nullable": true},
         {"name": "Switch gegevens_Object assetId.toegekendDoor","type": "object", "nullable": true},
