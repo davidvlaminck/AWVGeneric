@@ -416,7 +416,7 @@ class BypassProcessor:
 
         # Wegschrijven van het dataframe
         with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-            df.to_excel(writer, sheet_name='Wegkantkasten_Teletransmissieverbinding',
+            df.to_excel(writer, sheet_name='Wegkantkasten_TT',
                         columns=["Switch gegevens_Naam Teletransmissieverbinding", "asset_uuid_teletransmissieverbinding"],
                         index=False, freeze_panes=[1, 1])
         logging.info('Wegkantkasten_Teletransmisseiverbinding aangemaakt')
@@ -1906,10 +1906,7 @@ if __name__ == '__main__':
     bypass.process_wegkantkasten_switch(df=bypass.df_assets_wegkantkasten)
     bypass.process_wegkantkasten_teletransmissieverbinding(df=bypass.df_assets_wegkantkasten)
 
-    # UUID aanvullen
-
     bypass.process_voeding_HS_cabine(df=bypass.df_assets_voeding)
-    # UUID aanvullen
 
     bypass.process_voeding_hoogspanningsdeel(df=bypass.df_assets_voeding)
     bypass.process_voeding_laagspanningsdeel(df=bypass.df_assets_voeding)
@@ -1919,7 +1916,6 @@ if __name__ == '__main__':
     bypass.process_voeding_segmentcontroller(df=bypass.df_assets_voeding)
     bypass.process_voeding_wegverlichting(df=bypass.df_assets_voeding)
     bypass.process_voeding_switch(df=bypass.df_assets_voeding)
-    # UUID aanvullen
 
     bypass.process_openbare_verlichting(df=bypass.df_assets_openbare_verlichting)
     bypass.process_mivlve(df=bypass.df_assets_mivlve)
