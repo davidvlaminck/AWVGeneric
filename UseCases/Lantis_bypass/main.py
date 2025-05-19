@@ -1940,17 +1940,17 @@ if __name__ == '__main__':
 
     bypass.import_data()
 
-    # bypass.process_installatie(df=bypass.df_assets_wegkantkasten)
-    # bypass.process_wegkantkasten(df=bypass.df_assets_wegkantkasten)
-    # bypass.process_wegkantkasten_lsdeel(df=bypass.df_assets_wegkantkasten)
-    # bypass.process_wegkantkasten_switch(df=bypass.df_assets_wegkantkasten)
-    # bypass.process_wegkantkasten_teletransmissieverbinding(df=bypass.df_assets_wegkantkasten)
-    #
-    # bypass.process_voeding_HS_cabine(df=bypass.df_assets_voeding)
-    #
-    # bypass.process_voeding_hoogspanningsdeel(df=bypass.df_assets_voeding)
-    # bypass.process_voeding_laagspanningsdeel(df=bypass.df_assets_voeding)
-    # bypass.process_voeding_hoogspanning(df=bypass.df_assets_voeding)
+    bypass.process_installatie(df=bypass.df_assets_wegkantkasten)
+    bypass.process_wegkantkasten(df=bypass.df_assets_wegkantkasten)
+    bypass.process_wegkantkasten_lsdeel(df=bypass.df_assets_wegkantkasten)
+    bypass.process_wegkantkasten_switch(df=bypass.df_assets_wegkantkasten)
+    bypass.process_wegkantkasten_teletransmissieverbinding(df=bypass.df_assets_wegkantkasten)
+
+    bypass.process_voeding_HS_cabine(df=bypass.df_assets_voeding)
+
+    bypass.process_voeding_hoogspanningsdeel(df=bypass.df_assets_voeding)
+    bypass.process_voeding_laagspanningsdeel(df=bypass.df_assets_voeding)
+    bypass.process_voeding_hoogspanning(df=bypass.df_assets_voeding)
     bypass.process_voeding_DNBHoogspanning(df=bypass.df_assets_voeding)
     bypass.process_voeding_energiemeter_DNB(df=bypass.df_assets_voeding)
     bypass.process_voeding_segmentcontroller(df=bypass.df_assets_voeding)
