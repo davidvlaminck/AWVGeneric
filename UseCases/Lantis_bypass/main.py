@@ -5,7 +5,7 @@ import re
 
 from API.EMInfraDomain import OperatorEnum, BoomstructuurAssetTypeEnum, \
     AssetDTOToestand, QueryDTO, PagingModeEnum, ExpansionsDTO, SelectionDTO, TermDTO, ExpressionDTO, LogicalOpEnum, \
-    AssetDTO
+    AssetDTO, EigenschapValueDTO
 from API.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 import pandas as pd
@@ -723,8 +723,8 @@ class BypassProcessor:
                 parent_asset = next(self.eminfra_client.search_asset_by_uuid(asset_uuid=asset_row_parent_uuid), None)
             else:
                 parent_asset = None
-            asset_row_eanNummer = asset_row.get("DNBHoogspanning_eanNummer")
-            asset_row_referentieDNB = asset_row.get("DNBHoogspanning_referentieDNB")
+
+
 
             logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_name}')
 
@@ -745,6 +745,10 @@ class BypassProcessor:
                 if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
                     logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
                     self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
+
+                # Update eigenschapwaarden
+                self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='eanNummer', eigenschapwaarde_nieuw=asset_row.get("DNBHoogspanning_eanNummer"))
+                self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='referentieDNB', eigenschapwaarde_nieuw=asset_row.get("DNBHoogspanning_referentieDNB"))
 
                 # Hoortbij-relatie
                 hoortbijrelatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=asset.uuid,
@@ -778,7 +782,6 @@ class BypassProcessor:
                 parent_asset = next(self.eminfra_client.search_asset_by_uuid(asset_uuid=asset_row_parent_uuid), None)
             else:
                 parent_asset = None
-            asset_row_meternummer = asset_row.get("EnergiemeterDNB_meternummer")
 
             logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_name}')
 
@@ -800,6 +803,9 @@ class BypassProcessor:
                 if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
                     logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
                     self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
+
+                # Update eigenschappen
+                self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='meternummer', eigenschapwaarde_nieuw=asset_row.get("EnergiemeterDNB_meternummer"))
 
                 # Hoortbij-relatie
                 hoortbijrelatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=asset.uuid,
@@ -1048,6 +1054,9 @@ class BypassProcessor:
                     self.eminfra_client.update_kenmerk_locatie_by_asset_uuid(asset_uuid=asset.uuid,
                                                                              wkt_geom=asset_row_wkt_geometry)
 
+                # Update eigenschappen
+                self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='type MIV installatie', eigenschapwaarde_nieuw=asset_row.get("LVE_Type"))
+
                 # Voeding-relatie
                 bronAsset_uuid = asset_row.get('Voedingsrelaties_UUID Voedingsrelatie bronAsset')
                 voedingsrelatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=bronAsset_uuid,
@@ -1120,6 +1129,13 @@ class BypassProcessor:
                     logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
                     self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
+                # Update eigenschappen
+                self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='aansluiting', eigenschapwaarde_nieuw=asset_row.get("Meetpunt_Aansluiting"))
+                # self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='', eigenschapwaarde_nieuw=asset_row.get("Meetpunt_Formaat"))
+                # self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='', eigenschapwaarde_nieuw=asset_row.get("Meetpunt_Laag"))
+                self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='uitslijprichting', eigenschapwaarde_nieuw=asset_row.get("Meetpunt_Uitslijprichting"))
+                self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='wegdek', eigenschapwaarde_nieuw=asset_row.get("Meetpunt_Wegdek"))
+
                 # Update eigenschap locatie
                 if asset_row_wkt_geometry := self.parse_wkt_geometry(asset_row=asset_row):
                     logging.debug(f'Update eigenschap locatie: "{asset.uuid}": "{asset_row_wkt_geometry}"')
@@ -1176,6 +1192,14 @@ class BypassProcessor:
                 if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
                     logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
                     self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
+
+                # Update eigenschappen
+                asset_row_type_camera = asset_row.get("Camera_Type Camera")
+                if asset_row_type_camera == 'PTZ':
+                    self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='isPtz', eigenschapwaarde_nieuw=True)
+                elif asset_row_type_camera == 'AID':
+                    self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='heeftAid', eigenschapwaarde_nieuw=True)
+                # self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='', eigenschapwaarde_nieuw=asset_row.get("Camera_Kijkrichting"))
 
                 # Update eigenschap locatie
                 if asset_row_wkt_geometry := self.parse_wkt_geometry(asset_row=asset_row):
@@ -1255,6 +1279,9 @@ class BypassProcessor:
                 if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
                     logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
                     self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
+
+                # Update eigenschappen
+                self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='merk', eigenschapwaarde_nieuw=asset_row.get("DVM-Bord_merk"))
 
                 # Update eigenschap locatie
                 if asset_row_wkt_geometry := self.parse_wkt_geometry(asset_row=asset_row):
@@ -1343,6 +1370,9 @@ class BypassProcessor:
                     logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
                     self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
+                # Update eigenschappen
+                self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='merk', eigenschapwaarde_nieuw=asset_row.get("DVM-Bord_merk"))
+
                 # Update eigenschap locatie
                 if asset_row_wkt_geometry := self.parse_wkt_geometry(asset_row=asset_row):
                     logging.debug(f'Update eigenschap locatie: "{asset.uuid}": "{asset_row_wkt_geometry}"')
@@ -1427,6 +1457,10 @@ class BypassProcessor:
                 if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
                     logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
                     self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
+
+                # Update eigenschappen
+                self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='vrije hoogte', eigenschapwaarde_nieuw=asset_row.get("Seinbrug_vrijeHoogte"))
+                # self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='', eigenschapwaarde_nieuw=asset_row.get("Seinbrug_RWS/Standaardportiek/tijdelijke seinbrug"))
 
                 # Update eigenschap locatie
                 if asset_row_wkt_geometry := self.parse_wkt_geometry(asset_row=asset_row):
@@ -1876,6 +1910,24 @@ class BypassProcessor:
             raise ValueError(f"De naam van de RVMS ({rvms_naam}) voldoet niet aan de syntax regels.")
         return rvms_groep_naam
 
+    def update_eigenschap(self, assetId:str, eigenschapnaam_bestaand: str, eigenschapwaarde_nieuw: str) -> None:
+        # Get all eigenschappen from asset
+        eigenschappen = self.eminfra_client.get_eigenschappen(assetId=assetId)
+
+        eigenschap_bestaand = [e for e in eigenschappen if e.eigenschap.naam == eigenschapnaam_bestaand]
+
+        if eigenschap_bestaand:
+            eigenschap_bestaand = eigenschap_bestaand[0]
+            logging.info(f'Eigenschap "{eigenschap_bestaand.eigenschap.naam}" bestaat')
+            if eigenschap_bestaand.typedValue.get('value', None) == eigenschapwaarde_nieuw:
+                logging.info(
+                    f'Eigenschap "{eigenschap_bestaand.eigenschap.naam}" waarde is identiek aan de nieuwe waarde "{eigenschapwaarde_nieuw}": geen update')
+            else:
+                logging.info(
+                    f'Eigenschap "{eigenschap_bestaand}" waarde wordt overschreven door een nieuwe waarde "{eigenschapwaarde_nieuw}": update')
+                eigenschap_bestaand.typedValue.update({"value": eigenschapwaarde_nieuw})
+                self.eminfra_client.update_eigenschap(assetId=assetId, eigenschap=eigenschap_bestaand)
+
 
 if __name__ == '__main__':
     bypass = BypassProcessor(
@@ -1888,17 +1940,17 @@ if __name__ == '__main__':
 
     bypass.import_data()
 
-    bypass.process_installatie(df=bypass.df_assets_wegkantkasten)
-    bypass.process_wegkantkasten(df=bypass.df_assets_wegkantkasten)
-    bypass.process_wegkantkasten_lsdeel(df=bypass.df_assets_wegkantkasten)
-    bypass.process_wegkantkasten_switch(df=bypass.df_assets_wegkantkasten)
-    bypass.process_wegkantkasten_teletransmissieverbinding(df=bypass.df_assets_wegkantkasten)
-
-    bypass.process_voeding_HS_cabine(df=bypass.df_assets_voeding)
-
-    bypass.process_voeding_hoogspanningsdeel(df=bypass.df_assets_voeding)
-    bypass.process_voeding_laagspanningsdeel(df=bypass.df_assets_voeding)
-    bypass.process_voeding_hoogspanning(df=bypass.df_assets_voeding)
+    # bypass.process_installatie(df=bypass.df_assets_wegkantkasten)
+    # bypass.process_wegkantkasten(df=bypass.df_assets_wegkantkasten)
+    # bypass.process_wegkantkasten_lsdeel(df=bypass.df_assets_wegkantkasten)
+    # bypass.process_wegkantkasten_switch(df=bypass.df_assets_wegkantkasten)
+    # bypass.process_wegkantkasten_teletransmissieverbinding(df=bypass.df_assets_wegkantkasten)
+    #
+    # bypass.process_voeding_HS_cabine(df=bypass.df_assets_voeding)
+    #
+    # bypass.process_voeding_hoogspanningsdeel(df=bypass.df_assets_voeding)
+    # bypass.process_voeding_laagspanningsdeel(df=bypass.df_assets_voeding)
+    # bypass.process_voeding_hoogspanning(df=bypass.df_assets_voeding)
     bypass.process_voeding_DNBHoogspanning(df=bypass.df_assets_voeding)
     bypass.process_voeding_energiemeter_DNB(df=bypass.df_assets_voeding)
     bypass.process_voeding_segmentcontroller(df=bypass.df_assets_voeding)
