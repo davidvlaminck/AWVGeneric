@@ -205,12 +205,14 @@ class PyVisWrapper:
             node_id = info_object.uuid
 
             # add level
-            g.add_node(node_id,
-                       level=level_dict[info_object.short_type] if info_object.short_type in level_dict else None,
-                       label=naam,
-                       shape=shape,
-                       size=size,
-                       color=selected_color)
+            g.add_node(
+                node_id,
+                level=level_dict.get(info_object.short_type, None),
+                label=naam,
+                shape=shape,
+                size=size,
+                color=selected_color,
+            )
 
             g.nodes[index]['title'] = tooltip
 
@@ -262,9 +264,11 @@ class PyVisWrapper:
 
     @classmethod
     def get_tooltip(cls, otl_object: InfoObject) -> str:
-        html = (str(otl_object).replace('<', '').replace('>', '').
+        # print the dictionary in otl_object, pretty formatted
+        text = f'{otl_object.short_type} {otl_object.uuid}\n{json.dumps(otl_object.attr_dict, indent=4)}'
+        html = (text.replace('<', '').replace('>', '').
                 replace('\n', '<br/>').replace(' ', '&nbsp;'))
-        return f'<htmlTitle>("<div style="font-family: monospace;">{html}</div>")<htmlTitleEnd>'
+        return f'<htmlTitle>("<div style="font-family: monospace; font-size: smaller;">{html}</div>")<htmlTitleEnd>'
 
     @classmethod
     def modify_html(cls, file_path: Path, notebook: bool = False) -> None:
