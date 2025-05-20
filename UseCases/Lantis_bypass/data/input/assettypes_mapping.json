@@ -1,0 +1,162 @@
+{
+    "Wegkantkasten": [
+        {
+            "uuid": "10377658-776f-4c21-a294-6c740b9f655e",
+            "naam": "Kast (Legacy)",
+            "label": "Kast",
+            "uri": "https://lgc.data.wegenenverkeer.be/ns/installatie#Kast",
+            "_type": "Legacy"
+        },
+        {
+            "uuid": "c3601915-3b66-4bde-9728-25c1bbf2f374",
+            "naam": "Wegkantkast",
+            "label": "Wegkantkast",
+            "uri": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Wegkantkast",
+            "_type": "OTL"
+        }
+    ],
+    "HSCabines-CC-SC-HS-LS-Switch-WV": [
+        {
+            "uuid": "1cf24e76-5bf3-44b0-8332-a47ab126b87e",
+            "naam": "Hoogspanningscabine (Legacy)",
+            "label": "HSCabineLegacy",
+            "uri": "https://lgc.data.wegenenverkeer.be/ns/installatie#HSCabineLegacy",
+            "_type": "Legacy"
+        },
+        {
+            "uuid": "d76cbedd-5488-428c-a221-fe0bc8f74fa2",
+            "naam": "HS-cabine",
+            "label": "HSCabine",
+            "uri": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HSCabine",
+            "_type": "OTL"
+        }
+    ],
+    "Openbare verlichting": [
+        {
+            "uuid": "4dfad588-277c-480f-8cdc-0889cfaf9c78",
+            "naam": "Lichtmast wegverlichting (Legacy)",
+            "label": "VPLMast",
+            "uri": "https://lgc.data.wegenenverkeer.be/ns/installatie#VPLMast",
+            "_type": "Legacy"
+        },
+        {
+            "uuid": "478add39-e6fb-4b0b-b090-9c65e836f3a0",
+            "naam": "WV lichtmast",
+            "label": "WVLichtmast",
+            "uri": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#WVLichtmast",
+            "_type": "OTL"
+        }
+    ],
+    "MIVLVE": [
+        {
+            "uuid": "a4c75282-972a-4132-ad72-0d0de09dbdb8",
+            "naam": "MIVLVE (Legacy)",
+            "label": "MIVLVE",
+            "uri": "https://lgc.data.wegenenverkeer.be/ns/installatie#MIVLVE",
+            "_type": "Legacy"
+        },
+        {
+            "uuid": "7f59b64e-9d6c-4ac9-8de7-a279973c9210",
+            "naam": "MIV-module",
+            "label": "MIVModule",
+            "uri": "https://wegenenverkeer.data.vlaanderen.be/ns/installatie#MIVModule",
+            "_type": "OTL"
+        }
+    ],
+    "MIVMeetpunten": [
+        {
+            "uuid": "dc3db3b7-7aad-4d7f-a788-a4978f803021",
+            "naam": "MIV meetpunt (Legacy)",
+            "label": "Mpt",
+            "uri": "https://lgc.data.wegenenverkeer.be/ns/installatie#Mpt",
+            "_type": "Legacy"
+        },
+        {
+            "uuid": "4e12c432-1546-4bbd-95d9-8fc9bc1e0e02",
+            "naam": "MIV meetpunt",
+            "label": "MIVMeetpunt",
+            "uri": "https://wegenenverkeer.data.vlaanderen.be/ns/installatie#MIVMeetpunt",
+            "_type": "OTL"
+        }
+    ],
+    "RSS-borden": [
+        {
+            "uuid": "1496b2fd-0742-44a9-a3b4-e994bd5af8af",
+            "naam": "RSS bord (Legacy)",
+            "label": "RSSBord",
+            "uri": "https://lgc.data.wegenenverkeer.be/ns/installatie#RSSBord",
+            "_type": "Legacy"
+        },
+        {
+            "uuid": "9826b683-02fa-4d97-8680-fbabc91a417f",
+            "naam": "RSS-bord",
+            "label": "DynBordRSS",
+            "uri": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRSS",
+            "_type": "OTL"
+        }
+    ],
+    "(R)VMS-borden": [
+        {
+            "uuid": "5b44cb96-3edf-4ef5-bc85-ec4d5c5152a3",
+            "naam": "RVMS bord (Legacy)",
+            "label": "RVMS",
+            "uri": "https://lgc.data.wegenenverkeer.be/ns/installatie#RVMS",
+            "_type": "Legacy"
+        },
+        {
+            "uuid": "0515e9bc-1778-43ae-81a9-44df3e2b7c21",
+            "naam": "RVMS-bord",
+            "label": "DynBordRVMS",
+            "uri": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRVMS",
+            "_type": "OTL"
+        }
+    ],
+    "Cameras": [
+        {
+            "uuid": "f66d1ad1-4247-4d99-80bb-5a2e6331eb96",
+            "naam": "Camera (Legacy)",
+            "label": "CameraLegacy",
+            "uri": "https://lgc.data.wegenenverkeer.be/ns/installatie#CameraLegacy",
+            "_type": "Legacy"
+        },
+        {
+            "uuid": "3f98f53a-b435-4a69-af3c-cede1cd373a7",
+            "naam": "Camera",
+            "label": "Camera",
+            "uri": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Camera",
+            "_type": "OTL"
+        }
+    ],
+    "Portieken-Seinbruggen": [
+        {
+            "uuid": "",
+            "naam": "",
+            "label": "",
+            "uri": "",
+            "_type": "Legacy"
+        },
+        {
+            "uuid": "40b2e487-f4b8-48a2-be9d-e68263bab75a",
+            "naam": "Seinbrug",
+            "label": "Seinbrug",
+            "uri": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Seinbrug",
+            "_type": "OTL"
+        }
+    ],
+    "Galgpaal": [
+        {
+            "uuid": "",
+            "naam": "",
+            "label": "",
+            "uri": "",
+            "_type": "Legacy"
+        },
+        {
+            "uuid": "615356ae-64eb-4a7d-8f40-6e496ec5b8d7",
+            "naam": "Galgpaal",
+            "label": "Galgpaal",
+            "uri": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Galgpaal",
+            "_type": "OTL"
+        }
+    ]
+}
