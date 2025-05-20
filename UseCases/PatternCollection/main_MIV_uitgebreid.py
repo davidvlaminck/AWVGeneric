@@ -26,18 +26,40 @@ if __name__ == '__main__':
                ('a', '-[r2]-', 'c'),
                ('a', '-[r2]-', 'e'),
                ('c', '-[r1]-', 'd'),
-               ('b', 'type_of', ['onderdeel#Wegkantkast']),
+               ('f', '-[r3]->', 'a'),
+               ('f', '-[r1]-', 'b'),
+               ('f', '-[r3]*->', 'f'),
+               ('g', '-[r3]->', 'f'),
+               ('h', '-[r3]->', 'g'),
+               ('b', 'type_of', ['lgc:installatie#Kast']),
                ('c', 'type_of', ['onderdeel#Netwerkpoort']),
                ('d', 'type_of', ['onderdeel#Netwerkelement']),
                ('e', 'type_of', ['installatie#MIVMeetpunt']),
+               ('f', 'type_of', ['lgc:installatie#LSDeel']),
+               ('g', 'type_of', ['lgc:installatie#LS', 'lgc:installatie#HSDeel']),
+               ('h', 'type_of', ['lgc:installatie#HS']),
                ('r1', 'type_of', ['onderdeel#Bevestiging']),
-               ('r2', 'type_of', ['onderdeel#Sturing'])
-               ]
+               ('r2', 'type_of', ['onderdeel#Sturing']),
+               ('r3', 'type_of', ['onderdeel#Voedt']),
+               ('a', 'level', 0),
+               ('b', 'level', -1),
+               ('c', 'level', -1),
+               ('d', 'level', -2),
+               ('e', 'level', 1),
+               ('f', 'level', -2),
+               ('g', 'level', -3),
+               ('h', 'level', -4)]
 
     chosen_assets = syncer.em_infra_client.get_assets_by_filter(filter={
-        'typeUri': 'https://wegenenverkeer.data.vlaanderen.be/ns/installatie#MIVModule', 'naam' : 'MIV231'})
+        'typeUri': 'https://wegenenverkeer.data.vlaanderen.be/ns/installatie#MIVModule', 'naam' : 'MIV235'})
     l = (list(chosen_assets))
-    syncer.collect_info_given_asset_uuids(asset_uuids=[x['@id'][39:75] for x in l],
+    asset_uuids = [x['@id'][39:75] for x in l]
+    syncer.collect_info_given_asset_uuids(asset_uuids=asset_uuids,
                                           asset_info_collector=syncer.collector, pattern=pattern)
     print(len(syncer.collector.collection.object_dict))
-    PyVisWrapper().show(syncer.collector.collection.object_dict.values(), launch_html=True, notebook_mode=False)
+
+    objects_to_visualise = syncer.collector.filter_collection_by_pattern(filter_pattern=pattern,
+                                                                         starting_uuids=asset_uuids)
+    level_dict = syncer.collector.get_level_dict(pattern=pattern)
+
+    PyVisWrapper().show(objects_to_visualise, launch_html=True, notebook_mode=False, level_dict=level_dict)

@@ -62,10 +62,11 @@ class AssetInfoCollector:
                                            ignore_duplicates=ignore_duplicates)
 
     def start_collecting_from_starting_uuids_using_pattern(self, starting_uuids: [str],
-                                                           pattern: [tuple[str, str, object]]) -> None:
+                                                           pattern: [tuple[str, str, object]],
+                                                           print_progress: bool = True) -> None:
         uuid_pattern = next((t[2] for t in pattern if t[:2] == ('uuids', 'of')), None)
         type_of_patterns = [t for t in pattern if t[1] == 'type_of']
-        relation_patterns = [t for t in pattern if re.match('^(<)?-\\[r(\\d)*]-(>)?$', t[1]) is not None]
+        relation_patterns = [t for t in pattern if re.match('^(<)?-\\[r(\\d)*]\\*?-(>)?$', t[1]) is not None]
 
         if uuid_pattern is None:
             raise ValueError('No uuids pattern found in pattern list. '
@@ -78,38 +79,63 @@ class AssetInfoCollector:
                              'Must contain at least one tuple with (object, "-[r]-", object) where r is followed by a '
                              'number and relation may or may not be directional (using < and > symbols)')
 
+        if print_progress:
+            print(f'Collecting asset info...')
         self.collect_asset_info(uuids=starting_uuids)
+        if print_progress:
+            print(f'Collected asset info: {len(self.collection.object_dict)} objects')
 
         matching_objects = [uuid_pattern]
+        MAX_REPEATS_WITH_STAR_PATTERN = 5
         while relation_patterns:
+            if print_progress:
+                print(f'Collecting relation info... {len(matching_objects)} object(s) remain to process with '
+                      f'{len(relation_patterns)} pattern(s)')
             new_matching_objects = []
             for obj in matching_objects:
                 relation_patterns = self.order_patterns_for_object(obj, relation_patterns)
+
+                # Check if there are any star patterns in the relation patterns
+                star_patterns = [t for t in relation_patterns if '*' in t[1]]
+                if star_patterns:
+                    other_patterns = [pattern for pattern in relation_patterns if pattern not in star_patterns]
+                    relation_patterns = star_patterns + other_patterns
 
                 for relation_pattern in relation_patterns:
                     if relation_pattern[0] != obj:
                         continue
 
-                    new_matching_objects.append(relation_pattern[2])
+                    repeat_with_star_pattern = 0
+                    while True:
+                        if '*' in relation_pattern[1]:
+                            repeat_with_star_pattern += 1
 
-                    type_of_obj_l = [t[2] for t in type_of_patterns if t[0] == relation_pattern[0]]
-                    type_of_obj = []
-                    for l in type_of_obj_l:
-                        type_of_obj.extend(l)
-                    if type_of_obj is None:
-                        raise ValueError(f'No type_of pattern found for object {relation_pattern[0]}')
+                        new_matching_objects.append(relation_pattern[2])
 
-                    type_of_uuids = [asset.uuid for asset in self.collection.get_node_objects_by_types(type_of_obj)]
-                    if not type_of_uuids:
-                        continue
-                    try:
-                        self.collect_relation_info_by_sources_or_targets(uuids=type_of_uuids, ignore_duplicates=True)
-                    except AssetsMissingError as e:
-                        self.collect_asset_info(uuids=e.uuids)
-                        self.collect_relation_info_by_sources_or_targets(uuids=type_of_uuids, ignore_duplicates=True)
+                        type_of_obj_l = [t[2] for t in type_of_patterns if t[0] == relation_pattern[0]]
+                        type_of_obj = []
+                        for l in type_of_obj_l:
+                            type_of_obj.extend(l)
+                        if type_of_obj is None:
+                            raise ValueError(f'No type_of pattern found for object {relation_pattern[0]}')
+
+                        type_of_uuids = [asset.uuid for asset in self.collection.get_node_objects_by_types(type_of_obj)]
+                        if not type_of_uuids:
+                            break
+                        try:
+                            self.collect_relation_info_by_sources_or_targets(uuids=type_of_uuids, ignore_duplicates=True)
+                        except AssetsMissingError as e:
+                            self.collect_asset_info(uuids=e.uuids)
+                            self.collect_relation_info_by_sources_or_targets(uuids=type_of_uuids, ignore_duplicates=True)
+
+                        if print_progress:
+                            print(f'Collected asset info: {len(self.collection.object_dict)} objects')
+
+                        if repeat_with_star_pattern == 0 or repeat_with_star_pattern >= MAX_REPEATS_WITH_STAR_PATTERN:
+                            break
 
                 relation_patterns = [t for t in relation_patterns if t[0] != obj]
-            matching_objects = new_matching_objects
+            matching_objects = list(set(new_matching_objects))
 
     @classmethod
     def order_patterns_for_object(cls, obj: str, relation_patterns: [tuple[str, str, str]]) -> [tuple[str, str, str]]:
@@ -125,7 +151,7 @@ class AssetInfoCollector:
     @classmethod
     def reverse_relation_pattern(cls, relation_pattern: tuple[str, str, str]) -> tuple[str, str, str]:
         rel_str = relation_pattern[1]
-        parts = re.match('(<?-)\\[(r.+)](->?)', rel_str).groups()
+        parts = re.match('(<?-)\\[(r.+)](\\*?->?)', rel_str).groups()
         parts_2 = parts[0].replace('<', '>')[::-1]
         parts_0 = parts[2].replace('>', '<')[::-1]
 
@@ -142,12 +168,16 @@ class AssetInfoCollector:
                 level_dict[assettype] = level_statement[2]
         return level_dict
 
-    def filter_collection_by_pattern(self, filter_pattern: [tuple[str, str, object]], starting_uuids: [str]
-                                     ) -> [NodeInfoObject]:
+    def filter_collection_by_pattern(self, filter_pattern: [tuple[str, str, object]], starting_uuids: [str],
+                                     print_progress: bool = True) -> [NodeInfoObject]:
         uuid_pattern = next((t[2] for t in filter_pattern if t[:2] == ('uuids', 'of')), None)
         type_of_patterns = [t for t in filter_pattern if t[1] == 'type_of']
-        relation_patterns = [t for t in filter_pattern if re.match('^(<)?-\\[r(\\d)*]-(>)?$', t[1]) is not None]
+        relation_patterns = [t for t in filter_pattern if re.match('^(<)?-\\[r(\\d)*]\\*?-(>)?$', t[1]) is not None]
         node_info_objects = []
+
+        if print_progress:
+            print(f'Filtering collection ({len(self.collection.object_dict)} objects) with pattern...')
+            print(f'Filtered objects: {len(node_info_objects)}')
 
         if uuid_pattern is None:
             raise ValueError('No uuids pattern found in pattern list. '
@@ -164,53 +194,74 @@ class AssetInfoCollector:
         node_info_objects.extend([x for x in self.collection.get_node_objects_by_types(types)
                                  if x.uuid in starting_uuids])
 
-        matching_objects = [uuid_pattern]
+        matching_objects = set(uuid_pattern)
+
+        MAX_REPEATS_WITH_STAR_PATTERN = 5
         while relation_patterns:
-            new_matching_objects = []
+            if print_progress:
+                print(f'Collecting relation info... {len(matching_objects)} object(s) remain to process with '
+                      f'{len(relation_patterns)} pattern(s)')
+            new_matching_objects = set()
             for obj in matching_objects:
                 relation_patterns = self.order_patterns_for_object(obj, relation_patterns)
+
+                # Check if there are any star patterns in the relation patterns
+                star_patterns = [t for t in relation_patterns if '*' in t[1]]
+                if star_patterns:
+                    other_patterns = [pattern for pattern in relation_patterns if pattern not in star_patterns]
+                    relation_patterns = star_patterns + other_patterns
 
                 for relation_pattern in relation_patterns:
                     if relation_pattern[0] != obj:
                         continue
 
-                    new_matching_objects.append(relation_pattern[2])
+                    repeat_with_star_pattern = 0
+                    while True:
+                        if '*' in relation_pattern[1]:
+                            repeat_with_star_pattern += 1
 
-                    type_of_obj = list(itertools.chain.from_iterable(
-                        t[2] for t in type_of_patterns if t[0] == relation_pattern[0]
-                    ))
-                    if type_of_obj is None:
-                        raise ValueError(f'No type_of pattern found for object {relation_pattern[0]}')
+                        new_matching_objects.add(relation_pattern[2])
 
-                    type_of_uuids = [asset.uuid for asset in node_info_objects if asset.short_type in type_of_obj]
-                    if not type_of_uuids:
-                        continue
-                    objects = []
+                        type_of_obj = list(itertools.chain.from_iterable(
+                            t[2] for t in type_of_patterns if t[0] == relation_pattern[0]
+                        ))
+                        if type_of_obj is None:
+                            raise ValueError(f'No type_of pattern found for object {relation_pattern[0]}')
 
-                    # relation pattern preparation
-                    if relation_pattern[1].startswith('<'):
-                        allowed_directions = [Direction.REVERSED]
-                    elif relation_pattern[1].endswith('>'):
-                        allowed_directions = [Direction.WITH]
-                    else:
-                        allowed_directions = [Direction.NONE]
-                    rel_type_code = relation_pattern[1].split('[')[1].split(']')[0]
-                    type_of_rel = [r.split('#')[1] for l in
-                                   [t[2] for t in type_of_patterns if t[0] == rel_type_code]
-                                   for r in l]
+                        type_of_uuids = [asset.uuid for asset in node_info_objects if asset.short_type in type_of_obj]
+                        if not type_of_uuids:
+                            break
+                        objects = []
 
-                    target_code = relation_pattern[2]
-                    type_of_target = list(itertools.chain.from_iterable(
-                        t[2] for t in type_of_patterns if t[0] == target_code
-                    ))
+                        # relation pattern preparation
+                        if relation_pattern[1].startswith('<'):
+                            allowed_directions = [Direction.REVERSED]
+                        elif relation_pattern[1].endswith('>'):
+                            allowed_directions = [Direction.WITH]
+                        else:
+                            allowed_directions = [Direction.NONE]
+                        rel_type_code = relation_pattern[1].split('[')[1].split(']')[0]
+                        type_of_rel = [r.split('#')[1] for l in
+                                       [t[2] for t in type_of_patterns if t[0] == rel_type_code]
+                                       for r in l]
 
-                    for asset_uuid in type_of_uuids:
-                        objects.extend(list(
-                            self.collection.traverse_graph(
-                                start_uuid=asset_uuid, relation_types=type_of_rel,
-                                allowed_directions=allowed_directions, filtered_node_types=type_of_target,
-                                return_type='info_object', return_relation_info=True)))
-                    node_info_objects.extend(objects)
+                        target_code = relation_pattern[2]
+                        type_of_target = list(itertools.chain.from_iterable(
+                            t[2] for t in type_of_patterns if t[0] == target_code
+                        ))
+
+                        for asset_uuid in type_of_uuids:
+                            objects.extend(list(
+                                self.collection.traverse_graph(
+                                    start_uuid=asset_uuid, relation_types=type_of_rel,
+                                    allowed_directions=allowed_directions, filtered_node_types=type_of_target,
+                                    return_type='info_object', return_relation_info=True)))
+                        node_info_objects.extend(objects)
+                        if print_progress:
+                            print(f'Filtered objects: {len(node_info_objects)}')
+
+                        if repeat_with_star_pattern == 0 or repeat_with_star_pattern >= MAX_REPEATS_WITH_STAR_PATTERN:
+                            break
 
                 relation_patterns = [t for t in relation_patterns if t[0] != obj]
             matching_objects = new_matching_objects
