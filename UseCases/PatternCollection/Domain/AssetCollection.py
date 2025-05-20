@@ -137,7 +137,8 @@ class AssetCollection:
             raise ObjectAlreadyExistsError(f"Node with uuid {uuid} already exists in collection.")
 
     def traverse_graph(self, start_uuid: str, relation_types: [str] = None, allowed_directions: [Direction] = None,
-                       filtered_node_types: [str] = None, return_type: str = 'uuid', return_only_active: bool = True
+                       filtered_node_types: [str] = None, return_type: str = 'uuid', return_only_active: bool = True,
+                       return_relation_info: bool = False
                        ) -> Generator[str | NodeInfoObject, None, None]:
         starting_object = self.get_node_object_by_uuid(start_uuid)
         if starting_object is None:
@@ -166,5 +167,9 @@ class AssetCollection:
                         continue
                     if return_type == 'uuid':
                         yield target_uuid
+                        if return_relation_info:
+                            yield relation_info['relation_object'].uuid
                     else:
                         yield relation_info['node_object']
+                        if return_relation_info:
+                            yield relation_info['relation_object']
