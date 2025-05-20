@@ -1,6 +1,7 @@
 import json
 import logging
 from datetime import datetime
+from enum import Enum
 import re
 
 from API.EMInfraDomain import OperatorEnum, BoomstructuurAssetTypeEnum, \
@@ -11,6 +12,26 @@ from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path
 
+class AssetType(Enum):
+    INSTALLATIE = 'Installatie'
+    WEGKANTKAST = 'Wegkantkast'
+    HSDEEL = 'HSDeel'
+    LSDEEL = 'LSDeel'
+    HS = 'HS'
+    IP = 'IP'
+    TT = 'Teletransmissieverbinding'
+    MIVLVE = 'MIVLVE'
+    MPT = 'Meetpunt'
+    SEINBRUGDVM = 'SeinbrugDVM'
+    RSSGROEP = 'RSSGroep'
+    RSSBORD = 'RSSBord'
+    CAMGROEP = 'CAMGroep'
+    CAMERA = 'Camera'
+    SEGC = 'Segmentcontroller'
+    WVLICHTMAST = 'Wegverlichtingsmast'
+    WVGROEP = 'Wegverlichtingsgroep'
+    AB = 'Afstandsbewaking'
+    HSCABINE = 'HSCabine'
 
 class BypassProcessor:
     def __init__(self
@@ -50,6 +71,7 @@ class BypassProcessor:
 
         self.setup_mapping_dict_typeURI()
         self.setup_mapping_dict_assettype()
+
     def setup_mapping_dict_typeURI(self):
         self.typeURI_mapping_dict = {
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Wegkantkast": "https://lgc.data.wegenenverkeer.be/ns/installatie#Kast"
@@ -296,32 +318,56 @@ class BypassProcessor:
                         index=False, freeze_panes=[1, 1])
         logging.info(f'Installaties bij het assettype {asset_type} aangemaakt')
 
-    def process_assets(self, df: pd.DataFrame, ):
-        """"
-        Processing van een asset.
-         - aanmaken van de asset
-            - toestand updaten
-            - bestekkoppelingen updaten
-            - locatie updaten
-         - relaties aanmaken
-
+    def process_assets(self, asset_type: AssetType, df: pd.DataFrame, column_uuid: str, column_typeURI: str, column_name: str, column_parent_uuid: str | None, column_parent_name: str | None, relaties: dict | None) -> None:
         """
-        logging.info('Aanmaken van Wegkantkasten onder installaties')
+        verwerken van een dataframe van assets.
+
+        :param asset_type:
+        :param df:
+        :param column_uuid:
+        :param column_typeURI:
+        :param column_name:
+        :param column_parent_uuid:
+        :param column_parent_name:
+        :param relaties: dictionary with a key and two elements. The key is the relation URI. Elements are bronAsset_uuid and doelAsset_uuid.
+        When left empty, the asset itself is the bron or doel.
+        Example: relaties = {
+            'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging': {
+                'bronAsset_uuid': ''
+                , 'doelAsset_uuid': ''
+            }
+        }
+        :return:
+        """
+        logging.info(f'Aanmaken van assets ... (assettype: {asset_type.value}) ')
         for idx, asset_row in df.iterrows():
-            asset_row_uuid = asset_row.get("Wegkantkast_UUID Object")
-            asset_row_typeURI = asset_row.get("Wegkantkast_Object typeURI")
+            asset_row_uuid = asset_row.get(column_uuid)
+            if column_typeURI.startswith('https://') or column_typeURI.startswith('lgc:'):
+                asset_row_typeURI = column_typeURI
+            else:
+                asset_row_typeURI = asset_row.get(column_typeURI)
             typeURI = self.typeURI_mapping_dict.get(asset_row_typeURI, asset_row_typeURI)
-            asset_row_name = asset_row.get("Wegkantkast_Object assetId.identificator")
+            asset_row_name = asset_row.get(column_name)
 
             logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_name}')
-
-            asset_row_parent_name = self.construct_installatie_naam(naam=asset_row_name, asset_type='Kast')
-            parent_asset = next(self.eminfra_client.search_beheerobjecten(naam=asset_row_parent_name, actief=True,
-                                                                          operator=OperatorEnum.EQ), None)
 
             if asset_row_uuid and asset_row_name:
                 logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
                 self.validate_asset(uuid=asset_row_uuid, naam=asset_row_name, stop_on_error=True)
+
+            # parent asset
+            if column_parent_uuid:
+                # zoek parent op basis van uuid. zowel als beheerobject en nadien als asset
+                # parent_asset = next()
+                parent_asset = None # to be implemented
+            elif column_parent_name:
+                # zoek parent op basis van diens naam. Zowel als beheerobject en nadien als asset
+                # parent_asset = next()
+                parent_asset = None # to be implemented
+            else:
+                asset_row_parent_name = self.construct_installatie_naam(naam=asset_row_name, asset_type=asset_type)
+                parent_asset = next(self.eminfra_client.search_beheerobjecten(naam=asset_row_parent_name, actief=True,
+                                                                          operator=OperatorEnum.EQ), None)
 
             if parent_asset is None:
                 logging.critical('Parent asset is ongekend.')
@@ -331,15 +377,20 @@ class BypassProcessor:
                                                      parent_uuid=parent_asset.uuid, wkt_geometry=wkt_geometry,
                                                      parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
 
+                # Aanmaken van relaties
+                # todo tot hier.
+
                 # Lijst aanvullen met de naam en diens overeenkomstig uuid
-                df.at[idx, "asset_uuid_lsdeel"] = asset.uuid
+                df.at[idx, "asset_uuid"] = asset.uuid
+                # todo aanvullen voor relaties
 
         # Wegschrijven van het dataframe
         with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-            df.to_excel(writer, sheet_name='Wegkantkasten',
-                        columns=["Wegkantkast_Object assetId.identificator", "asset_uuid_lsdeel"],
+            df.to_excel(writer, sheet_name=f'{asset_type.value}',
+                        columns=[f"{column_name}", "asset_uuid"],
+                        # todo: kolommen aanvullen voor eventuele relaties
                         index=False, freeze_panes=[1, 1])
-        logging.info('Wegkantkasten aangemaakt')
+        logging.info(f'Assets aangemaakt (assettype: {asset_type.value})')
 
     def process_wegkantkasten(self, df: pd.DataFrame):
         logging.info('Aanmaken van Wegkantkasten onder installaties')
@@ -1660,38 +1711,33 @@ class BypassProcessor:
             raise ValueError(f"De naam van de Seinbrug ({naam}) eindigt niet op '.S'")
         return installatie_naam
 
-    def construct_installatie_naam(self, naam: str, asset_type: str) -> str:
+    def construct_installatie_naam(self, naam: str, asset_type: AssetType) -> str:
         # kastnaam: str = None, hscabinenaam: str = None, hoogspanningsdeelnaam: str = None, laagspanningsdeelnaam: str = None, hoogspanningnaam: str = None, segmentcontrollernaam: str = None) -> str:
         """
         Bouw de installatie naam op basis van het asset-type
         """
-        ASSET_TYPES = ['Kast', 'HSCabine', 'Hoogspanningsdeel', 'Laagspanningsdeel', 'Hoogspanning',
-                             'Segmentcontroller', 'Wegverlichtingsgroep', 'Switch', 'Teletransmissieverbinding', 'WVLichtmast', 'Seinbrug']
-        if asset_type not in ASSET_TYPES:
-            raise ValueError(f'Parameter {asset_type} must match one of: "{ASSET_TYPES}"')
-
         installatie_naam = ''
-        if asset_type == 'Kast':
+        if asset_type.name == 'WEGKANTKAST':
             installatie_naam = self._construct_installatie_naam_kast(naam=naam)
-        elif asset_type == 'HSCabine':
+        elif asset_type.name == 'HSCABINE':
             installatie_naam = self._construct_installatie_naam_hscabine(naam=naam)
-        elif asset_type == 'Hoogspanningsdeel':
+        elif asset_type.name == 'HSDEEL':
             installatie_naam = self._construct_installatie_naam_hoogspanningsdeel(naam=naam)
-        elif asset_type == 'Laagspanningsdeel':
+        elif asset_type.name == 'LSDEEL':
             installatie_naam = self._construct_installatie_naam_laagspanningsdeel(naam=naam)
-        elif asset_type == 'Hoogspanning':
+        elif asset_type.name == 'HS':
             installatie_naam = self._construct_installatie_naam_hoogspanning(naam=naam)
-        elif asset_type == 'Segmentcontroller':
+        elif asset_type.name == 'SEGC':
             installatie_naam = self._construct_installatie_naam_segmentcontroller(naam=naam)
-        elif asset_type == 'Wegverlichtingsgroep':
+        elif asset_type.name == 'WVGROEP':
             installatie_naam = self._construct_installatie_naam_wegverlichtingsgroep(naam=naam)
-        elif asset_type == 'Switch':
+        elif asset_type.name == 'IP':
             installatie_naam = self._construct_installatie_naam_switch(naam=naam)
-        elif asset_type == 'Teletransmissieverbinding':
+        elif asset_type.name == 'TT':
             installatie_naam = self._construct_installatie_naam_teletransmissieverbinding(naam=naam)
-        elif asset_type == 'WVLichtmast':
+        elif asset_type.name == 'WVLICHTMAST':
             installatie_naam = self._construct_installatie_naam_wvlichtmast(naam=naam)
-        elif asset_type == 'Seinbrug':
+        elif asset_type.name == 'SEINBRUGDVM':
             installatie_naam = self._construct_installatie_naam_seinbrug(naam=naam)
         return installatie_naam
 
