@@ -320,10 +320,6 @@ class BypassProcessor:
                                                  asset_naam=asset_row_name,
                                                  parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
 
-                # Update toestand
-                if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
-                    logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
-                    self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
                 # Update eigenschap locatie
                 if asset_row_wkt_geometry := self.parse_wkt_geometry(asset_row=asset_row):
@@ -371,10 +367,6 @@ class BypassProcessor:
                                                             asset_naam=asset_row_name,
                                                             parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
 
-                # Update toestand
-                if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
-                    logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
-                    self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
                 # Bestekkoppelingen
                 self.add_bestekkoppeling_if_missing(asset_uuid=asset.uuid,
@@ -432,10 +424,6 @@ class BypassProcessor:
                                                             asset_naam=asset_row_name,
                                                             parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
 
-                # Update toestand
-                if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
-                    logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
-                    self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
                 # Bestekkoppelingen
                 self.add_bestekkoppeling_if_missing(asset_uuid=asset.uuid,
@@ -486,10 +474,6 @@ class BypassProcessor:
                                                             asset_naam=asset_row_name,
                                                             parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
 
-                # Update toestand
-                if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
-                    logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
-                    self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
                 # Bestekkoppelingen
                 self.add_bestekkoppeling_if_missing(asset_uuid=asset.uuid,
@@ -532,10 +516,6 @@ class BypassProcessor:
                                                  asset_naam=asset_row_name,
                                                  parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
 
-                # Update toestand
-                if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
-                    logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
-                    self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
                 # Update eigenschap locatie
                 if asset_row_wkt_geometry := self.parse_wkt_geometry(asset_row=asset_row):
@@ -580,10 +560,6 @@ class BypassProcessor:
                                                  asset_naam=asset_row_name,
                                                  parent_asset_type=BoomstructuurAssetTypeEnum.ASSET)
 
-                # Update toestand
-                if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
-                    logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
-                    self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
                 # Bevestiging-relatie
                 doelAsset_uuid = df.loc[idx, "HSCabine_UUID Object"]
@@ -629,10 +605,6 @@ class BypassProcessor:
                                                      asset_naam=asset_row_name,
                                                      parent_asset_type=BoomstructuurAssetTypeEnum.ASSET)
 
-                # Update toestand
-                if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
-                    logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
-                    self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
                 # Bevestiging-relatie
                 doelAsset_uuid = df.loc[idx, "HSCabine_UUID Object"]
@@ -685,10 +657,6 @@ class BypassProcessor:
                                                  asset_naam=asset_row_name,
                                                  parent_asset_type=BoomstructuurAssetTypeEnum.ASSET)
 
-                # Update toestand
-                if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
-                    logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
-                    self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
                 # Bevestiging-relatie
                 doelAsset_uuid = df.loc[idx, "HSCabine_UUID Object"]
@@ -741,10 +709,6 @@ class BypassProcessor:
                 # reorganize OTL-asset in tree-structure
                 self.eminfra_client.reorganize_beheerobject(parentAsset=parent_asset, childAsset=asset, parentType=BoomstructuurAssetTypeEnum.ASSET)
 
-                # Update toestand
-                if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
-                    logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
-                    self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
                 # Update eigenschapwaarden
                 self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='eanNummer', eigenschapwaarde_nieuw=asset_row.get("DNBHoogspanning_eanNummer"))
@@ -799,10 +763,6 @@ class BypassProcessor:
                 # reorganize OTL-asset in tree-structure
                 self.eminfra_client.reorganize_beheerobject(parentAsset=parent_asset, childAsset=asset, parentType=BoomstructuurAssetTypeEnum.ASSET)
 
-                # Update toestand
-                if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
-                    logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
-                    self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
                 # Update eigenschappen
                 self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='meternummer', eigenschapwaarde_nieuw=asset_row.get("EnergiemeterDNB_meternummer"))
@@ -852,10 +812,6 @@ class BypassProcessor:
                                                  asset_naam=asset_row_name,
                                                  parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
 
-                # Update toestand
-                if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
-                    logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
-                    self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
                 # Bestekkoppelingen
                 self.add_bestekkoppeling_if_missing(asset_uuid=asset.uuid, eDelta_dossiernummer=self.eDelta_dossiernummer,
@@ -898,10 +854,6 @@ class BypassProcessor:
                                                  asset_naam=asset_row_name,
                                                  parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
 
-                # Update toestand
-                if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
-                    logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
-                    self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
                 # Bestekkoppelingen
                 self.add_bestekkoppeling_if_missing(asset_uuid=asset.uuid, eDelta_dossiernummer=self.eDelta_dossiernummer,
@@ -942,10 +894,6 @@ class BypassProcessor:
                                                      asset_naam=asset_row_name,
                                                      parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
 
-                # Update toestand
-                if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
-                    logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
-                    self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
                 # Bestekkoppelingen
                 self.add_bestekkoppeling_if_missing(asset_uuid=asset.uuid, eDelta_dossiernummer=self.eDelta_dossiernummer,
@@ -987,10 +935,6 @@ class BypassProcessor:
                                                      asset_naam=asset_row_name,
                                                      parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
 
-                # Update toestand
-                if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
-                    logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
-                    self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
                 # Update eigenschap locatie
                 if asset_row_wkt_geometry := self.parse_wkt_geometry(asset_row=asset_row):
@@ -1043,10 +987,6 @@ class BypassProcessor:
                 asset = self.create_asset_if_missing(typeURI=typeURI, parent_uuid=parent_asset.uuid,
                                                  asset_naam=asset_row_name,
                                                  parent_asset_type=BoomstructuurAssetTypeEnum.ASSET)
-                # Update toestand
-                if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
-                    logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
-                    self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
                 # Update eigenschap locatie
                 if asset_row_wkt_geometry := self.parse_wkt_geometry(asset_row=asset_row):
@@ -1124,10 +1064,6 @@ class BypassProcessor:
                 if asset is None:
                     logging.critical('Asset werd niet aangemaakt')
 
-                # Update toestand
-                if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
-                    logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
-                    self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
                 # Update eigenschappen
                 self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='aansluiting', eigenschapwaarde_nieuw=asset_row.get("Meetpunt_Aansluiting"))
@@ -1188,10 +1124,6 @@ class BypassProcessor:
                                                  asset_naam=asset_row_name,
                                                  parent_asset_type=BoomstructuurAssetTypeEnum.ASSET)
 
-                # Update toestand
-                if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
-                    logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
-                    self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
                 # Update eigenschappen
                 asset_row_type_camera = asset_row.get("Camera_Type Camera")
@@ -1275,10 +1207,6 @@ class BypassProcessor:
                                                      asset_naam=asset_row_name,
                                                      parent_asset_type=BoomstructuurAssetTypeEnum.ASSET)
 
-                # Update toestand
-                if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
-                    logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
-                    self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
                 # Update eigenschappen
                 self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='merk', eigenschapwaarde_nieuw=asset_row.get("DVM-Bord_merk"))
@@ -1365,10 +1293,6 @@ class BypassProcessor:
                                                      asset_naam=asset_row_name,
                                                      parent_asset_type=BoomstructuurAssetTypeEnum.ASSET)
 
-                # Update toestand
-                if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
-                    logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
-                    self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
                 # Update eigenschappen
                 self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='merk', eigenschapwaarde_nieuw=asset_row.get("DVM-Bord_merk"))
@@ -1452,11 +1376,6 @@ class BypassProcessor:
 
                 if asset is None:
                     logging.critical('Asset werd niet aangemaakt')
-
-                # Update toestand
-                if asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
-                    logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW}"')
-                    self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
                 # Update eigenschappen
                 self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='vrije hoogte', eigenschapwaarde_nieuw=asset_row.get("Seinbrug_vrijeHoogte"))
@@ -1589,6 +1508,7 @@ class BypassProcessor:
                                 parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT) -> AssetDTO | None:
         """
         Maak de asset aan indien nog onbestaande en geef de asset terug
+        Update de toestand van de asset
 
         :param typeURI: asset typeURI
         :asset_naam: asset naam
@@ -1627,6 +1547,8 @@ class BypassProcessor:
             logging.critical('Unknown error')
             raise ValueError(
                 f'Could not create new asset. typeURI: {typeURI}, asset_naam: {asset_naam}, parent_uuid: {parent_uuid}')
+
+        self.update_toestand(asset=asset)
         return asset
 
     def create_relatie_if_missing(self, bronAsset_uuid: str, doelAsset_uuid: str, relatie_naam: str) -> str | None:
@@ -1927,6 +1849,23 @@ class BypassProcessor:
                     f'Eigenschap "{eigenschap_bestaand}" waarde wordt overschreven door een nieuwe waarde "{eigenschapwaarde_nieuw}": update')
                 eigenschap_bestaand.typedValue.update({"value": eigenschapwaarde_nieuw})
                 self.eminfra_client.update_eigenschap(assetId=assetId, eigenschap=eigenschap_bestaand)
+
+    def update_toestand(self, asset: AssetDTO) -> None:
+        """
+        Update de toestand van een asset.
+
+        Doe niets indien de toestand van de asset 'IN_GEBRUIK' of 'OVERGEDRAGEN' is.
+        Wijzig de toestand naar 'IN_OPBOUW' in alle andere situaties.
+
+        :param asset:
+        :return:
+        """
+        toestand = asset.toestand.value
+        if toestand in [AssetDTOToestand.IN_GEBRUIK.value, AssetDTOToestand.OVERGEDRAGEN.value]:
+            logging.info(f'Asset {asset.uuid} heeft toestand "{toestand}" en wordt niet geüpdatet')
+        elif asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
+            logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW.value}"')
+            self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
 
 if __name__ == '__main__':
