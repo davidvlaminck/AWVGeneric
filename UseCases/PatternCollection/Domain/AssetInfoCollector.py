@@ -1,3 +1,4 @@
+import itertools
 import re
 from typing import Generator
 
@@ -7,6 +8,7 @@ from Exceptions.AssetsMissingError import AssetsMissingError
 from Exceptions.ObjectAlreadyExistsError import ObjectAlreadyExistsError
 
 from UseCases.PatternCollection.Domain.AssetCollection import AssetCollection
+from UseCases.PatternCollection.Domain.Enums import Direction
 from UseCases.PatternCollection.Domain.InfoObject import NodeInfoObject
 
 
@@ -159,7 +161,8 @@ class AssetInfoCollector:
                              'number and relation may or may not be directional (using < and > symbols)')
         types = next(pattern[2] for pattern in type_of_patterns if pattern[0] == uuid_pattern)
 
-        node_info_objects.extend(self.collection.get_node_objects_by_types(types))
+        node_info_objects.extend([x for x in self.collection.get_node_objects_by_types(types)
+                                 if x.uuid in starting_uuids])
 
         matching_objects = [uuid_pattern]
         while relation_patterns:
@@ -173,21 +176,43 @@ class AssetInfoCollector:
 
                     new_matching_objects.append(relation_pattern[2])
 
-                    type_of_obj_l = [t[2] for t in type_of_patterns if t[0] == relation_pattern[0]]
-                    type_of_obj = []
-                    for l in type_of_obj_l:
-                        type_of_obj.extend(l)
+                    type_of_obj = list(itertools.chain.from_iterable(
+                        t[2] for t in type_of_patterns if t[0] == relation_pattern[0]
+                    ))
                     if type_of_obj is None:
                         raise ValueError(f'No type_of pattern found for object {relation_pattern[0]}')
 
-                    type_of_uuids = [asset.uuid for asset in self.collection.get_node_objects_by_types(type_of_obj)]
+                    type_of_uuids = [asset.uuid for asset in node_info_objects if asset.short_type in type_of_obj]
                     if not type_of_uuids:
                         continue
-                    try:
-                        self.collect_relation_info_by_sources_or_targets(uuids=type_of_uuids, ignore_duplicates=True)
-                    except AssetsMissingError as e:
-                        self.collect_asset_info(uuids=e.uuids)
-                        self.collect_relation_info_by_sources_or_targets(uuids=type_of_uuids, ignore_duplicates=True)
+                    objects = []
+
+                    # relation pattern preparation
+                    if relation_pattern[1].startswith('<'):
+                        allowed_directions = [Direction.REVERSED]
+                    elif relation_pattern[1].endswith('>'):
+                        allowed_directions = [Direction.WITH]
+                    else:
+                        allowed_directions = [Direction.NONE]
+                    rel_type_code = relation_pattern[1].split('[')[1].split(']')[0]
+                    type_of_rel = [r.split('#')[1] for l in
+                                   [t[2] for t in type_of_patterns if t[0] == rel_type_code]
+                                   for r in l]
+
+                    target_code = relation_pattern[2]
+                    type_of_target = list(itertools.chain.from_iterable(
+                        t[2] for t in type_of_patterns if t[0] == target_code
+                    ))
+
+                    for asset_uuid in type_of_uuids:
+                        objects.extend(list(
+                            self.collection.traverse_graph(
+                                start_uuid=asset_uuid, relation_types=type_of_rel,
+                                allowed_directions=allowed_directions, filtered_node_types=type_of_target,
+                                return_type='info_object', return_relation_info=True)))
+                    node_info_objects.extend(objects)
 
                 relation_patterns = [t for t in relation_patterns if t[0] != obj]
             matching_objects = new_matching_objects
+
+        return node_info_objects
