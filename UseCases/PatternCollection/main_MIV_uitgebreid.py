@@ -27,7 +27,7 @@ if __name__ == '__main__':
                ('a', '-[r2]-', 'e'),
                ('c', '-[r1]-', 'd'),
                ('f', '-[r3]->', 'a'),
-               ('f', '-[r1]-', 'b'),
+               ('f', '-[r1]-', 'i'),
                ('f', '-[r3]*->', 'f'),
                ('g', '-[r3]->', 'f'),
                ('h', '-[r3]->', 'g'),
@@ -38,6 +38,7 @@ if __name__ == '__main__':
                ('f', 'type_of', ['lgc:installatie#LSDeel']),
                ('g', 'type_of', ['lgc:installatie#LS', 'lgc:installatie#HSDeel']),
                ('h', 'type_of', ['lgc:installatie#HS']),
+               ('i', 'type_of', ['lgc:installatie#Kast', 'lgc:installatie#HSCabineLegacy']),
                ('r1', 'type_of', ['onderdeel#Bevestiging']),
                ('r2', 'type_of', ['onderdeel#Sturing']),
                ('r3', 'type_of', ['onderdeel#Voedt']),
@@ -48,10 +49,11 @@ if __name__ == '__main__':
                ('e', 'level', 1),
                ('f', 'level', -2),
                ('g', 'level', -3),
-               ('h', 'level', -4)]
+               ('h', 'level', -4),
+               ('i', 'level', -1)]
 
     chosen_assets = syncer.em_infra_client.get_assets_by_filter(filter={
-        'typeUri': 'https://wegenenverkeer.data.vlaanderen.be/ns/installatie#MIVModule', 'naam' : 'MIV235'})
+        'typeUri': 'https://wegenenverkeer.data.vlaanderen.be/ns/installatie#MIVModule', 'naam' : 'MIV233'})
     l = (list(chosen_assets))
     asset_uuids = [x['@id'][39:75] for x in l]
     syncer.collect_info_given_asset_uuids(asset_uuids=asset_uuids,

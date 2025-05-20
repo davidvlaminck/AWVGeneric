@@ -162,8 +162,8 @@ class AssetInfoCollector:
         level_dict = {}
         for level_statement in level_statements:
             for assettype in next(t[2] for t in pattern if t[0] == level_statement[0] and t[1] == 'type_of'):
-                if assettype in level_dict:
-                    raise ValueError(f'Level for {assettype} is already defined in the pattern')
+                if assettype in level_dict and level_dict[assettype] != level_statement[2]:
+                    raise ValueError(f'Level for {assettype} is already defined in the pattern and is different')
 
                 level_dict[assettype] = level_statement[2]
         return level_dict
