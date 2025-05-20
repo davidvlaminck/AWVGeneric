@@ -157,9 +157,10 @@ class PyVisWrapper:
         self.color_dict = {}
 
     def show(self, list_of_objects: [InfoObject], html_path: Path = Path('example.html'), launch_html: bool = True,
-             notebook_mode: bool = False, **kwargs) -> None:
+             notebook_mode: bool = False, level_dict: dict = {}, **kwargs) -> None:
         if notebook_mode and kwargs.get('cdn_resources') != 'in_line':
             kwargs['cdn_resources'] = 'in_line'
+
         g = networkx.Network(directed=True, notebook=notebook_mode, **kwargs)
 
         assets = []
@@ -170,7 +171,7 @@ class PyVisWrapper:
             else:
                 assets.append(o)
 
-        nodes_created = self.create_nodes(g, assets)
+        nodes_created = self.create_nodes(g, assets, level_dict=level_dict)
         self.create_edges(g, list_of_objects=relations, nodes=nodes_created)
         options = ('options = {  "nodes": {    "borderWidth": null,    "borderWidthSelected": null,      "physics": false,    "scaling": {      "label": {        "enabled": true,        "min": null,        "max": null,        "maxVisible": null,        "drawThreshold": null      }    },    "size": null  },  "edges": {    "selfReferenceSize": null,    "selfReference": {      "angle": 0.7853981633974483    },    "smooth": false  },  "layout": {    "hierarchical": {      "enabled": true,      "direction": "LR"    }  },  "physics": {    "enabled": false,    "hierarchicalRepulsion": {      "centralGravity": 0,      "avoidOverlap": null    },    "minVelocity": 0.75,    "solver": "hierarchicalRepulsion"  }}')
         # see https://visjs.github.io/vis-network/docs/network/#options => {"configure":{"showButton":true}}
@@ -181,18 +182,8 @@ class PyVisWrapper:
         if not self.notebook_mode and launch_html:
             webbrowser.open(str(html_path))
 
-    def create_nodes(self, g, list_of_objects: [InfoObject]) -> [InfoObject]:
+    def create_nodes(self, g, list_of_objects: [InfoObject], level_dict: dict = {}) -> [InfoObject]:
         list_of_objects = remove_duplicates_in_iterable_based_on_asset_id(list_of_objects)
-
-        level_dict = {'installatie#MIVModule': 0,
-                      'installatie#MIVMeetpunt': 1,
-                      'lgc:installatie#MIVLVE': -1,
-                      'onderdeel#Netwerkpoort': 1,
-                      'onderdeel#MIVProcessorkaart': 2,
-                      'onderdeel#Netwerkelement': 2,
-                      'installatie#VLAN': 2
-                      }
-
 
         nodes = []
         for index, info_object in enumerate(list_of_objects):
