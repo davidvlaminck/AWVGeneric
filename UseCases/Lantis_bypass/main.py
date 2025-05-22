@@ -198,7 +198,8 @@ class BypassProcessor:
             "https://lgc.data.wegenenverkeer.be/ns/installatie#CameraLegacy": "f66d1ad1-4247-4d99-80bb-5a2e6331eb96",
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Seinbrug": "40b2e487-f4b8-48a2-be9d-e68263bab75a",
             "https://lgc.data.wegenenverkeer.be/ns/installatie#SeinbrugDVM": "6f66dad8-8290-4d07-8e8b-6add6c7fe723",
-            "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Galgpaal": "615356ae-64eb-4a7d-8f40-6e496ec5b8d7"
+            "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Galgpaal": "615356ae-64eb-4a7d-8f40-6e496ec5b8d7",
+            "https://lgc.data.wegenenverkeer.be/ns/installatie#TT": "8c2c8fb4-9e64-467c-a7a2-a72e9dbcff48"
         }
 
     def setup_logging(self):
@@ -370,23 +371,28 @@ class BypassProcessor:
 
     # Helper function for lookups
     def _search_parent_asset_by_uuid(self, uuid: str):
-        if parent_asset_info.parent_asset_type == BoomstructuurAssetTypeEnum.ASSET:
+        if uuid:
             return next(self.eminfra_client.search_asset_by_uuid(asset_uuid=uuid), None)
-        elif parent_asset_info.parent_asset_type == BoomstructuurAssetTypeEnum.BEHEEROBJECT:
+        return None
+
+    def _search_parent_beheerobject_by_uuid(self, uuid: str):
+        if uuid:
             return self.eminfra_client.get_beheerobject_by_uuid(beheerobject_uuid=uuid)
         return None
 
     def _search_parent_asset_by_name(self, name: str):
-        if parent_asset_info.parent_asset_type == BoomstructuurAssetTypeEnum.ASSET:
+        if name:
             return next(self.eminfra_client.search_asset_by_name(asset_name=name, exact_search=True), None)
-        elif parent_asset_info.parent_asset_type == BoomstructuurAssetTypeEnum.BEHEEROBJECT:
-            return next(self.eminfra_client.search_beheerobjecten(naam=name, operator=OperatorEnum.EQ), None)
         return None
 
+    def _search_parent_beheerobject_by_name(self, name: str):
+        if name:
+            return next(self.eminfra_client.search_beheerobjecten(naam=name, operator=OperatorEnum.EQ), None)
+        return None
     def process_assets(self
                        , df: pd.DataFrame
                        , asset_info: AssetInfo
-                       , parent_asset_info: ParentAssetInfo
+                       , parent_asset_info: ParentAssetInfo = None
                        , eigenschap_infos: [EigenschapInfo] = None
                        , relatie_infos: [RelatieInfo] = None) -> None:
         """
@@ -428,40 +434,54 @@ class BypassProcessor:
                 logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
                 self.validate_asset(uuid=asset_row_uuid, naam=asset_row_name, stop_on_error=True)
 
-            # Default to None
-            parent_asset = None
+            wkt_geometry = self.parse_wkt_geometry(asset_row=asset_row)
 
-            # Try UUID lookup first
-            if parent_asset_info.column_parent_uuid:
-                parent_uuid = asset_row.get(parent_asset_info.column_parent_uuid)
-                if parent_uuid:
-                    parent_asset = self._search_parent_asset_by_uuid(parent_uuid)
+            if parent_asset_info: # Legacy
+                # Default to None
+                parent_asset = None
 
-            # Try name-based lookup
-            elif parent_asset_info.column_parent_name:
-                parent_name = asset_row.get(parent_asset_info.column_parent_name)
-                if parent_name:
-                    parent_asset = self._search_parent_asset_by_name(parent_name)
+                # Try UUID lookup first
+                if parent_asset_info.column_parent_uuid:
+                    parent_uuid = asset_row.get(parent_asset_info.column_parent_uuid)
+                    if parent_asset_info.parent_asset_type == BoomstructuurAssetTypeEnum.ASSET:
+                        parent_asset = self._search_parent_asset_by_uuid(uuid=parent_uuid)
+                    elif parent_asset_info.parent_asset_type == BoomstructuurAssetTypeEnum.BEHEEROBJECT:
+                        parent_asset = self._search_parent_beheerobject_by_uuid(uuid=parent_uuid)
 
-            # Fallback to constructed name if needed. Name of the parent constructed via name of the asset itself.
-            else:
-                fallback_name = self.construct_installatie_naam(naam=asset_row_name, asset_type=asset_info.asset_type)
-                parent_asset = next(
-                    self.eminfra_client.search_beheerobjecten(naam=fallback_name, actief=True,
-                                                              operator=OperatorEnum.EQ),
-                    None
-                )
+                # Try name-based lookup
+                elif parent_asset_info.column_parent_name:
+                    parent_name = asset_row.get(parent_asset_info.column_parent_name)
+                    if parent_asset_info.parent_asset_type == BoomstructuurAssetTypeEnum.ASSET:
+                        parent_asset = self._search_parent_asset_by_name(name=parent_name)
+                    elif parent_asset_info.parent_asset_type == BoomstructuurAssetTypeEnum.BEHEEROBJECT:
+                        parent_asset = self._search_parent_beheerobject_by_name(name=parent_name)
 
-            if parent_asset is None:
-                logging.critical('Parent asset is ongekend.')
-            else:
-                wkt_geometry = self.parse_wkt_geometry(asset_row=asset_row)
-                # todo: uitzoeken hoe je een asset kan aanpasen, met parent als optionele parameter.
-                asset = self.create_asset_if_missing(typeURI=typeURI, asset_naam=asset_row_name,
-                                                     parent_uuid=parent_asset.uuid, wkt_geometry=wkt_geometry,
-                                                     parent_asset_type=parent_asset_info.parent_asset_type)
+                # Fallback to constructed name if needed. Name of the parent derived from the asset name
+                else:
+                    if asset_row_name:
+                        installatie_name = self.construct_installatie_naam(naam=asset_row_name, asset_type=asset_info.asset_type)
+                        if parent_asset_info.parent_asset_type == BoomstructuurAssetTypeEnum.BEHEEROBJECT:
+                            parent_asset = next(
+                                self.eminfra_client.search_beheerobjecten(naam=installatie_name, actief=True,
+                                                                          operator=OperatorEnum.EQ),
+                                None
+                            )
 
+                if parent_asset is None:
+                    logging.critical('Parent asset is ongekend.')
+                else:
+                    asset = self.create_asset_if_missing(typeURI=typeURI, asset_naam=asset_row_name,
+                                                         parent_uuid=parent_asset.uuid, wkt_geometry=wkt_geometry,
+                                                         parent_asset_type=parent_asset_info.parent_asset_type)
 
+            else: # OTL
+                pass
+                # search of create OTL-asset
+                # todo tot hier. implementeren aanmaak OTL-asset in em-infra
+                # self.eminfra_client.asset
+                # 'https://apps.mow.vlaanderen.be/eminfra/core/swagger-ui/index.html#/onderdelen/onderdeelCreate'
+
+            if asset:
                 df.at[idx, "asset_uuid"] = asset.uuid
                 df_output_columns.add("asset_uuid")
 
@@ -485,1024 +505,266 @@ class BypassProcessor:
         # Wegschrijven van het dataframe
         with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
             df.to_excel(writer, sheet_name=f'{asset_info.asset_type.value}',
-                        columns=list(df_output_columns).sort(), index=False, freeze_panes=[1, 1])
+                        columns=sorted(list(df_output_columns)), index=False, freeze_panes=[1, 1])
         logging.info(f'Assets aangemaakt (assettype: {asset_info.asset_type.value})')
 
 
-    def process_wegkantkasten(self, df: pd.DataFrame):
-        logging.info('Aanmaken van Wegkantkasten onder installaties')
-        for idx, asset_row in df.iterrows():
-            asset_row_uuid = asset_row.get("Wegkantkast_UUID Object")
-            asset_row_typeURI = asset_row.get("Wegkantkast_Object typeURI")
-            typeURI = self.typeURI_mapping_dict.get(asset_row_typeURI, asset_row_typeURI)
-            asset_row_name = asset_row.get("Wegkantkast_Object assetId.identificator")
-
-            logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_name}')
-
-            asset_row_parent_name = self.construct_installatie_naam(naam=asset_row_name, asset_type=AssetType.WEGKANTKAST)
-            parent_asset = next(self.eminfra_client.search_beheerobjecten(naam=asset_row_parent_name, actief=True,
-                                                                          operator=OperatorEnum.EQ), None)
-
-            if asset_row_uuid and asset_row_name:
-                logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
-                self.validate_asset(uuid=asset_row_uuid, naam=asset_row_name, stop_on_error=True)
-
-            if parent_asset is None:
-                logging.critical('Parent asset is ongekend.')
-            else:
-                wkt_geometry = self.parse_wkt_geometry(asset_row=asset_row)
-                asset = self.create_asset_if_missing(typeURI=typeURI, asset_naam=asset_row_name,
-                                                     parent_uuid=parent_asset.uuid, wkt_geometry=wkt_geometry,
-                                                     parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
-
-                # Lijst aanvullen met de naam en diens overeenkomstig uuid
-                df.at[idx, "asset_uuid_lsdeel"] = asset.uuid
-
-        # Wegschrijven van het dataframe
-        with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-            df.to_excel(writer, sheet_name='Wegkantkasten',
-                        columns=["Wegkantkast_Object assetId.identificator", "asset_uuid_lsdeel"],
-                        index=False, freeze_panes=[1, 1])
-        logging.info('Wegkantkasten aangemaakt')
-
-    def process_wegkantkasten_lsdeel(self, df: pd.DataFrame):
-        logging.info('Aanmaken van Wegkantkasten_LSDeel')
-        for idx, asset_row in df.iterrows():
-            asset_row_uuid = asset_row.get("Laagspanningsdeel_UUID LSDeel")
-            asset_row_typeURI = 'lgc:installatie#LSDeel'
-            typeURI = self.typeURI_mapping_dict.get(asset_row_typeURI, None)
-            asset_row_name = asset_row.get("Laagspanningsdeel_Naam LSDeel")
-            logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_name}')
-
-            asset_row_parent_name = self.construct_installatie_naam(naam=asset_row_name, asset_type=AssetType.LSDEEL)
-            parent_asset = next(
-                self.eminfra_client.search_beheerobjecten(naam=asset_row_parent_name, actief=True,
-                                                          operator=OperatorEnum.EQ), None)
-
-            if asset_row_uuid and asset_row_name:
-                logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
-                self.validate_asset(uuid=asset_row_uuid, naam=asset_row_name, stop_on_error=True)
-
-            if parent_asset is None:
-                logging.critical('Parent asset is ongekend.')
-            else:
-                wkt_geometry = self.parse_wkt_geometry(asset_row=asset_row)
-                asset = self.create_asset_if_missing(typeURI=typeURI, asset_naam=asset_row_name,
-                                                     parent_uuid=parent_asset.uuid, wkt_geometry=wkt_geometry,
-                                                     parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
-
-                # Bevestiging-relatie
-                doelAsset_uuid = asset_row.get("Wegkantkast_UUID Object")
-                bevestigingsrelatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=asset.uuid,
-                                                                                 doelAsset_uuid=doelAsset_uuid,
-                                                                                 relatie_naam='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging')
-                # Voeding-relatie
-                bronAsset_uuid = asset_row.get("Voedingsrelatie (oorsprong)_UUID Voedingsrelatie bronAsset")
-                doelAsset_uuid = asset_row.get("Laagspanningsdeel_UUID LSDeel")
-                voedingsrelatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=bronAsset_uuid,
-                                                                             doelAsset_uuid=doelAsset_uuid,
-                                                                             relatie_naam='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt')
-
-                # Lijst aanvullen met de naam en diens overeenkomstig uuid
-                df.at[idx, "asset_uuid_lsdeel"] = asset.uuid
-                df.at[idx, "bevestigingsrelatie_uuid_lsdeel"] = bevestigingsrelatie_uuid
-                df.at[idx, "voedingsrelatie_uuid_lsdeel"] = voedingsrelatie_uuid
-
-        # Wegschrijven van het dataframe
-        with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-            df.to_excel(writer, sheet_name='Wegkantkasten_LSDeel',
-                        columns=["Laagspanningsdeel_Naam LSDeel", "asset_uuid_lsdeel", "bevestigingsrelatie_uuid_lsdeel", "voedingsrelatie_uuid_lsdeel"],
-                        index=False, freeze_panes=[1, 1])
-        logging.info('Wegkantkasten_LSDeel aangemaakt')
-
-
-    def process_wegkantkasten_switch(self, df: pd.DataFrame):
-        logging.info('Aanmaken van Wegkantkasten_Switch')
-        for idx, asset_row in df.iterrows():
-            asset_row_uuid = asset_row.get("Switch gegevens_UUID switch")
-            asset_row_typeURI = 'Switch'
-            typeURI = self.typeURI_mapping_dict.get(asset_row_typeURI, None)
-            asset_row_name = asset_row.get("Switch gegevens_Object assetId.identificator")
-            logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_name}')
-
-            asset_row_parent_name = self.construct_installatie_naam(naam=asset_row_name, asset_type=AssetType.IP)
-            parent_asset = next(
-                self.eminfra_client.search_beheerobjecten(naam=asset_row_parent_name, actief=True,
-                                                          operator=OperatorEnum.EQ), None)
-
-            if asset_row_uuid and asset_row_name:
-                logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
-                self.validate_asset(uuid=asset_row_uuid, naam=asset_row_name, stop_on_error=True)
-
-            if parent_asset is None:
-                logging.critical('Parent asset is ongekend.')
-            else:
-                wkt_geometry = self.parse_wkt_geometry(asset_row=asset_row)
-                asset = self.create_asset_if_missing(typeURI=typeURI, asset_naam=asset_row_name,
-                                                     parent_uuid=parent_asset.uuid, wkt_geometry=wkt_geometry,
-                                                     parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
-
-                # Bevestiging-relatie
-                bronAsset_uuid = asset_row.get("Switch gegevens_UUID Switch")
-                doelAsset_uuid = asset_row.get("Wegkantkast_UUID Object")
-                bevestigingsrelatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=bronAsset_uuid,
-                                                                                 doelAsset_uuid=doelAsset_uuid,
-                                                                                 relatie_naam='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging')
-
-                # Lijst aanvullen met de naam en diens overeenkomstig uuid
-                df.at[idx, "asset_uuid_switch"] = asset.uuid
-                df.at[idx, "bevestigingsrelatie_uuid_switch"] = bevestigingsrelatie_uuid
-
-        # Wegschrijven van het dataframe
-        with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-            df.to_excel(writer, sheet_name='Wegkantkasten_Switch',
-                        columns=["Switch gegevens_Object assetId.identificator", "asset_uuid_switch", "bevestigingsrelatie_uuid_switch"],
-                        index=False, freeze_panes=[1, 1])
-        logging.info('Wegkantkasten_Switch aangemaakt')
-
-    def process_wegkantkasten_teletransmissieverbinding(self, df: pd.DataFrame):
-        logging.info('Aanmaken van Wegkantkasten_Teletransmissieverbinding')
-        for idx, asset_row in df.iterrows():
-            asset_row_uuid = asset_row.get("Switch gegevens_UUID Teletransmissieverbinding")
-            asset_row_typeURI = 'TT'
-            typeURI = self.typeURI_mapping_dict.get(asset_row_typeURI, None)
-            asset_row_name = asset_row.get("Switch gegevens_Naam Teletransmissieverbinding")
-            logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_name}')
-
-            asset_row_parent_name = self.construct_installatie_naam(naam=asset_row_name, asset_type=AssetType.TT)
-            parent_asset = next(
-                self.eminfra_client.search_beheerobjecten(naam=asset_row_parent_name, actief=True,
-                                                          operator=OperatorEnum.EQ), None)
-
-            if asset_row_uuid and asset_row_name:
-                logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
-                self.validate_asset(uuid=asset_row_uuid, naam=asset_row_name, stop_on_error=True)
-
-            if parent_asset is None:
-                logging.critical('Parent asset is ongekend.')
-            else:
-                wkt_geometry = self.parse_wkt_geometry(asset_row=asset_row)
-                asset = self.create_asset_if_missing(typeURI=typeURI, asset_naam=asset_row_name,
-                                                     parent_uuid=parent_asset.uuid, wkt_geometry=wkt_geometry,
-                                                     parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
-
-                # Lijst aanvullen met de naam en diens overeenkomstig uuid
-                df.at[idx, "asset_uuid_teletransmissieverbinding"] = asset.uuid
-
-        # Wegschrijven van het dataframe
-        with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-            df.to_excel(writer, sheet_name='Wegkantkasten_TT',
-                        columns=["Switch gegevens_Naam Teletransmissieverbinding", "asset_uuid_teletransmissieverbinding"],
-                        index=False, freeze_panes=[1, 1])
-        logging.info('Wegkantkasten_Teletransmisseiverbinding aangemaakt')
-
-
-    def process_voeding_HS_cabine(self, df: pd.DataFrame):
-        # HSCabine
-        logging.info('Aanmaken van HSCabine onder installaties')
-        for idx, asset_row in df.iterrows():
-            asset_row_uuid = asset_row.get("HSCabine_UUID Object")
-            asset_row_typeURI = asset_row.get("HSCabine_Object typeURI")
-            typeURI = self.typeURI_mapping_dict.get(asset_row_typeURI, asset_row_typeURI)
-            asset_row_name = asset_row.get("HSCabine_Object assetId.identificator")
-            asset_row_parent_name = self.construct_installatie_naam(naam=asset_row_name, asset_type=AssetType.HSCABINE)
-            parent_asset = next(self.eminfra_client.search_beheerobjecten(naam=asset_row_parent_name, actief=True,
-                                                                          operator=OperatorEnum.EQ), None)
-
-            logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_name}')
-
-            if asset_row_uuid and asset_row_name:
-                logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
-                self.validate_asset(uuid=asset_row_uuid, naam=asset_row_name, stop_on_error=True)
-
-            if parent_asset is None:
-                logging.critical('Parent asset is ongekend.')
-            else:
-                wkt_geometry = self.parse_wkt_geometry(asset_row=asset_row)
-                asset = self.create_asset_if_missing(typeURI=typeURI, asset_naam=asset_row_name,
-                                                     parent_uuid=parent_asset.uuid, wkt_geometry=wkt_geometry,
-                                                     parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
-
-
-
-
-
-
-                # Lijst aanvullen met de naam en diens overeenkomstig uuid
-                df.at[idx, "asset_uuid"] = asset.uuid
-
-        # Wegschrijven van het dataframe
-        with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-            df.to_excel(writer, sheet_name='HSCabine', columns=["HSCabine_Object assetId.identificator", "asset_uuid"],
-                        index=False, freeze_panes=[1, 1])
-        logging.info('HSCabine aangemaakt')
-
-    def process_voeding_hoogspanningsdeel(self, df: pd.DataFrame):
-        logging.info('Aanmaken van Hoogspanningsdeel onder Hoogspanning Cabine')
-        for idx, asset_row in df.iterrows():
-            asset_row_uuid = asset_row.get("Hoogspanningsdeel_UUID HSDeel")
-            asset_row_typeURI = asset_row.get("Hoogspanningsdeel_HSDeel lgc:installatie")
-            typeURI = self.typeURI_mapping_dict.get(asset_row_typeURI, asset_row_typeURI)
-            asset_row_name = asset_row.get("Hoogspanningsdeel_Naam HSDeel")
-            asset_row_parent_name = self.construct_installatie_naam(naam=asset_row_name, asset_type=AssetType.HSDEEL)
-            parent_asset = next(self.eminfra_client.search_asset_by_name(asset_name=asset_row_parent_name, exact_search=True), None)
-
-            logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_name}')
-
-            if asset_row_uuid and asset_row_name:
-                logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
-                self.validate_asset(uuid=asset_row_uuid, naam=asset_row_name, stop_on_error=True)
-
-            if parent_asset is None:
-                logging.critical('Parent asset is ongekend.')
-            else:
-                wkt_geometry = self.parse_wkt_geometry(asset_row=asset_row)
-                asset = self.create_asset_if_missing(typeURI=typeURI, asset_naam=asset_row_name,
-                                                     parent_uuid=parent_asset.uuid, wkt_geometry=wkt_geometry,
-                                                     parent_asset_type=BoomstructuurAssetTypeEnum.ASSET)
-
-
-                # Bevestiging-relatie
-                doelAsset_uuid = df.loc[idx, "HSCabine_UUID Object"]
-                bevestigingsrelatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=asset.uuid,
-                                                                          doelAsset_uuid=doelAsset_uuid,
-                                                                          relatie_naam='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging')
-
-
-
-                # Lijst aanvullen met de naam en diens overeenkomstig uuid
-                df.at[idx, "asset_uuid"] = asset.uuid
-                df.at[idx, "bevestigingsrelatie_uuid"] = bevestigingsrelatie_uuid
-
-        # Wegschrijven van het dataframe
-        with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-            df.to_excel(writer, sheet_name='Hoogspanningsdeel', columns=["Hoogspanningsdeel_Naam HSDeel", "asset_uuid", "bevestigingsrelatie_uuid"],
-                        index=False, freeze_panes=[1, 1])
-        logging.info('Hoogspanningsdeel aangemaakt')
-
-    def process_voeding_laagspanningsdeel(self, df: pd.DataFrame):
-        logging.info('Aanmaken van Laagspanningsdeel onder Hoogspanning Cabine')
-        for idx, asset_row in df.iterrows():
-            asset_row_uuid = asset_row.get("Laagspanningsdeel_UUID LSDeel")
-            asset_row_typeURI = asset_row.get("Laagspanningsdeel_LSDeel lgc:installatie")
-            typeURI = self.typeURI_mapping_dict.get(asset_row_typeURI, asset_row_typeURI)
-            asset_row_name = asset_row.get("Laagspanningsdeel_Naam LSDeel")
-            asset_row_parent_name = self.construct_installatie_naam(naam=asset_row_name, asset_type=AssetType.LSDEEL)
-            parent_asset = next(self.eminfra_client.search_asset_by_name(asset_name=asset_row_parent_name, exact_search=True), None)
-
-            logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_name}')
-
-            if asset_row_uuid and asset_row_name:
-                logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
-                self.validate_asset(uuid=asset_row_uuid, naam=asset_row_name, stop_on_error=True)
-
-            if parent_asset is None:
-                logging.critical('Parent asset is ongekend.')
-            else:
-                wkt_geometry = self.parse_wkt_geometry(asset_row=asset_row)
-                asset = self.create_asset_if_missing(typeURI=typeURI, asset_naam=asset_row_name,
-                                                     parent_uuid=parent_asset.uuid, wkt_geometry=wkt_geometry,
-                                                     parent_asset_type=BoomstructuurAssetTypeEnum.ASSET)
-
-
-                # Bevestiging-relatie
-                doelAsset_uuid = df.loc[idx, "HSCabine_UUID Object"]
-                bevestigingsrelatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=asset.uuid,
-                                                                          doelAsset_uuid=doelAsset_uuid,
-                                                                          relatie_naam='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging')
-                # Voeding-relatie
-                bronAsset_uuid = df.loc[idx, "Hoogspanningsdeel_UUID HSDeel"]
-                voedingsrelatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=bronAsset_uuid,
-                                                                      doelAsset_uuid=asset.uuid,
-                                                                      relatie_naam='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voeding')
-
-
-
-                # Lijst aanvullen met de naam en diens overeenkomstig uuid
-                df.at[idx, "asset_uuid"] = asset.uuid
-                df.at[idx, "bevestigingsrelatie_uuid"] = bevestigingsrelatie_uuid
-                df.at[idx, "voedingsrelatie_uuid"] = voedingsrelatie_uuid
-
-        # Wegschrijven van het dataframe
-        with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-            df.to_excel(writer, sheet_name='Laagspanningsdeel',
-                        columns=["Laagspanningsdeel_Naam LSDeel", "asset_uuid", "bevestigingsrelatie_uuid",
-                                 "voedingsrelatie_uuid"], index=False, freeze_panes=[1, 1])
-        logging.info('Laagspanningsdeel aangemaakt')
-
-    def process_voeding_hoogspanning(self, df: pd.DataFrame):
-        logging.info('Aanmaken van Hoogspanning onder Hoogspanning Cabine')
-        for idx, asset_row in df.iterrows():
-            asset_row_uuid = asset_row.get("Hoogspanning_UUID HSDeel")
-            asset_row_typeURI = asset_row.get("Hoogspanning_HS lgc:installatie")
-            typeURI = self.typeURI_mapping_dict.get(asset_row_typeURI, asset_row_typeURI)
-            asset_row_name = asset_row.get("Hoogspanning_Naam HS")
-            asset_row_parent_name = self.construct_installatie_naam(naam=asset_row_name, asset_type=AssetType.HS)
-            parent_asset = next(self.eminfra_client.search_asset_by_name(asset_name=asset_row_parent_name, exact_search=True), None)
-
-            logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_name}')
-
-            if asset_row_uuid and asset_row_name:
-                logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
-                self.validate_asset(uuid=asset_row_uuid, naam=asset_row_name, stop_on_error=True)
-
-            if parent_asset is None:
-                logging.critical('Parent asset is ongekend.')
-            else:
-                wkt_geometry = self.parse_wkt_geometry(asset_row=asset_row)
-                asset = self.create_asset_if_missing(typeURI=typeURI, asset_naam=asset_row_name,
-                                                     parent_uuid=parent_asset.uuid, wkt_geometry=wkt_geometry,
-                                                     parent_asset_type=BoomstructuurAssetTypeEnum.ASSET)
-
-
-                # Bevestiging-relatie
-                doelAsset_uuid = df.loc[idx, "HSCabine_UUID Object"]
-                bevestigingsrelatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=asset.uuid,
-                                                                          doelAsset_uuid=doelAsset_uuid,
-                                                                          relatie_naam='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging')
-
-
-
-                # Lijst aanvullen met de naam en diens overeenkomstig uuid
-                df.at[idx, "asset_uuid"] = asset.uuid
-                df.at[idx, "bevestigingsrelatie_uuid"] = bevestigingsrelatie_uuid
-
-        # Wegschrijven van het dataframe
-        with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-            df.to_excel(writer, sheet_name='Hoogspanning',
-                        columns=["Hoogspanningsdeel_Naam HSDeel", "asset_uuid", "bevestigingsrelatie_uuid"],
-                        index=False, freeze_panes=[1, 1])
-        logging.info('Hoogspanning aangemaakt')
-
-    def process_voeding_DNBHoogspanning(self, df: pd.DataFrame):
-        logging.info('Aanmaken van DNBHoogspanning (OTL)')
-        for idx, asset_row in df.iterrows():
-            asset_row_uuid = asset_row.get("DNBHoogspanning_UUID Object")
-            asset_row_typeURI = asset_row.get("DNBHoogspanning_Object typeURI")
-            typeURI = self.typeURI_mapping_dict.get(asset_row_typeURI, asset_row_typeURI)
-            asset_row_name = asset_row.get("DNBHoogspanning_Object assetId.identificator")
-            asset_row_parent_uuid = df.loc[idx, "Hoogspanning_UUID HS"]
-            if not pd.isna(asset_row_parent_uuid):
-                parent_asset = next(self.eminfra_client.search_asset_by_uuid(asset_uuid=asset_row_parent_uuid), None)
-            else:
-                parent_asset = None
-
-
-
-            logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_name}')
-
-            if asset_row_uuid and asset_row_name:
-                logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
-                self.validate_asset(uuid=asset_row_uuid, naam=asset_row_name, stop_on_error=True)
-
-            if parent_asset is None:
-                logging.critical('Parent asset is ongekend.')
-            else:
-                wkt_geometry = self.parse_wkt_geometry(asset_row=asset_row)
-                asset = self.create_asset_if_missing(typeURI=typeURI, asset_naam=asset_row_name,
-                                                     parent_uuid=parent_asset.uuid, wkt_geometry=wkt_geometry,
-                                                     parent_asset_type=BoomstructuurAssetTypeEnum.ASSET)
-                # reorganize OTL-asset in tree-structure
-                self.eminfra_client.reorganize_beheerobject(parentAsset=parent_asset, childAsset=asset, parentType=BoomstructuurAssetTypeEnum.ASSET)
-
-
-                # Update eigenschapwaarden
-                self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='eanNummer', eigenschapwaarde_nieuw=asset_row.get("DNBHoogspanning_eanNummer"))
-                self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='referentieDNB', eigenschapwaarde_nieuw=asset_row.get("DNBHoogspanning_referentieDNB"))
-
-                # Hoortbij-relatie
-                hoortbijrelatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=asset.uuid,
-                                                                      doelAsset_uuid=parent_asset.uuid,
-                                                                      relatie_naam='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HoortBij')
-
-
-
-                # Lijst aanvullen met de naam en diens overeenkomstig uuid
-                df.at[idx, "asset_uuid"] = asset.uuid
-                df.at[idx, "hoortbijrelatie_uuid"] = hoortbijrelatie_uuid
-
-        # Wegschrijven van het dataframe
-        with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-            df.to_excel(writer, sheet_name='DNBHoogspanning',
-                        columns=["DNBHoogspanning_Object assetId.identificator", "asset_uuid", "hoortbijrelatie_uuid"],
-                        index=False, freeze_panes=[1, 1])
-        logging.info('DNBHoogspanning aangemaakt')
-
-    def process_voeding_energiemeter_DNB(self, df: pd.DataFrame):
-        logging.info('Aanmaken van EnergiemeterDNB (OTL)')
-        for idx, asset_row in df.iterrows():
-            asset_row_uuid = asset_row.get("EnergiemeterDNB_UUID Object")
-            asset_row_typeURI = asset_row.get("EnergiemeterDNB_Object typeURI")
-            typeURI = self.typeURI_mapping_dict.get(asset_row_typeURI, asset_row_typeURI)
-            asset_row_name = asset_row.get("EnergiemeterDNB_Object assetId.identificator")
-            asset_row_parent_uuid = df.loc[idx, "Hoogspanning_UUID HS"]
-            if not pd.isna(asset_row_parent_uuid):
-                parent_asset = next(self.eminfra_client.search_asset_by_uuid(asset_uuid=asset_row_parent_uuid), None)
-            else:
-                parent_asset = None
-
-            logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_name}')
-
-            if asset_row_uuid and asset_row_name:
-                logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
-                self.validate_asset(uuid=asset_row_uuid, naam=asset_row_name, stop_on_error=True)
-
-            if parent_asset is None:
-                logging.critical('Parent asset is ongekend.')
-            else:
-                wkt_geometry = self.parse_wkt_geometry(asset_row=asset_row)
-                asset = self.create_asset_if_missing(typeURI=typeURI, asset_naam=asset_row_name,
-                                                     parent_uuid=parent_asset.uuid, wkt_geometry=wkt_geometry,
-                                                     parent_asset_type=BoomstructuurAssetTypeEnum.ASSET)
-
-                # reorganize OTL-asset in tree-structure
-                self.eminfra_client.reorganize_beheerobject(parentAsset=parent_asset, childAsset=asset, parentType=BoomstructuurAssetTypeEnum.ASSET)
-
-
-                # Update eigenschappen
-                self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='meternummer', eigenschapwaarde_nieuw=asset_row.get("EnergiemeterDNB_meternummer"))
-
-                # Hoortbij-relatie
-                hoortbijrelatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=asset.uuid,
-                                                                      doelAsset_uuid=parent_asset.uuid,
-                                                                      relatie_naam='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HoortBij')
-
-
-
-                # Lijst aanvullen met de naam en diens overeenkomstig uuid
-                df.at[idx, "asset_uuid"] = asset.uuid
-                df.at[idx, "hoortbijrelatie_uuid"] = hoortbijrelatie_uuid
-
-        # Wegschrijven van het dataframe
-        with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-            df.to_excel(writer, sheet_name='Energiemeter DNB',
-                        columns=["EnergiemeterDNB_Object assetId.identificator", "asset_uuid", "hoortbijrelatie_uuid"],
-                        index=False, freeze_panes=[1, 1])
-        logging.info('EnergiemeterDNB aangemaakt')
-
-    def process_voeding_segmentcontroller(self, df: pd.DataFrame):
-        logging.info('Aanmaken van SegmentController (OTL)')
-        for idx, asset_row in df.iterrows():
-            asset_row_uuid = asset_row.get("Segmentcontroller_UUID SC")
-            asset_row_typeURI = asset_row.get("Segmentcontroller_SC TypeURI")
-            typeURI = self.typeURI_mapping_dict.get(asset_row_typeURI, asset_row_typeURI)
-            asset_row_name = asset_row.get("Segmentcontroller_Naam SC")
-            asset_row_parent_name = self.construct_installatie_naam(naam=asset_row_name, asset_type=AssetType.SEGC)
-            parent_asset = next(self.eminfra_client.search_beheerobjecten(naam=asset_row_parent_name, actief=True,
-                                                                          operator=OperatorEnum.EQ), None)
-
-            logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_name}')
-
-            if asset_row_uuid and asset_row_name:
-                logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
-                self.validate_asset(uuid=asset_row_uuid, naam=asset_row_name, stop_on_error=True)
-
-            if parent_asset is None:
-                logging.critical('Parent asset is ongekend.')
-            else:
-                wkt_geometry = self.parse_wkt_geometry(asset_row=asset_row)
-                asset = self.create_asset_if_missing(typeURI=typeURI, asset_naam=asset_row_name,
-                                                     parent_uuid=parent_asset.uuid, wkt_geometry=wkt_geometry,
-                                                     parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
-
-
-
-
-                # Lijst aanvullen met de naam en diens overeenkomstig uuid
-                df.at[idx, "asset_uuid"] = asset.uuid
-
-        # Wegschrijven van het dataframe
-        with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-            df.to_excel(writer, sheet_name='Segmentcontroller', columns=["Segmentcontroller_Naam SC", "asset_uuid"],
-                        index=False, freeze_panes=[1, 1])
-        logging.info('Segmentcontroller aangemaakt')
-
-    def process_voeding_wegverlichting(self, df: pd.DataFrame):
-        # Wegverlichtingsgroep
-        logging.info('Aanmaken van Wegverlichtingsgroep')
-        for idx, asset_row in df.iterrows():
-            asset_row_uuid = asset_row.get("Wegverlichtingsgroep_UUID WV")
-            asset_row_typeURI = asset_row.get("Wegverlichtingsgroep_WV lgc:installatie")
-            typeURI = self.typeURI_mapping_dict.get(asset_row_typeURI, asset_row_typeURI)
-            asset_row_name = asset_row.get("Wegverlichtingsgroep_Naam WV")
-            asset_row_parent_name = self.construct_installatie_naam(naam=asset_row_name, asset_type=AssetType.WVGROEP)
-            # todo pas de zoekopdracht naar de parent aan naar ofwel een Beheerobject, ofwel een Asset
-            # parent_asset = next(self.eminfra_client.search_asset_by_name(asset_name=asset_row_parent_name, exact_search=True), None)
-            parent_asset = next(self.eminfra_client.search_beheerobjecten(naam=asset_row_parent_name, actief=True,
-                                                                          operator=OperatorEnum.EQ), None)
-
-            logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_name}')
-
-            if asset_row_uuid and asset_row_name:
-                logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
-                self.validate_asset(uuid=asset_row_uuid, naam=asset_row_name, stop_on_error=True)
-
-            if parent_asset is None:
-                logging.critical('Parent asset is ongekend.')
-            else:
-                wkt_geometry = self.parse_wkt_geometry(asset_row=asset_row)
-                asset = self.create_asset_if_missing(typeURI=typeURI, asset_naam=asset_row_name,
-                                                     parent_uuid=parent_asset.uuid, wkt_geometry=wkt_geometry,
-                                                     parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
-
-
-
-
-                # Lijst aanvullen met de naam en diens overeenkomstig uuid
-                df.at[idx, "asset_uuid"] = asset.uuid
-
-        # Wegschrijven van het dataframe
-        with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-            df.to_excel(writer, sheet_name='Wegverlichting', columns=["Wegverlichtingsgroep_Naam WV", "asset_uuid"],
-                        index=False, freeze_panes=[1, 1])
-        logging.info('Wegverlichtingsgroep aangemaakt')
-
-    def process_voeding_switch(self, df: pd.DataFrame):
-        logging.info('Aanmaken Switch (IP-Netwerkapparatuur)')
-        for idx, asset_row in df.iterrows():
-            asset_row_uuid = asset_row.get("Switch gegevens_UUID switch")
-            asset_row_typeURI = 'Switch'
-            typeURI = self.typeURI_mapping_dict.get(asset_row_typeURI, None)
-            asset_row_name = asset_row.get("Switch gegevens_Object assetId.identificator")
-            asset_row_parent_name = self.construct_installatie_naam(naam=asset_row_name, asset_type=AssetType.IP)
-            # todo pas de zoekopdracht naar de parent aan naar ofwel een Beheerobject, ofwel een Asset
-            # parent_asset = next(self.eminfra_client.search_asset_by_name(asset_name=asset_row_parent_name, exact_search=True), None)
-            parent_asset = next(self.eminfra_client.search_beheerobjecten(naam=asset_row_parent_name, actief=True,
-                                                                          operator=OperatorEnum.EQ), None)
-
-            logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_name}')
-
-            if asset_row_uuid and asset_row_name:
-                logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
-                self.validate_asset(uuid=asset_row_uuid, naam=asset_row_name, stop_on_error=True)
-
-            if parent_asset is None:
-                logging.critical('Parent asset is ongekend.')
-            else:
-                asset = self.create_asset_if_missing(typeURI=typeURI, asset_naam=asset_row_name,
-                                                     parent_uuid=parent_asset.uuid, parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
-
-
-
-
-                # Lijst aanvullen met de naam en diens overeenkomstig uuid
-                df.at[idx, "asset_uuid"] = asset.uuid
-
-        # Wegschrijven van het dataframe
-        with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-            df.to_excel(writer, sheet_name='Switch', columns=["Switch gegevens_Object assetId.identificator", "asset_uuid"],
-                        index=False, freeze_panes=[1, 1])
-        logging.info('Switch (IP-Netwerkapparatuur) aangemaakt')
-
-    def process_openbare_verlichting(self, df: pd.DataFrame):
-        # Openbare verlichting
-        logging.info('Aanmaken Openbare verlichting (WVLichtmast)')
-        for idx, asset_row in df.iterrows():
-            asset_row_uuid = asset_row.get("WVLichtmast_UUID Object")
-            asset_row_typeURI = asset_row.get("WVLichtmast_Object typeURI")
-            typeURI = self.typeURI_mapping_dict.get(asset_row_typeURI, asset_row_typeURI)
-            asset_row_name = asset_row.get("WVLichtmast_Object assetId.identificator")
-            asset_row_parent_name = self.construct_installatie_naam(naam=asset_row_name, asset_type=AssetType.WVLICHTMAST)
-            # todo pas de zoekopdracht naar de parent aan naar ofwel een Beheerobject, ofwel een Asset
-            # parent_asset = next(self.eminfra_client.search_asset_by_name(asset_name=asset_row_parent_name, exact_search=True), None)
-            parent_asset = next(self.eminfra_client.search_beheerobjecten(naam=asset_row_parent_name, actief=True,
-                                                                          operator=OperatorEnum.EQ), None)
-
-            logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_name}')
-
-            if asset_row_uuid and asset_row_name:
-                logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
-                self.validate_asset(uuid=asset_row_uuid, naam=asset_row_name, stop_on_error=True)
-
-            if parent_asset is None:
-                logging.critical('Parent asset is ongekend.')
-            else:
-                wkt_geometry = self.parse_wkt_geometry(asset_row=asset_row)
-                asset = self.create_asset_if_missing(typeURI=typeURI, asset_naam=asset_row_name,
-                                                     parent_uuid=parent_asset.uuid, wkt_geometry=wkt_geometry,
-                                                     parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
-
-
-
-
-                # Voeding-relatie
-                bronAsset_uuid = asset_row.get('Voedingsrelaties_UUID Voedingsrelatie bronAsset')
-                voedingsrelatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=bronAsset_uuid,
-                                                                      doelAsset_uuid=asset.uuid,
-                                                                      relatie_naam='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt')
-
-
-
-                # Lijst aanvullen met de naam en diens overeenkomstig uuid
-                df.at[idx, "asset_uuid"] = asset.uuid
-                df.at[idx, "voedingsrelatie_uuid"] = voedingsrelatie_uuid
-
-        # Wegschrijven van het dataframe
-        with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-            df.to_excel(writer, sheet_name='Openbare verlichting',
-                        columns=["WVLichtmast_Object assetId.identificator", "asset_uuid", "voedingsrelatie_uuid"],
-                        index=False, freeze_panes=[1, 1])
-        logging.info('Openbare verlichting (WVLichtmast) aangemaakt')
-
-    def process_mivlve(self, df: pd.DataFrame):
-        logging.info('Aanmaken van MIVLVE onder Wegkantkasten')
-        for idx, asset_row in df.iterrows():
-            asset_row_uuid = asset_row.get("LVE_UUID Object")
-            asset_row_typeURI = asset_row.get("LVE_Object typeURI")
-            typeURI = self.typeURI_mapping_dict.get(asset_row_typeURI, asset_row_typeURI)
-            asset_row_name = asset_row.get("LVE_Object assetId.identificator")
-            asset_row_parent_name = asset_row.get("Bevestigingsrelatie_Bevestigingsrelatie doelAssetId.identificator")
-            parent_asset = next(
-                self.eminfra_client.search_assets(query_dto=self.build_query_MIVLVE(naam=asset_row_parent_name)), None)
-
-            logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_name}')
-
-            if asset_row_uuid and asset_row_name:
-                logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
-                self.validate_asset(uuid=asset_row_uuid, naam=asset_row_name, stop_on_error=True)
-
-            if parent_asset is None:
-                logging.critical('Parent asset is ongekend.')
-            else:
-                wkt_geometry = self.parse_wkt_geometry(asset_row=asset_row)
-                asset = self.create_asset_if_missing(typeURI=typeURI, asset_naam=asset_row_name,
-                                                     parent_uuid=parent_asset.uuid, wkt_geometry=wkt_geometry,
-                                                     parent_asset_type=BoomstructuurAssetTypeEnum.ASSET)
-
-
-
-                # Update eigenschappen
-                self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='type MIV installatie', eigenschapwaarde_nieuw=asset_row.get("LVE_Type"))
-
-                # Voeding-relatie
-                bronAsset_uuid = asset_row.get('Voedingsrelaties_UUID Voedingsrelatie bronAsset')
-                voedingsrelatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=bronAsset_uuid,
-                                                                          doelAsset_uuid=asset.uuid,
-                                                                          relatie_naam='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt')
-
-
-                # Bevestiging-relatie
-                doelAsset_uuid = asset_row.get('Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
-                bevestigingsrelatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=asset.uuid,
-                                                                          doelAsset_uuid=doelAsset_uuid,
-                                                                          relatie_naam='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging')
-
-                # Sturing-relatie
-                # TODO: controleer of the bron van de sturingsrelatie effectief de Switch is.
-                bronAsset_uuid = asset_row.get('Netwerkgegevens_UUID Switch')
-                sturingsrelatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=bronAsset_uuid,
-                                                                          doelAsset_uuid=asset.uuid,
-                                                                          relatie_naam='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Sturing')
-
-
-
-
-                # Lijst aanvullen met de naam en diens overeenkomstig uuid
-                df.at[idx, "asset_uuid"] = asset.uuid
-                df.at[idx, "voedingsrelatie_uuid"] = voedingsrelatie_uuid
-                df.at[idx, "bevestigingsrelatie_uuid"] = bevestigingsrelatie_uuid
-                df.at[idx, "sturingsrelatie_uuid"] = sturingsrelatie_uuid
-
-        with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-            df.to_excel(writer, sheet_name='MIVLVE',
-                        columns=["LVE_Object assetId.identificator", "asset_uuid", "voedingsrelatie_uuid", "bevestigingsrelatie_uuid", "sturingsrelatie_uuid"],
-                        index=False, freeze_panes=[1, 1])
-        logging.info('MIVLVE aangemaakt')
-
-    def process_mivmeetpunten(self, df: pd.DataFrame):
-        # Aanmaken van de MIVMeetpunten
-        logging.info('Aanmaken van MIVMeetpunten onder MIVLVE')
-        for idx, asset_row in df.iterrows():
-            asset_row_uuid = asset_row.get("Meetpunt_UUID Object")
-            asset_row_typeURI = asset_row.get("Meetpunt_Object typeURI")
-            typeURI = self.typeURI_mapping_dict.get(asset_row_typeURI, asset_row_typeURI)
-            asset_row_name = asset_row.get("Meetpunt_Object assetId.identificator")
-
-            asset_row_parent_name = asset_row.get("Sturingsrelaties_Sturingsrelatie bron AssetId.identificator")
-            parent_asset = next(
-                self.eminfra_client.search_assets(query_dto=self.build_query_MIVMeetpunten(naam=asset_row_parent_name)),
-                None)
-
-            logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_name}')
-
-            if asset_row_uuid and asset_row_name:
-                logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
-                self.validate_asset(uuid=asset_row_uuid, naam=asset_row_name, stop_on_error=True)
-
-            if parent_asset is None:
-                logging.critical('Parent asset is ongekend.')
-            else:
-                wkt_geometry = self.parse_wkt_geometry(asset_row=asset_row)
-                asset = self.create_asset_if_missing(typeURI=typeURI, asset_naam=asset_row_name,
-                                                     parent_uuid=parent_asset.uuid, wkt_geometry=wkt_geometry,
-                                                     parent_asset_type=BoomstructuurAssetTypeEnum.ASSET)
-
-                if asset is None:
-                    logging.critical('Asset werd niet aangemaakt')
-
-
-                # Update eigenschappen
-                self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='aansluiting', eigenschapwaarde_nieuw=asset_row.get("Meetpunt_Aansluiting"))
-                # self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='', eigenschapwaarde_nieuw=asset_row.get("Meetpunt_Formaat"))
-                # self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='', eigenschapwaarde_nieuw=asset_row.get("Meetpunt_Laag"))
-                self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='uitslijprichting', eigenschapwaarde_nieuw=asset_row.get("Meetpunt_Uitslijprichting"))
-                self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='wegdek', eigenschapwaarde_nieuw=asset_row.get("Meetpunt_Wegdek"))
-
-
-
-                # Sturing-relatie
-                bronAsset_uuid = asset_row.get('Sturingsrelaties_UUID Sturingsrelatie bronAsset')
-                sturingsrelatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=bronAsset_uuid,
-                                                                      doelAsset_uuid=asset.uuid,
-                                                                      relatie_naam='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Sturing')
-
-
-
-                # Lijst aanvullen met de naam en diens overeenkomstig uuid
-                df.at[idx, "asset_uuid"] = asset.uuid
-                df.at[idx, "sturingsrelatie_uuid"] = sturingsrelatie_uuid
-
-        with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-            df.to_excel(writer, sheet_name='MIVMeetpunten',
-                        columns=["Meetpunt_Object assetId.identificator", "asset_uuid",
-                                 "sturingsrelatie_uuid"], index=False, freeze_panes=[1, 1])
-        logging.info('MIVMeetpunten aangemaakt')
-
-    def process_cameras(self, df: pd.DataFrame):
-        logging.info('Aanmaken Cameras')
-        for idx, asset_row in df.iterrows():
-            asset_row_uuid = asset_row.get("Camera_UUID Object")
-            asset_row_typeURI = asset_row.get("Camera_Object typeURI")
-            typeURI = self.typeURI_mapping_dict.get(asset_row_typeURI, asset_row_typeURI)
-            asset_row_name = asset_row.get("Camera_Object assetId.identificator")
-            # Camera via diens Bevestigingsrelatie op de juiste plaats in de boomstructuur plaatsen
-            parent_asset_uuid = asset_row.get("Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset")
-            if not pd.isna(parent_asset_uuid):
-                parent_asset = next(self.eminfra_client.search_asset_by_uuid(asset_uuid=parent_asset_uuid), None)
-            else:
-                parent_asset = None
-
-            logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_name}')
-            if asset_row_uuid and asset_row_name:
-                logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
-                self.validate_asset(uuid=asset_row_uuid, naam=asset_row_name, stop_on_error=True)
-
-            if parent_asset is None:
-                logging.critical('Parent asset is ongekend.')
-            else:
-                wkt_geometry = self.parse_wkt_geometry(asset_row=asset_row)
-                asset = self.create_asset_if_missing(typeURI=typeURI, asset_naam=asset_row_name,
-                                                     parent_uuid=parent_asset.uuid, wkt_geometry=wkt_geometry,
-                                                     parent_asset_type=BoomstructuurAssetTypeEnum.ASSET)
-
-
-                # Update eigenschappen
-                asset_row_type_camera = asset_row.get("Camera_Type Camera")
-                if asset_row_type_camera == 'PTZ':
-                    self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='isPtz', eigenschapwaarde_nieuw=True)
-                elif asset_row_type_camera == 'AID':
-                    self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='heeftAid', eigenschapwaarde_nieuw=True)
-                # self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='', eigenschapwaarde_nieuw=asset_row.get("Camera_Kijkrichting"))
-
-
-
-                # Relaties
-                # Voedingsrelatie
-                bronAsset_uuid = asset_row.get('Voedingsrelaties_UUID Voedingsrelatie bronAsset')
-                voedingsrelatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=bronAsset_uuid,
-                                                                      doelAsset_uuid=asset.uuid,
-                                                                      relatie_naam='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt')
-                # Bevestigingsrelatie
-                doelAsset_uuid = asset_row.get('Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
-                bevestigingsrelatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=asset.uuid,
-                                                                          doelAsset_uuid=doelAsset_uuid,
-                                                                          relatie_naam='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging')
-                # Sturingsrelatie
-                doelAsset_uuid = asset_row.get('Netwerkgegevens_UUID Switch')
-                sturingsrelatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=asset.uuid, doelAsset_uuid=doelAsset_uuid,
-                                                                 relatie_naam='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Sturing')
-
-
-
-                # Lijst aanvullen met de naam en diens overeenkomstig uuid
-                df.at[idx, "asset_uuid"] = asset.uuid
-                df.at[idx, "voedingsrelatie_uuid"] = voedingsrelatie_uuid
-                df.at[idx, "bevestigingsrelatie_uuid"] = bevestigingsrelatie_uuid
-                df.at[idx, "sturingsrelatie_uuid"] = sturingsrelatie_uuid
-
-        # Wegschrijven van het dataframe
-        with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-            df.to_excel(writer, sheet_name='Cameras',
-                        columns=["Camera_Object assetId.identificator", "asset_uuid", "voedingsrelatie_uuid",
-                                 "bevestigingsrelatie_uuid", "sturingsrelatie_uuid"], index=False, freeze_panes=[1, 1])
-        logging.info('Cameras aangemaakt')
-
-    def process_RSS_borden(self, df: pd.DataFrame):
-        logging.info('Aanmaken RSS-borden (Rij Strook Signalisatie)')
-        logging.info(
-            'RSS-borden en (R)VMS-borden. Eerst de groep aanmaken en nadien de Legacy-assets in deze groep plaatsen.')
-        logging.info('Seinbrug > RSSGroep > RSS-bord')
-        for idx, asset_row in df.iterrows():
-            asset_row_uuid = asset_row.get("DVM-Bord_UUID Object")
-            asset_row_typeURI = asset_row.get("DVM-Bord_Object typeURI")
-            typeURI = self.typeURI_mapping_dict.get(asset_row_typeURI, asset_row_typeURI)
-            asset_row_name = asset_row.get("DVM-Bord_Object assetId.identificator")
-
-            parent_asset_uuid = asset_row.get("Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset")
-            if not pd.isna(parent_asset_uuid):
-                parent_asset = next(self.eminfra_client.search_asset_by_uuid(asset_uuid=parent_asset_uuid), None)
-            else:
-                parent_asset = None
-
-            logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_name}')
-            if asset_row_uuid and asset_row_name:
-                logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
-                self.validate_asset(uuid=asset_row_uuid, naam=asset_row_name, stop_on_error=True)
-
-            if parent_asset is None:
-                logging.critical('Parent asset is ongekend.')
-            else:
-                # RSSGroep
-                rss_groep_naam = self.construct_rss_groep_naam(rss_naam=asset_row_name)
-                rss_groep_asset = self.create_asset_if_missing(
-                    typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#RSSGroep', asset_naam=rss_groep_naam,
-                    parent_uuid=parent_asset.uuid, parent_asset_type=BoomstructuurAssetTypeEnum.ASSET)
-
-                wkt_geometry = self.parse_wkt_geometry(asset_row=asset_row)
-                asset = self.create_asset_if_missing(typeURI=typeURI, asset_naam=asset_row_name,
-                                                     parent_uuid=rss_groep_asset.uuid, wkt_geometry=wkt_geometry,
-                                                     parent_asset_type=BoomstructuurAssetTypeEnum.ASSET)
-
-
-                # Update eigenschappen
-                self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='merk', eigenschapwaarde_nieuw=asset_row.get("DVM-Bord_merk"))
-
-
-
-                # Relaties
-                # HoortBijrelatie
-                doelAsset_uuid = rss_groep_asset.uuid
-                hoortbijrelatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=asset.uuid,
-                                                                      doelAsset_uuid=doelAsset_uuid,
-                                                                      relatie_naam='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HoortBij')
-
-                # Bevestigingsrelatie
-                doelAsset_uuid = asset_row.get('Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
-                bevestigingsrelatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=asset.uuid,
-                                                                          doelAsset_uuid=doelAsset_uuid,
-                                                                          relatie_naam='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging')
-                # Voedingsrelatie
-                bronAsset_uuid = asset_row.get('Voedingsrelaties_UUID Voedingsrelatie bronAsset')
-                voedingsrelatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=bronAsset_uuid,
-                                                                      doelAsset_uuid=asset.uuid,
-                                                                      relatie_naam='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt')
-                # Sturingsrelatie
-                doelAsset_uuid = asset_row.get('Netwerkgegevens_UUID Switch')
-                sturingsrelatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=asset.uuid, doelAsset_uuid=doelAsset_uuid,
-                                                                 relatie_naam='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Sturing')
-
-
-
-
-                # Lijst aanvullen met de naam en diens overeenkomstig uuid
-                df.at[idx, "asset_uuid"] = asset.uuid
-                df.at[idx, "hoortbijrelatie_uuid"] = hoortbijrelatie_uuid
-                df.at[idx, "bevestigingsrelatie_uuid"] = bevestigingsrelatie_uuid
-                df.at[idx, "voedingsrelatie_uuid"] = voedingsrelatie_uuid
-                df.at[idx, "sturingsrelatie_uuid"] = sturingsrelatie_uuid
-
-        # Wegschrijven van het dataframe
-        with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-            df.to_excel(writer, sheet_name='RSS-borden',
-                        columns=["DVM-Bord_Object assetId.identificator", "asset_uuid", "hoortbijrelatie_uuid",
-                                 "bevestigingsrelatie_uuid", "voedingsrelatie_uuid", "sturingsrelatie_uuid"],
-                        index=False, freeze_panes=[1, 1])
-        logging.info('RSS-borden (Rij Strook Signalisatie) aangemaakt')
-
-    def process_RVMS_borden(self, df: pd.DataFrame):
-        logging.info('Aanmaken RVMS-borden (Road-side Variable Message Signs)')
-        for idx, asset_row in df.iterrows():
-            asset_row_uuid = asset_row.get("DVM-Bord_UUID Object")
-            asset_row_typeURI = asset_row.get("DVM-Bord_Object typeURI")
-            typeURI = self.typeURI_mapping_dict.get(asset_row_typeURI, asset_row_typeURI)
-            asset_row_name = asset_row.get("DVM-Bord_Object assetId.identificator")
-
-            parent_asset_uuid = asset_row.get("Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset")
-            if not pd.isna(parent_asset_uuid):
-                parent_asset = next(self.eminfra_client.search_asset_by_uuid(asset_uuid=parent_asset_uuid), None)
-            else:
-                parent_asset = None
-
-            logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_name}')
-            if asset_row_uuid and asset_row_name:
-                logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
-                self.validate_asset(uuid=asset_row_uuid, naam=asset_row_name, stop_on_error=True)
-
-            if parent_asset is None:
-                logging.critical('Parent asset is ongekend.')
-            else:
-                # RVMSGroep
-                rvms_groep_naam = self.construct_rvms_groep_naam(rvms_naam=asset_row_name)
-                rvms_groep_asset = self.create_asset_if_missing(
-                    typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#RVMSGroep', asset_naam=rvms_groep_naam,
-                    parent_uuid=parent_asset.uuid, parent_asset_type=BoomstructuurAssetTypeEnum.ASSET)
-
-                wkt_geometry = self.parse_wkt_geometry(asset_row=asset_row)
-                asset = self.create_asset_if_missing(typeURI=typeURI, asset_naam=asset_row_name,
-                                                     parent_uuid=rvms_groep_asset.uuid, wkt_geometry=wkt_geometry,
-                                                     parent_asset_type=BoomstructuurAssetTypeEnum.ASSET)
-
-
-                # Update eigenschappen
-                self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='merk', eigenschapwaarde_nieuw=asset_row.get("DVM-Bord_merk"))
-
-
-
-                # Relaties
-                # HoortBijrelatie
-                doelAsset_uuid = rvms_groep_asset.uuid
-                hoortbijrelatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=asset.uuid,
-                                                                      doelAsset_uuid=doelAsset_uuid,
-                                                                      relatie_naam='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HoortBij')
-
-                # Bevestigingsrelatie
-                doelAsset_uuid = asset_row.get('Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
-                bevestigingsrelatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=asset.uuid,
-                                                                          doelAsset_uuid=doelAsset_uuid,
-                                                                          relatie_naam='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging')
-                # Voedingsrelatie
-                bronAsset_uuid = asset_row.get('Voedingsrelaties_UUID Voedingsrelatie bronAsset')
-                voedingsrelatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=bronAsset_uuid,
-                                                                      doelAsset_uuid=asset.uuid,
-                                                                      relatie_naam='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt')
-                # Sturingsrelatie
-                # nog te activeren: is de sturingsrelatie naar een Switch juist?
-                # doelAsset_uuid = asset_row.get('Netwerkgegevens_UUID Switch')
-                # sturingsrelatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=asset.uuid, doelAsset_uuid=doelAsset_uuid,
-                #                                                  relatie_naam='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Sturing')
-                sturingsrelatie_uuid = None
-
-
-
-                # Lijst aanvullen met de naam en diens overeenkomstig uuid
-                df.at[idx, "asset_uuid"] = asset.uuid
-                df.at[idx, "hoortbijrelatie_uuid"] = hoortbijrelatie_uuid
-                df.at[idx, "bevestigingsrelatie_uuid"] = bevestigingsrelatie_uuid
-                df.at[idx, "voedingsrelatie_uuid"] = voedingsrelatie_uuid
-                df.at[idx, "sturingsrelatie_uuid"] = sturingsrelatie_uuid
-
-        # Wegschrijven van het dataframe
-        with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-            df.to_excel(writer, sheet_name='(R)VMS-borden',
-                        columns=["DVM-Bord_Object assetId.identificator", "asset_uuid", "hoortbijrelatie_uuid",
-                                 "bevestigingsrelatie_uuid", "voedingsrelatie_uuid", "sturingsrelatie_uuid"],
-                        index=False, freeze_panes=[1, 1])
-        logging.info('RVMS-borden (Road-side Variable Message Signs) aangemaakt')
-
-    def process_portieken_seinbruggen(self, df: pd.DataFrame):
-        # Aanmaken van de Portieken-Seinbruggen
-        logging.info('Aanmaken van de Portieken / Seinbruggen')
-        for idx, asset_row in df.iterrows():
-            asset_row_uuid = asset_row.get("Seinbrug_UUID Object")
-            asset_row_typeURI = asset_row.get("Seinbrug_Object typeURI")
-            typeURI = self.typeURI_mapping_dict.get(asset_row_typeURI, asset_row_typeURI)
-            asset_row_name = asset_row.get("Seinbrug_Object assetId.identificator")
-
-            asset_row_parent_name = self.construct_installatie_naam(naam=asset_row_name, asset_type=AssetType.SEINBRUGDVM)
-            # todo pas de zoekopdracht naar de parent aan naar ofwel een Beheerobject, ofwel een Asset
-            # parent_asset = next(self.eminfra_client.search_asset_by_name(asset_name=asset_row_parent_name, exact_search=True), None)
-            parent_asset = next(self.eminfra_client.search_beheerobjecten(naam=asset_row_parent_name, actief=True,
-                                                                          operator=OperatorEnum.EQ), None)
-
-            logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_name}')
-
-            if asset_row_uuid and asset_row_name:
-                logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
-                self.validate_asset(uuid=asset_row_uuid, naam=asset_row_name, stop_on_error=True)
-
-            if parent_asset is None:
-                logging.critical('Parent asset is ongekend.')
-            else:
-                wkt_geometry = self.parse_wkt_geometry(asset_row=asset_row)
-                asset = self.create_asset_if_missing(typeURI=typeURI, asset_naam=asset_row_name,
-                                                     parent_uuid=parent_asset.uuid, wkt_geometry=wkt_geometry,
-                                                     parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
-
-                if asset is None:
-                    logging.critical('Asset werd niet aangemaakt')
-
-                # Update eigenschappen
-                self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='vrije hoogte', eigenschapwaarde_nieuw=asset_row.get("Seinbrug_vrijeHoogte"))
-                # self.update_eigenschap(assetId=asset.uuid, eigenschapnaam_bestaand='', eigenschapwaarde_nieuw=asset_row.get("Seinbrug_RWS/Standaardportiek/tijdelijke seinbrug"))
-
-                # Lijst aanvullen met de naam en diens overeenkomstig uuid
-                df.at[idx, "asset_uuid"] = asset.uuid
-
-        with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-            df.to_excel(writer, sheet_name='Portieken-Seinbruggen',
-                        columns=["Seinbrug_Object assetId.identificator", "asset_uuid"], index=False,
-                        freeze_panes=[1, 1])
-        logging.info('Portieken / Seinbruggen aangemaakt')
+    def process_wegkantkasten(self):
+        logging.info('Aanmaken Wegkantkasten')
+        asset_info = AssetInfo(asset_type=AssetType.WEGKANTKAST, column_typeURI='Wegkantkast_Object typeURI',
+                               column_uuid='Wegkantkast_UUID Object',
+                               column_name='Wegkantkast_Object assetId.identificator')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
+        bypass.process_assets(df=bypass.df_assets_wegkantkasten, asset_info=asset_info,
+                              parent_asset_info=parent_asset_info)
+
+    def process_wegkantkasten_lsdeel(self):
+        logging.info('Aanmaken LSDeel')
+        asset_info = AssetInfo(asset_type=AssetType.LSDEEL, column_uuid='Laagspanningsdeel_UUID LSDeel',
+                               column_name='Laagspanningsdeel_Naam LSDeel',
+                               column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#LSDeel')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
+                                            column_parent_uuid='Wegkantkast_UUID Object',
+                                            column_parent_name='Wegkantkast_Object assetId.identificator')
+        bevestigingsrelatie = RelatieInfo(bronAsset_uuid=None
+                                          , doelAsset_uuid='Wegkantkast_UUID Object'
+                                          , uri=RelatieType.BEVESTIGING)
+        voedingsrelatie = RelatieInfo(bronAsset_uuid='Voedingsrelatie (oorsprong)_UUID Voedingsrelatie bronAsset'
+                                      , doelAsset_uuid='Laagspanningsdeel_UUID LSDeel'
+                                      , uri=RelatieType.VOEDT)
+        bypass.process_assets(df=bypass.df_assets_wegkantkasten
+                              , asset_info=asset_info
+                              , parent_asset_info=parent_asset_info
+                              , relatie_infos=[bevestigingsrelatie, voedingsrelatie])
+
+    def process_wegkantkasten_ip(self):
+        logging.info('Aanmaken IP')
+        asset_info = AssetInfo(asset_type=AssetType.IP, column_uuid='Switch gegevens_UUID Switch',
+                               column_name='Switch gegevens_Object assetId.identificator',
+                               column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#IP')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
+                                            column_parent_uuid='Wegkantkast_UUID Object')
+        bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid=None,
+                                          doelAsset_uuid='Wegkantkast_UUID Object')
+        bypass.process_assets(df=bypass.df_assets_wegkantkasten, asset_info=asset_info,
+                              parent_asset_info=parent_asset_info, relatie_infos=[bevestigingsrelatie])
+
+    def process_wegkantkasten_teletransmissieverbinding(self):
+        logging.info('Aanmaken Teletransmissieverbinding (TT)')
+        asset_info = AssetInfo(asset_type=AssetType.TT, column_uuid='Switch gegevens_UUID Teletransmissieverbinding',
+                               column_name='Switch gegevens_Naam Teletransmissieverbinding',
+                               column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#TT')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
+                                            column_parent_uuid='Wegkantkast_UUID Object')
+        bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid=None,
+                                          doelAsset_uuid='Wegkantkast_UUID Object')
+        bypass.process_assets(df=bypass.df_assets_wegkantkasten, asset_info=asset_info,
+                              parent_asset_info=parent_asset_info, relatie_infos=[bevestigingsrelatie])
+
+    def process_voeding_HS_cabine(self):
+        logging.info('Aanmaken HSCabine')
+        asset_info = AssetInfo(asset_type=AssetType.HSCABINE, column_name='HSCabine_Object assetId.identificator',
+                               column_uuid='HSCabine_UUID Object', column_typeURI='HSCabine_Object typeURI')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT,
+                                            column_parent_uuid=None, column_parent_name=None)
+        bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info)
+
+    def process_voeding_hoogspanningsdeel(self):
+        logging.info('Aanmaken HSDeel')
+        asset_info = AssetInfo(asset_type=AssetType.HSDEEL, column_name='Hoogspanningsdeel_Naam HSDeel',
+                               column_uuid='Hoogspanningsdeel_UUID HSDeel',
+                               column_typeURI='Hoogspanningsdeel_HSDeel lgc:installatie')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
+                                            column_parent_uuid='HSCabine_UUID Object',
+                                            column_parent_name='HSCabine_Object assetId.identificator')
+        bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid=None,
+                                          doelAsset_uuid='HSCabine_UUID Object')
+        bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info,
+                              relatie_infos=[bevestigingsrelatie])
+
+    def process_voeding_laagspanningsdeel(self):
+        logging.info('Aanmaken LSDeel')
+        asset_info = AssetInfo(asset_type=AssetType.LSDEEL, column_name='Laagspanningsdeel_Naam LSDeel',
+                               column_uuid='Laagspanningsdeel_UUID LSDeel',
+                               column_typeURI='Laagspanningsdeel_LSDeel lgc:installatie')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
+                                            column_parent_uuid='HSCabine_UUID Object',
+                                            column_parent_name='HSCabine_Object assetId.identificator')
+        bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid=None,
+                                          doelAsset_uuid='HSCabine_UUID Object')
+        voedingsrelatie = RelatieInfo(uri=RelatieType.VOEDT, bronAsset_uuid='Hoogspanningsdeel_UUID HSDeel',
+                                      doelAsset_uuid=None)
+        bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info,
+                              relatie_infos=[bevestigingsrelatie, voedingsrelatie])
+
+    def process_voeding_hoogspanning(self):
+        logging.info('Aanmaken Hoogspanning')
+        asset_info = AssetInfo(asset_type=AssetType.HS, column_name='Hoogspanning_Naam HS',
+                               column_uuid='Hoogspanning_UUID HS', column_typeURI='Hoogspanning_HS lgc:installatie')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
+                                            column_parent_uuid='HSCabine_UUID Object',
+                                            column_parent_name='HSCabine_Object assetId.identificator')
+        bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid=None,
+                                          doelAsset_uuid='HSCabine_UUID Object')
+        bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info,
+                              relatie_infos=[bevestigingsrelatie])
+
+    def process_voeding_DNBHoogspanning(self):
+        logging.info('Aanmaken DNBHoogspanning')
+        asset_info = AssetInfo(asset_type=AssetType.DNBHOOGSPANNING,
+                               column_name='DNBHoogspanning_Object assetId.identificator',
+                               column_uuid='DNBHoogspanning_UUID Object',
+                               column_typeURI='DNBHoogspanning_Object typeURI')
+        eigenschappen = [
+            EigenschapInfo(eminfra_eigenschap_name='eanNummer', column_eigenschap_name='DNBHoogspanning_eanNummer')]
+        eigenschappen.append(EigenschapInfo(eminfra_eigenschap_name='referentieDNB',
+                                            column_eigenschap_name='DNBHoogspanning_referentieDNB'))
+        hoortbijrelatie = RelatieInfo(uri=RelatieType.HOORTBIJ, bronAsset_uuid=None,
+                                      doelAsset_uuid='Hoogspanning_UUID HS')  # Hoortbij relatie van OTL naar Legacy-asset
+        bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, eigenschap_infos=eigenschappen,
+                              relatie_infos=[hoortbijrelatie])
+
+    def process_voeding_energiemeter_DNB(self):
+        logging.info('Aanmaken EnergiemeterDNB')
+        asset_info = AssetInfo(asset_type=AssetType.ENERGIEMETERDNB,
+                               column_name='EnergiemeterDNB_Object assetId.identificator',
+                               column_uuid='EnergiemeterDNB_UUID Object',
+                               column_typeURI='EnergiemeterDNB_Object typeURI')
+        eigenschappen = [EigenschapInfo(eminfra_eigenschap_name='meternummer', column_eigenschap_name='meternummer')]
+        hoortbijrelatie = RelatieInfo(uri=RelatieType.HOORTBIJ, bronAsset_uuid=None,
+                                      doelAsset_uuid='Hoogspanning_UUID HS')  # Hoortbij relatie van OTL naar Legacy-asset
+        bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, eigenschap_infos=eigenschappen,
+                              relatie_infos=[hoortbijrelatie])
+
+    def process_voeding_segmentcontroller(self):
+        logging.info('Aanmaken SegmentController')
+        asset_info = AssetInfo(asset_type=AssetType.SEGC, column_name='Segmentcontroller_Naam SC',
+                               column_uuid='Segmentcontroller_UUID SC', column_typeURI='Segmentcontroller_SC TypeURI')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT,
+                                            column_parent_uuid=None, column_parent_name=None)
+        bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info)
+
+    def process_voeding_wegverlichtingsgroep(self):
+        logging.info('Aanmaken Wegverlichtingsgroep')
+        asset_info = AssetInfo(asset_type=AssetType.WVGROEP, column_name='Wegverlichtingsgroep_Naam WV',
+                               column_uuid='Wegverlichtingsgroep_UUID WV',
+                               column_typeURI='Wegverlichtingsgroep_WV lgc:installatie')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT,
+                                            column_parent_uuid=None, column_parent_name=None)
+        bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info)
+
+    def process_voeding_wegverlichtingsmast(self):
+        logging.info('Aanmaken WVLichtmast')
+        asset_info = AssetInfo(asset_type=AssetType.WVLICHTMAST, column_name='WVLichtmast_Object assetId.identificator', column_uuid='WVLichtmast_UUID Object', column_typeURI='WVLichtmast_Object typeURI')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT, column_parent_uuid=None, column_parent_name=None)
+        voedingsrelatie = RelatieInfo(uri=RelatieType.VOEDT, bronAsset_uuid='Voedingsrelaties_UUID Voedingsrelatie bronAsset', doelAsset_uuid=None)
+        bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info)
+
+
+    def process_mivlve(self):
+        logging.info('Aanmaken Meetlussen MIVLVE')
+        asset_info = AssetInfo(asset_type=AssetType.MIVLVE, column_uuid='LVE_UUID Object',
+                               column_name='LVE_Object assetId.identificator', column_typeURI='LVE_Object typeURI')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
+                                            column_parent_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset',
+                                            column_parent_name='Bevestigingsrelatie_Bevestigingsrelatie doelAssetId.identificator')
+        eigenschap_infos = [EigenschapInfo(eminfra_eigenschap_name='type MIV installatie', column_eigenschap_name='LVE_Type')]
+        voedingsrelatie = RelatieInfo(uri=RelatieType.VOEDT,
+                                      bronAsset_uuid='Voedingsrelaties_UUID Voedingsrelatie bronAsset',
+                                      doelAsset_uuid=None)
+        bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid=None,
+                                          doelAsset_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
+        bypass.process_assets(df=bypass.df_assets_mivlve, asset_info=asset_info, parent_asset_info=parent_asset_info,
+                              relatie_infos=[voedingsrelatie, bevestigingsrelatie], eigenschap_infos=eigenschap_infos)
+
+    def process_mivmeetpunten(self):
+        logging.info('Aanmaken Meetpunten')
+        asset_info = AssetInfo(asset_type=AssetType.MPT, column_uuid='Meetpunt_UUID Object',
+                               column_name='Meetpunt_Object assetId.identificator',
+                               column_typeURI='Meetpunt_Object typeURI')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
+                                            column_parent_uuid='Sturingsrelaties_UUID Sturingsrelatie bronAsset',
+                                            column_parent_name='Sturingsrelatie_Sturingsrelatie bron AssetId.identificator')
+        eigenschap_infos = [
+            EigenschapInfo(eminfra_eigenschap_name='aansluiting', column_eigenschap_name='Meetpunt_Aansluiting')
+            , EigenschapInfo(eminfra_eigenschap_name='uitslijprichting',
+                             column_eigenschap_name='Meetpunt_Uitslijprichting')
+            , EigenschapInfo(eminfra_eigenschap_name='wegdek', column_eigenschap_name='Meetpunt_Wegdek')
+        ]
+        sturingsrelatie = RelatieInfo(uri=RelatieType.STURING,
+                                      bronAsset_uuid='Sturingsrelaties_UUID Sturingsrelatie bronAsset',
+                                      doelAsset_uuid=None)
+        bypass.process_assets(df=bypass.df_assets_mivmeetpunten, asset_info=asset_info, parent_asset_info=parent_asset_info,
+                              eigenschap_infos=eigenschap_infos, relatie_infos=[sturingsrelatie])
+
+    def process_cameras(self):
+        logging.info('Aanmaken Camera')
+        logging.debug('Camgroep onder 1 installatie plaatsen')
+        asset_info = AssetInfo(asset_type=AssetType.CAMERA,
+                               column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#Camera',
+                               column_name='Camera_Object assetId.identificator', column_uuid='Camera_UUID Object')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
+                                            column_parent_name='Bevestigingsrelatie_Bevestigingsrelatie doelAssetId.identificator',
+                                            column_parent_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
+        eigenschap_infos = [EigenschapInfo(eminfra_eigenschap_name='isPtz', column_eigenschap_name='isPtz')]
+        eigenschap_infos.append(EigenschapInfo(eminfra_eigenschap_name='heeftAid', column_eigenschap_name='heeftAid'))
+        voedingsrelatie = RelatieInfo(uri=RelatieType.VOEDT,
+                                      bronAsset_uuid='Voedingsrelaties_Voedingsrelatie bronAssetId.identificator',
+                                      doelAsset_uuid=None)
+        bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid=None,
+                                          doelAsset_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
+        bypass.process_assets(df=bypass.df_assets_cameras, asset_info=asset_info, parent_asset_info=parent_asset_info,
+                              eigenschap_infos=eigenschap_infos, relatie_infos=[voedingsrelatie, bevestigingsrelatie])
+
+    def process_RSS_borden(self):
+        logging.info('Aanmaken RSSBord')
+        asset_info = AssetInfo(asset_type=AssetType.RSSBORD,
+                               column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#RSSBord',
+                               column_name='DVM-Bord_Object assetId.identificator', column_uuid='DVM-Bord_UUID Object')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
+                                            column_parent_name='HoortBij Relatie voor RSS-groep_HoortBij doelAssetId.identificator',
+                                            column_parent_uuid='HoortBij Relatie voor RSS-groep_UUID HoortBij doelAsset')
+        eigenschap_info = EigenschapInfo(eminfra_eigenschap_name='merk', column_eigenschap_name='DVM-Bord_merk')
+        hoortbijrelatie = RelatieInfo(uri=RelatieType.HOORTBIJ, bronAsset_uuid=None,
+                                      doelAsset_uuid='HoortBij Relatie voor RSS-groep_UUID HoortBij doelAsset')
+        bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid=None,
+                                          doelAsset_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
+        voedingsrelatie = RelatieInfo(uri=RelatieType.VOEDT,
+                                      bronAsset_uuid='Voedingsrelaties_Voedingsrelatie bronAssetId.identificator',
+                                      doelAsset_uuid=None)
+        bypass.process_assets(df=bypass.df_assets_RSS_borden, asset_info=asset_info,
+                              parent_asset_info=parent_asset_info, eigenschap_infos=[eigenschap_info],
+                              relatie_infos=[hoortbijrelatie, bevestigingsrelatie, voedingsrelatie])
+
+    def process_RVMS_borden(self):
+        logging.info('Aanmaken RVMS-Bord')
+        asset_info = AssetInfo(asset_type=AssetType.RSSBORD,
+                               column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#RVMSBord',
+                               column_name='DVM-Bord_Object assetId.identificator', column_uuid='DVM-Bord_UUID Object')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
+                                            column_parent_name='HoortBij Relatie_HoortBij doelAssetId.identificator',
+                                            column_parent_uuid='HoortBij Relatie_UUID HoortBij doelAsset')
+        eigenschap_info = EigenschapInfo(eminfra_eigenschap_name='merk', column_eigenschap_name='DVM-Bord_merk')
+        hoortbijrelatie = RelatieInfo(uri=RelatieType.HOORTBIJ, bronAsset_uuid=None,
+                                      doelAsset_uuid='HoortBij Relatie_UUID HoortBij doelAsset')
+        bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid=None,
+                                          doelAsset_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
+        voedingsrelatie = RelatieInfo(uri=RelatieType.VOEDT,
+                                      bronAsset_uuid='Voedingsrelaties_Voedingsrelatie bronAssetId.identificator',
+                                      doelAsset_uuid=None)
+        bypass.process_assets(df=bypass.df_assets_RVMS_borden, asset_info=asset_info,
+                              parent_asset_info=parent_asset_info, eigenschap_infos=[eigenschap_info],
+                              relatie_infos=[hoortbijrelatie, bevestigingsrelatie, voedingsrelatie])
+
+    def process_seinbruggen(self):
+        logging.info('Aanmaken Seinbrug DVM')
+        asset_info = AssetInfo(asset_type=AssetType.SEINBRUGDVM, column_typeURI='Seinbrug_Object typeURI',
+                               column_uuid='Seinbrug_UUID Object', column_name='Seinbrug_Object assetId.identificator')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
+        eigenschap_info = EigenschapInfo(eminfra_eigenschap_name='vrije hoogte',
+                                         column_eigenschap_name='Seinbrug_vrijeHoogte')
+        bypass.process_assets(df=bypass.df_assets_portieken_seinbruggen, asset_info=asset_info,
+                              parent_asset_info=parent_asset_info, eigenschap_infos=[eigenschap_info])
 
     def import_data_as_dataframe(self, filepath: Path, sheet_name: str = None):
         """Import data as a dataframe
@@ -1699,12 +961,6 @@ class BypassProcessor:
 
             relatie_uuid = self.eminfra_client.create_assetrelatie(relatieType_uuid=relatieType_id, bronAsset_uuid=bronAsset_uuid, doelAsset_uuid=doelAsset_uuid)
             return relatie_uuid
-            # self.eminfra_client.add_relatie(assetId=bronAsset_uuid, kenmerkTypeId=kenmerkType_id, relatieTypeId=relatieType_id, doel_assetId=doelAsset_uuid)
-            # relatie = next(self.eminfra_client.search_relaties(assetId=bronAsset_uuid, kenmerkTypeId=kenmerkType_id, relatieTypeId=relatieType_id), None)
-            # if relatie:
-            #     return relatie.uuid
-            # else:
-            #     return None
 
     def _construct_installatie_naam_kast(self, naam: str) -> str:
         """
@@ -1732,8 +988,10 @@ class BypassProcessor:
     def _construct_installatie_naam_hscabine(self, naam: str) -> str:
         if naam.endswith('.HSCabine'):
             installatie_naam = naam[:-9]
+        elif naam.endswith('.HSCab'):
+            installatie_naam = naam[:-6]
         else:
-            raise ValueError(f"De naam van de HSCabine ({naam}) eindigt niet op '.HSCabine'")
+            raise ValueError(f"De naam van de HSCabine ({naam}) eindigt niet op '.HSCabine' of '.HSCab'")
         return installatie_naam
 
     def _construct_installatie_naam_hoogspanningsdeel(self, naam: str) -> str:
@@ -1820,6 +1078,8 @@ class BypassProcessor:
         elif asset_type.name == 'WVGROEP':
             installatie_naam = self._construct_installatie_naam_wegverlichtingsgroep(naam=naam)
         elif asset_type.name == 'IP':
+            installatie_naam = self._construct_installatie_naam_switch(naam=naam)
+        elif asset_type.name == 'SWITCH':
             installatie_naam = self._construct_installatie_naam_switch(naam=naam)
         elif asset_type.name == 'TT':
             installatie_naam = self._construct_installatie_naam_teletransmissieverbinding(naam=naam)
@@ -1982,220 +1242,212 @@ class BypassProcessor:
             logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW.value}"')
             self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
 
+    def process_mivlve_switch(self):
+        logging.info('Aanmaken Switch')
+        asset_info = AssetInfo(asset_type=AssetType.IP, column_uuid='Netwerkgegevens_UUID Switch',
+                               column_name='Netwerkgegevens_Switch assetId.identificator',
+                               column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#IP')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET)
+        bypass.process_assets(df=bypass.df_assets_mivlve, asset_info=asset_info, parent_asset_info=parent_asset_info)
+
+    def process_mivlve_poort(self):
+        logging.info('Aanmaken Poort')
+        asset_info = AssetInfo(asset_type=AssetType.POORT, column_uuid='Netwerkgegevens_UUID Poort',
+                               column_name='Netwerkgegevens_assetId.identificator Poort',
+                               column_typeURI='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Netwerkpoort')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
+                                            column_parent_uuid=None,
+                                            column_parent_name=None)
+        sturingrelatie = RelatieInfo(uri=RelatieType.STURING, bronAsset_uuid='Netwerkgegevens_UUID Poort',
+                                     doelAsset_uuid='LVE_UUID Object')
+        bypass.process_assets(df=bypass.df_assets_mivlve, asset_info=asset_info, parent_asset_info=parent_asset_info,
+                              relatie_infos=[sturingrelatie])
+
+    def process_RSS_groep(self):
+        logging.info('Aanmaken RSS-Groep')
+        asset_info = AssetInfo(asset_type=AssetType.RSSGROEP,
+                               column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#RSSGroep',
+                               column_name='HoortBij Relatie voor RSS-groep_HoortBij doelAssetId.identificator',
+                               column_uuid='HoortBij Relatie voor RSS-groep_UUID HoortBij doelAsset')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
+                                            column_parent_name='Bevestigingsrelatie_Bevestigingsrelatie doelAssetId.identificator',
+                                            column_parent_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
+        bypass.process_assets(df=bypass.df_assets_RSS_borden, asset_info=asset_info,
+                              parent_asset_info=parent_asset_info)  # geen eigenschappen, noch relaties voor de RSS-groep
+
+    def process_RSS_switch(self):
+        logging.info('Aanmaken Switch')
+        asset_info = AssetInfo(asset_type=AssetType.SWITCH, column_uuid='Netwerkgegevens_UUID switch', column_name='Netwerkgegevens_Aansturende switch (naam AWV)',
+                               column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#Switch')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
+                                            column_parent_uuid='DVM-Bord_UUID Object',
+                                            column_parent_name='DVM-bord_Object assetId.identificator')
+        bypass.process_assets(df=bypass.df_assets_RSS_borden, asset_info=asset_info,
+                              parent_asset_info=parent_asset_info)
+
+    def process_RSS_poort(self):
+        logging.info('Aanmaken Poort')
+        asset_info = AssetInfo(asset_type=AssetType.POORT, column_uuid='Netwerkgegevens_UUID Poort',
+                               column_name='Netwerkgegevens_Poort',
+                               column_typeURI='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Netwerkpoort')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
+                                            column_parent_uuid='DVM-Bord_UUID Object',
+                                            column_parent_name='DVM-bord_Object assetId.identificator')
+        sturingrelatie = RelatieInfo(uri=RelatieType.STURING, bronAsset_uuid='Netwerkgegevens_UUID Poort',
+                                     doelAsset_uuid='DVM-Bord_UUID Object')
+        bypass.process_assets(df=bypass.df_assets_RSS_borden, asset_info=asset_info,
+                              parent_asset_info=parent_asset_info, relatie_infos=[sturingrelatie])
+
+    def process_RVMS_groep(self):
+        logging.info('Aanmaken RVMS-Groep')
+        asset_info = AssetInfo(asset_type=AssetType.RVMSGROEP,
+                               column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#RVMSGroep',
+                               column_name='HoortBij Relatie_HoortBij doelAssetId.identificator',
+                               column_uuid='HoortBij Relatie_UUID HoortBij doelAsset')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
+                                            column_parent_name='Bevestigingsrelatie_Bevestigingsrelatie doelAssetId.identificator',
+                                            column_parent_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
+        bypass.process_assets(df=bypass.df_assets_RVMS_borden, asset_info=asset_info,
+                              parent_asset_info=parent_asset_info)  # geen eigenschappen, noch relaties voor de RSS-groep
+
+    def process_RVMS_Switch(self):
+        logging.info('Aanmaken Switch')
+        asset_info = AssetInfo(asset_type=AssetType.SWITCH, column_uuid='Netwerkgegevens_UUID switch', column_name='Netwerkgegevens_Aansturende switch (naam AWV)',
+                               column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#Switch')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
+                                            column_parent_uuid='DVM-Bord_UUID Object',
+                                            column_parent_name='DVM-bord_Object assetId.identificator')
+        bypass.process_assets(df=bypass.df_assets_RVMS_borden, asset_info=asset_info,
+                              parent_asset_info=parent_asset_info)
+
+    def process_RVMS_Poort(self):
+        logging.info('Aanmaken Poort')
+        asset_info = AssetInfo(asset_type=AssetType.POORT, column_uuid='Netwerkgegevens_UUID Poort',
+                               column_name='Netwerkgegevens_Poort',
+                               column_typeURI='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Netwerkpoort')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
+                                            column_parent_uuid='DVM-Bord_UUID Object',
+                                            column_parent_name='DVM-bord_Object assetId.identificator')
+        sturingrelatie = RelatieInfo(uri=RelatieType.STURING, bronAsset_uuid='Netwerkgegevens_UUID Poort',
+                                     doelAsset_uuid='DVM-Bord_UUID Object')
+        bypass.process_assets(df=bypass.df_assets_RVMS_borden, asset_info=asset_info,
+                              parent_asset_info=parent_asset_info,
+                              relatie_infos=[sturingrelatie])
+
+    def process_galgpaal(self):
+        logging.info('Aanmaken Galgpaal')
+        asset_info = AssetInfo(asset_type=AssetType.GALGPAAL, column_typeURI='Galgpaal_Object typeURI',
+                               column_uuid='Galgpaal_UUID Object', column_name='Galgpaal_Object assetId.identificator')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
+        bypass.process_assets(df=bypass.df_assets_galgpaal, asset_info=asset_info, parent_asset_info=parent_asset_info)
+
+    def process_camera_groep(self):
+        logging.info('Aanmaken Camera-Groep')
+        logging.debug('1 cameragroep per camera aanmaken')
+        asset_info = AssetInfo(asset_type=AssetType.CAMGROEP,
+                               column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#CamGroep',
+                               column_name='Camera_Object assetId.identificator', column_uuid='Camera_UUID Object')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT,
+                                            column_parent_name='Bevestigingsrelatie_Bevestigingsrelatie doelAssetId.identificator',
+                                            column_parent_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
+        bypass.process_assets(df=bypass.df_assets_cameras, asset_info=asset_info,
+                              parent_asset_info=parent_asset_info)  # geen eigenschappen, noch relaties voor de RSS-groep
+
+    def process_cameras_switch(self):
+        logging.info('Aanmaken Switch')
+        asset_info = AssetInfo(asset_type=AssetType.SWITCH, column_uuid='Netwerkgegevens_UUID Switch',
+                               column_name='Netwerkgegevens_Switch assetId.identificator',
+                               column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#Switch')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
+                                            column_parent_uuid='Camera_UUID Object',
+                                            column_parent_name='Camera_Object assetId.identificator')
+        bypass.process_assets(df=bypass.df_assets_cameras, asset_info=asset_info, parent_asset_info=parent_asset_info)
+
+    def process_cameras_poort(self):
+        logging.info('Aanmaken Poort')
+        asset_info = AssetInfo(asset_type=AssetType.POORT, column_uuid='Netwerkgegevens_UUID Poort',
+                               column_name='Netwerkgegevens_assetId.identificator Poort',
+                               column_typeURI='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Netwerkpoort')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
+                                            column_parent_uuid='Camera_UUID Object',
+                                            column_parent_name='Camera_Object assetId.identificator')
+        sturingrelatie = RelatieInfo(uri=RelatieType.STURING, bronAsset_uuid='Netwerkgegevens_UUID Poort',
+                                     doelAsset_uuid='Camera_UUID Object')
+        bypass.process_assets(df=bypass.df_assets_cameras, asset_info=asset_info, parent_asset_info=parent_asset_info,
+                              relatie_infos=[sturingrelatie])
+
+    def process_voeding_IP(self):
+        logging.info('Aanmaken IP')
+        asset_info = AssetInfo(asset_type=AssetType.IP, column_name='Switch gegevens_Object assetId.identificator',
+                               column_uuid='Switch gegevens_UUID switch',
+                               column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#IP')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT,
+                                            column_parent_uuid=None,
+                                            column_parent_name=None)  # Kan de juiste parent worden afgeleid?
+        bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info)
+
 
 if __name__ == '__main__':
     bypass = BypassProcessor(
         environment=Environment.TEI
         , input_path_componentenlijst=Path(
-            __file__).resolve().parent / 'data' / 'input' / 'Componentenlijst_20250507_TEI.xlsx'
+            __file__).resolve().parent / 'data' / 'input' / 'Componentenlijst_20250522_TEI.xlsx'
         , output_excel_path=Path(
             __file__).resolve().parent / 'data' / 'output' / f'lantis_bypass_{datetime.now().strftime(format="%Y-%m-%d")}.xlsx'
     )
 
     bypass.import_data()
-
-    # todo de code verder in functies wrappen om de leesbaarheid te verbeteren.
+    # todo volledige code testen
     logging.info('Aanmaken Boomstructuur voor installaties onder Wegkantkast')
     logging.info('Aanmaken installaties')
-    bypass.process_installatie(df=bypass.df_assets_wegkantkasten, column_name='Wegkantkast_Object assetId.identificator', asset_type=AssetType.WEGKANTKAST)
+    # bypass.process_installatie(df=bypass.df_assets_wegkantkasten
+    #                            , column_name='Wegkantkast_Object assetId.identificator'
+    #                            , asset_type=AssetType.WEGKANTKAST)
+    #
+    # bypass.process_wegkantkasten()
+    # bypass.process_wegkantkasten_lsdeel()
+    # bypass.process_wegkantkasten_ip()
+    # bypass.process_wegkantkasten_teletransmissieverbinding()
+    #
+    # bypass.process_mivlve()
+    # bypass.process_mivlve_switch()
+    # # bypass.process_mivlve_poort() # temporarily disabled
+    # bypass.process_mivmeetpunten()
+    #
+    # bypass.process_seinbruggen()
+    #
+    # bypass.process_RSS_groep()
+    # bypass.process_RSS_borden()
+    # bypass.process_RSS_switch()
+    # bypass.process_RSS_poort()
+    #
+    # bypass.process_RVMS_groep()
+    # bypass.process_RVMS_borden()
+    # bypass.process_RVMS_Switch()
+    # bypass.process_RVMS_Poort()
+    #
+    # bypass.process_galgpaal()
+    #
+    # bypass.process_camera_groep()
+    # bypass.process_cameras()
+    # bypass.process_cameras_switch()
+    # bypass.process_cameras_poort()
+    #
+    # logging.info('Boomstructuur van de Hoogspanningscabine')
+    # logging.info('Aanmaken Boomstructuur voor installaties onder Wegkantkast')
+    # logging.info('Aanmaken installaties')
+    # bypass.process_installatie(df=bypass.df_assets_voeding, column_name='HSCabine_Object assetId.identificator', asset_type=AssetType.HSCABINE)
+    #
+    # logging.info('Aanmaken Hoogspannings Cabine')
+    # bypass.process_voeding_HS_cabine()
+    # bypass.process_voeding_hoogspanningsdeel()
+    # bypass.process_voeding_laagspanningsdeel()
+    #
+    # bypass.process_voeding_hoogspanning()
+    bypass.process_voeding_DNBHoogspanning()
+    bypass.process_voeding_energiemeter_DNB()
 
-    logging.info('Aanmaken Wegkantkasten')
-    asset_info = AssetInfo(asset_type=AssetType.WEGKANTKAST, column_typeURI='Wegkantkast_Object typeURI', column_uuid='Wegkantkast_UUID Object', column_name='Wegkantkast_Object assetId.identificator')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
-    bypass.process_assets(df=bypass.df_assets_wegkantkasten, asset_info=asset_info, parent_asset_info=parent_asset_info)
-
-    logging.info('Aanmaken LSDeel')
-    asset_info = AssetInfo(asset_type=AssetType.LSDEEL, column_uuid='Laagspanningsdeel_UUID LSDeel', column_name='Laagspanningsdeel_Naam LSDeel', column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#LSDeel')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET, column_parent_uuid='Wegkantkast_UUID Object', column_parent_name='Wegkantkast_Object assetId.identificator')
-    bevestigingsrelatie = RelatieInfo(bronAsset_uuid=None
-                                      , doelAsset_uuid='Wegkantkast_UUID Object'
-                                      , uri=RelatieType.BEVESTIGING)
-    voedingsrelatie = RelatieInfo(bronAsset_uuid='Voedingsrelatie (oorsprong)_UUID Voedingsrelatie bronAsset'
-                                  , doelAsset_uuid='Laagspanningsdeel_UUID LSDeel'
-                                  , uri=RelatieType.VOEDT)
-    bypass.process_assets(df=bypass.df_assets_wegkantkasten
-                          , asset_info=asset_info
-                          , parent_asset_info=parent_asset_info
-                          , relatie_infos=[bevestigingsrelatie, voedingsrelatie])
-
-    logging.info('Aanmaken IP')
-    asset_info = AssetInfo(asset_type=AssetType.IP, column_uuid='Switch gegevens_UUID Switch', column_name='Switch gegevens_Object assetId.identificator', column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#IP')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET, column_parent_uuid='Wegkantkast_UUID Object')
-    bevestigingsrelatie = RelatieInfo(uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging', bronAsset_uuid=None, doelAsset_uuid='Wegkantkast_UUID Object')
-    bypass.process_assets(df=bypass.df_assets_wegkantkasten, asset_info=asset_info, parent_asset_info=parent_asset_info, relatie_infos=[bevestigingsrelatie])
-
-    logging.info('Aanmaken Teletransmissieverbinding (TT)')
-    asset_info = AssetInfo(asset_type=AssetType.TT, column_uuid='Switch gegevens_UUID Teletransmissieverbinding', column_name='Switch gegevens_Naam Teletransmissieverbinding', column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#TT')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET, column_parent_uuid='Wegkantkast_UUID Object')
-    bevestigingsrelatie = RelatieInfo(uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging', bronAsset_uuid=None, doelAsset_uuid='Wegkantkast_UUID Object')
-    bypass.process_assets(df=bypass.df_assets_wegkantkasten, asset_info=asset_info, parent_asset_info=parent_asset_info, relatie_infos=[bevestigingsrelatie])
-
-    logging.info('Aanmaken Meetlussen MIVLVE')
-    asset_info = AssetInfo(asset_type=AssetType.MIVLVE, column_uuid='LVE_UUID Object', column_name='LVE_Object assetId.identificator', column_typeURI='LVE_Object typeURI')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET, column_parent_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset', column_parent_name='Bevestigingsrelatie_Bevestigingsrelatie doelAssetId.identificator')
-    voedingsrelatie = RelatieInfo(uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt',
-                                      bronAsset_uuid='Voedingsrelaties_UUID Voedingsrelatie bronAsset', doelAsset_uuid=None)
-    bevestigingsrelatie = RelatieInfo(uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging', bronAsset_uuid=None, doelAsset_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
-    bypass.process_assets(df=bypass.df_assets_mivlve, asset_info=asset_info, parent_asset_info=parent_asset_info, relatie_infos=[voedingsrelatie, bevestigingsrelatie])
-    # bypass.process_mivlve(df=bypass.df_assets_mivlve)
-
-    logging.info('Aanmaken Switch')
-    asset_info = AssetInfo(asset_type=AssetType.IP, column_uuid='Netwerkgegevens_UUID Switch', column_name='Netwerkgegevens_Switch assetId.identificator', column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#IP')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET, column_parent_uuid='LVE_UUID Object', column_parent_name='LVE_Object assetId.identificator')
-    bypass.process_assets(df=bypass.df_assets_mivlve, asset_info=asset_info, parent_asset_info=parent_asset_info)
-
-    logging.info('Aanmaken Poort')
-    asset_info = AssetInfo(asset_type=AssetType.POORT, column_uuid='Netwerkgegevens_UUID Poort', column_name='Netwerkgegevens_assetId.identificator Poort', column_typeURI='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Netwerkpoort')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET, column_parent_uuid='LVE_UUID Object', column_parent_name='LVE_Object assetId.identificator')
-    sturingrelatie = RelatieInfo(uri=RelatieType.STURING, bronAsset_uuid='Netwerkgegevens_UUID Poort', doelAsset_uuid='LVE_UUID Object')
-    bypass.process_assets(df=bypass.df_assets_mivlve, asset_info=asset_info, parent_asset_info=parent_asset_info, relatie_infos=[sturingrelatie])
-
-    logging.info('Aanmaken Meetpunten')
-    asset_info = AssetInfo(asset_type=AssetType.MPT, column_uuid='Meetpunt_UUID Object', column_name='Meetpunt_Object assetId.identificator', column_typeURI='Meetpunt_Object typeURI')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET, column_parent_uuid='Sturingsrelaties_UUID Sturingsrelatie bronAsset', column_parent_name='Sturingsrelatie_Sturingsrelatie bron AssetId.identificator')
-    eigenschap_infos = [
-        EigenschapInfo(eminfra_eigenschap_name='aansluiting', column_eigenschap_name='Meetpunt_Aansluiting')
-        , EigenschapInfo(eminfra_eigenschap_name='uitslijprichting', column_eigenschap_name='Meetpunt_Uitslijprichting')
-        , EigenschapInfo(eminfra_eigenschap_name='wegdek', column_eigenschap_name='Meetpunt_Wegdek')
-    ]
-    sturingsrelatie = RelatieInfo(uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Sturing',
-                                      bronAsset_uuid='Sturingsrelaties_UUID Sturingsrelatie bronAsset', doelAsset_uuid=None)
-    bypass.process_assets(df=bypass.df_assets_mivlve, asset_info=asset_info, parent_asset_info=parent_asset_info, eigenschap_infos=eigenschap_infos, relatie_infos=[sturingsrelatie])
-    # bypass.process_mivmeetpunten(df=bypass.df_assets_mivmeetpunten)
-
-    logging.info('Aanmaken Seinbrug DVM')
-    asset_info = AssetInfo(asset_type=AssetType.SEINBRUGDVM, column_typeURI='Seinbrug_Object typeURI', column_uuid='Seinbrug_UUID Object', column_name='Seinbrug_Object assetId.identificator')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
-    eigenschap_info = EigenschapInfo(eminfra_eigenschap_name='vrije hoogte', column_eigenschap_name='Seinbrug_vrijeHoogte')
-    bypass.process_assets(df=bypass.df_assets_portieken_seinbruggen, asset_info=asset_info, parent_asset_info=parent_asset_info, eigenschap_infos=[eigenschap_info])
-
-    logging.info('Aanmaken RSS-Groep')
-    asset_info = AssetInfo(asset_type=AssetType.RSSGROEP, column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#RSSGroep', column_name='HoortBij Relatie voor RSS-groep_HoortBij doelAssetId.identificator', column_uuid='HoortBij Relatie voor RSS-groep_UUID HoortBij doelAsset')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET, column_parent_name='Bevestigingsrelatie_Bevestigingsrelatie doelAssetId.identificator', column_parent_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
-    bypass.process_assets(df=bypass.df_assets_RSS_borden, asset_info=asset_info, parent_asset_info=parent_asset_info) # geen eigenschappen, noch relaties voor de RSS-groep
-
-    logging.info('Aanmaken RSSBord')
-    asset_info = AssetInfo(asset_type=AssetType.RSSBORD, column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#RSSBord', column_name='DVM-Bord_Object assetId.identificator', column_uuid='DVM-Bord_UUID Object')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET, column_parent_name='HoortBij Relatie voor RSS-groep_HoortBij doelAssetId.identificator', column_parent_uuid='HoortBij Relatie voor RSS-groep_UUID HoortBij doelAsset')
-    eigenschap_info = EigenschapInfo(eminfra_eigenschap_name='merk', column_eigenschap_name='DVM-Bord_merk')
-    hoortbijrelatie = RelatieInfo(uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HoortBij', bronAsset_uuid=None, doelAsset_uuid='HoortBij Relatie voor RSS-groep_UUID HoortBij doelAsset')
-    bevestigingsrelatie = RelatieInfo(uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging', bronAsset_uuid=None, doelAsset_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
-    voedingsrelatie = RelatieInfo(uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt', bronAsset_uuid='Voedingsrelaties_Voedingsrelatie bronAssetId.identificator', doelAsset_uuid=None)
-    bypass.process_assets(df=bypass.df_assets_RSS_borden, asset_info=asset_info, parent_asset_info=parent_asset_info, eigenschap_infos=[eigenschap_info], relatie_infos=[hoortbijrelatie, bevestigingsrelatie, voedingsrelatie])
-
-    # todo hier de Netwerkgegevens aanvullen
-
-    logging.info('Aanmaken RVMS-Groep')
-    asset_info = AssetInfo(asset_type=AssetType.RVMSGROEP, column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#RVMSGroep', column_name='HoortBij Relatie_HoortBij doelAssetId.identificator', column_uuid='HoortBij Relatie_UUID HoortBij doelAsset')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET, column_parent_name='Bevestigingsrelatie_Bevestigingsrelatie doelAssetId.identificator', column_parent_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
-    bypass.process_assets(df=bypass.df_assets_RVMS_borden, asset_info=asset_info, parent_asset_info=parent_asset_info) # geen eigenschappen, noch relaties voor de RSS-groep
-
-    logging.info('Aanmaken RVMS-Bord')
-    asset_info = AssetInfo(asset_type=AssetType.RSSBORD, column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#RVMSBord', column_name='DVM-Bord_Object assetId.identificator', column_uuid='DVM-Bord_UUID Object')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET, column_parent_name='HoortBij Relatie_HoortBij doelAssetId.identificator', column_parent_uuid='HoortBij Relatie_UUID HoortBij doelAsset')
-    eigenschap_info = EigenschapInfo(eminfra_eigenschap_name='merk', column_eigenschap_name='DVM-Bord_merk')
-    hoortbijrelatie = RelatieInfo(uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HoortBij', bronAsset_uuid=None, doelAsset_uuid='HoortBij Relatie_UUID HoortBij doelAsset')
-    bevestigingsrelatie = RelatieInfo(uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging', bronAsset_uuid=None, doelAsset_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
-    voedingsrelatie = RelatieInfo(uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt', bronAsset_uuid='Voedingsrelaties_Voedingsrelatie bronAssetId.identificator', doelAsset_uuid=None)
-    bypass.process_assets(df=bypass.df_assets_RVMS_borden, asset_info=asset_info, parent_asset_info=parent_asset_info, eigenschap_infos=[eigenschap_info], relatie_infos=[hoortbijrelatie, bevestigingsrelatie, voedingsrelatie])
-
-    logging.info('Aanmaken Galgpaal')
-    asset_info = AssetInfo(asset_type=AssetType.GALGPAAL, column_typeURI='Galgpaal_Object typeURI', column_uuid='Galgpaal_UUID Object', column_name='Galgpaal_Object assetId.identificator')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
-    bypass.process_assets(df=bypass.df_assets_galgpaal, asset_info=asset_info, parent_asset_info=parent_asset_info)
-
-
-    logging.info('Aanmaken Camera-Groep')
-    logging.debug('1 cameragroep per camera aanmaken')
-    asset_info = AssetInfo(asset_type=AssetType.CAMGROEP, column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#CamGroep', column_name='Camera_Object assetId.identificator', column_uuid='Camera_UUID Object')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT, column_parent_name='Bevestigingsrelatie_Bevestigingsrelatie doelAssetId.identificator', column_parent_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
-    bypass.process_assets(df=bypass.df_assets_cameras, asset_info=asset_info, parent_asset_info=parent_asset_info) # geen eigenschappen, noch relaties voor de RSS-groep
-
-    logging.info('Aanmaken Camera')
-    logging.debug('Camgroep onder 1 installatie plaatsen')
-    asset_info = AssetInfo(asset_type=AssetType.CAMERA, column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#Camera', column_name='Camera_Object assetId.identificator', column_uuid='Camera_UUID Object')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET, column_parent_name='Bevestigingsrelatie_Bevestigingsrelatie doelAssetId.identificator', column_parent_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
-    eigenschap_1 = EigenschapInfo(eminfra_eigenschap_name='isPtz', column_eigenschap_name='isPtz')
-    eigenschap_2 = EigenschapInfo(eminfra_eigenschap_name='heeftAid', column_eigenschap_name='heeftAid')
-    voedingsrelatie = RelatieInfo(uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt', bronAsset_uuid='Voedingsrelaties_Voedingsrelatie bronAssetId.identificator', doelAsset_uuid=None)
-    bevestigingsrelatie = RelatieInfo(uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging', bronAsset_uuid=None, doelAsset_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
-    bypass.process_assets(df=bypass.df_assets_cameras, asset_info=asset_info, parent_asset_info=parent_asset_info, eigenschap_infos=[eigenschap_1, eigenschap_2], relatie_infos=[voedingsrelatie, bevestigingsrelatie])
-
-    logging.info('Aanmaken Switch')
-    asset_info = AssetInfo(asset_type=AssetType.SWITCH, column_uuid='Netwerkgegevens_UUID Switch', column_name='Netwerkgegevens_Switch assetId.identificator', column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#Switch')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET, column_parent_uuid='Camera_UUID Object', column_parent_name='Camera_Object assetId.identificator')
-    bypass.process_assets(df=bypass.df_assets_cameras, asset_info=asset_info, parent_asset_info=parent_asset_info)
-
-    logging.info('Aanmaken Poort')
-    asset_info = AssetInfo(asset_type=AssetType.POORT, column_uuid='Netwerkgegevens_UUID Poort', column_name='Netwerkgegevens_assetId.identificator Poort', column_typeURI='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Netwerkpoort')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET, column_parent_uuid='Camera_UUID Object', column_parent_name='Camera_Object assetId.identificator')
-    sturingrelatie = RelatieInfo(uri=RelatieType.STURING, bronAsset_uuid='Netwerkgegevens_UUID Poort', doelAsset_uuid='Camera_UUID Object')
-    bypass.process_assets(df=bypass.df_assets_cameras, asset_info=asset_info, parent_asset_info=parent_asset_info, relatie_infos=[sturingrelatie])
-
-
-    # Boomstructuur van de Hoogspanningscabine
-    logging.info('Aanmaken Boomstructuur voor installaties onder Wegkantkast')
-    logging.info('Aanmaken installaties')
-    bypass.process_installatie(df=bypass.df_assets_voeding, column_name='HSCabine_Object assetId.identificator', asset_type=AssetType.HSCABINE)
-    logging.info('Aanmaken Hoogspannings Cabine')
-
-    logging.info('Aanmaken HSCabine')
-    asset_info = AssetInfo(asset_type=AssetType.HSCABINE, column_name='HSCabine_Object assetId.identificator', column_uuid='HSCabine_UUID Object', column_typeURI='HSCabine_Object typeURI')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT, column_parent_uuid=None, column_parent_name=None)
-    bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info)
-
-    logging.info('Aanmaken HSDeel')
-    asset_info = AssetInfo(asset_type=AssetType.HSDEEL, column_name='Hoogspanningsdeel_Naam HSDeel', column_uuid='Hoogspanningsdeel_UUID HSDeel', column_typeURI='Hoogspanningsdeel_HSDeel lgc:installatie')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET, column_parent_uuid='HSCabine_UUID Object', column_parent_name='HSCabine_Object assetId.identificator')
-    bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid=None, doelAsset_uuid='HSCabine_UUID Object')
-    bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info, relatie_infos=[bevestigingsrelatie])
-
-    logging.info('Aanmaken LSDeel')
-    asset_info = AssetInfo(asset_type=AssetType.LSDEEL, column_name='Laagspanningsdeel_Naam LSDeel', column_uuid='Laagspanningsdeel_UUID LSDeel', column_typeURI='Laagspanningsdeel_LSDeel lgc:installatie')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET, column_parent_uuid='HSCabine_UUID Object', column_parent_name='HSCabine_Object assetId.identificator')
-    bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid=None, doelAsset_uuid='HSCabine_UUID Object')
-    voedingsrelatie = RelatieInfo(uri=RelatieType.VOEDT, bronAsset_uuid='Hoogspanningsdeel_UUID HSDeel', doelAsset_uuid=None)
-    bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info, relatie_infos=[bevestigingsrelatie, voedingsrelatie])
-
-    logging.info('Aanmaken Hoogspanning')
-    asset_info = AssetInfo(asset_type=AssetType.HS, column_name='Hoogspanning_Naam HS', column_uuid='Hoogspanning_UUID HS', column_typeURI='Hoogspanning_HS lgc:installatie')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET, column_parent_uuid='HSCabine_UUID Object', column_parent_name='HSCabine_Object assetId.identificator')
-    bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid=None, doelAsset_uuid='HSCabine_UUID Object')
-    bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info, relatie_infos=[bevestigingsrelatie])
-
-    logging.info('Aanmaken DNBHoogspanning')
-    asset_info = AssetInfo(asset_type=AssetType.DNBHOOGSPANNING, column_name='DNBHoogspanning_Object assetId.identificator', column_uuid='DNBHoogspanning_UUID Object', column_typeURI='DNBHoogspanning_Object typeURI')
-    eigenschappen = [EigenschapInfo(eminfra_eigenschap_name='eanNummer', column_eigenschap_name='DNBHoogspanning_eanNummer')]
-    eigenschappen.append(EigenschapInfo(eminfra_eigenschap_name='referentieDNB', column_eigenschap_name='DNBHoogspanning_referentieDNB'))
-    hoortbijrelatie = RelatieInfo(uri=RelatieType.HOORTBIJ, bronAsset_uuid=None, doelAsset_uuid='Hoogspanning_UUID HS') # Hoortbij relatie van OTL naar Legacy-asset
-    bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, eigenschap_infos=eigenschappen, relatie_infos=[hoortbijrelatie])
-
-    logging.info('Aanmaken EnergiemeterDNB')
-    asset_info = AssetInfo(asset_type=AssetType.ENERGIEMETERDNB, column_name='EnergiemeterDNB_Object assetId.identificator', column_uuid='EnergiemeterDNB_UUID Object', column_typeURI='EnergiemeterDNB_Object typeURI')
-    eigenschappen = [EigenschapInfo(eminfra_eigenschap_name='meternummer', column_eigenschap_name='meternummer')]
-    hoortbijrelatie = RelatieInfo(uri=RelatieType.HOORTBIJ, bronAsset_uuid=None, doelAsset_uuid='Hoogspanning_UUID HS') # Hoortbij relatie van OTL naar Legacy-asset
-    bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, eigenschap_infos=eigenschappen, relatie_infos=[hoortbijrelatie])
-
-    logging.info('Aanmaken SegmentController')
-    asset_info = AssetInfo(asset_type=AssetType.SEGC, column_name='Segmentcontroller_Naam SC', column_uuid='Segmentcontroller_UUID SC', column_typeURI='Segmentcontroller_SC TypeURI')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT, column_parent_uuid=None, column_parent_name=None)
-    bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info)
-
-    logging.info('Aanmaken Wegverlichtingsgroep')
-    asset_info = AssetInfo(asset_type=AssetType.WVGROEP, column_name='Wegverlichtingsgroep_Naam WV', column_uuid='Wegverlichtingsgroep_UUID WV', column_typeURI='Wegverlichtingsgroep_WV lgc:installatie')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT, column_parent_uuid=None, column_parent_name=None)
-    bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info)
-
-    logging.info('Aanmaken IP')
-    asset_info = AssetInfo(asset_type=AssetType.IP, column_name='Switch gegevens_Object assetId.identificator',
-                           column_uuid='Switch gegevens_UUID switch',
-                           column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#IP')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT,
-                                        column_parent_uuid=None, column_parent_name=None) # Kan de juiste parent worden afgeleid?
-    bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info)
-
-    logging.info('Aanmaken WVLichtmast')
-    asset_info = AssetInfo(asset_type=AssetType.WVLICHTMAST, column_name='WVLichtmast_Object assetId.identificator', column_uuid='WVLichtmast_UUID Object', column_typeURI='WVLichtmast_Object typeURI')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT, column_parent_uuid=None, column_parent_name=None)
-    voedingsrelatie = RelatieInfo(uri=RelatieType.VOEDT, bronAsset_uuid='Voedingsrelaties_UUID Voedingsrelatie bronAsset', doelAsset_uuid=None)
-    bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info)
+    bypass.process_voeding_segmentcontroller()
+    bypass.process_voeding_wegverlichtingsgroep()
+    bypass.process_voeding_IP()
+    bypass.process_voeding_wegverlichtingsmast()
