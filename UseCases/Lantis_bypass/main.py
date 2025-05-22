@@ -17,6 +17,9 @@ class AssetType(Enum):
     AB = 'Afstandsbewaking'
     CAMERA = 'Camera'
     CAMGROEP = 'CAMGroep'
+    DNBHOOGSPANNING = 'DNBHOOGSPANNING'
+    ENERGIEMETERDNB = 'ENERGIEMETERDNB'
+    GALGPAAL = 'GALGPAAL'
     HS = 'HS'
     HSCABINE = 'HSCabine'
     HSDEEL = 'HSDeel'
@@ -32,6 +35,7 @@ class AssetType(Enum):
     RVMSGROEP = 'RVMSGroep'
     SEGC = 'Segmentcontroller'
     SEINBRUGDVM = 'SeinbrugDVM'
+    SWITCH = 'SWITCH'
     TT = 'Teletransmissieverbinding'
     WEGKANTKAST = 'Wegkantkast'
     WVGROEP = 'Wegverlichtingsgroep'
@@ -133,8 +137,8 @@ class BypassProcessor:
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBLaagspanning": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBLaagspanning"
             ,
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#EnergiemeterDNB": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#EnergiemeterDNB"
-            , "Switch": "https://lgc.data.wegenenverkeer.be/ns/installatie#IP"
-            # , "Switch": "https://lgc.data.wegenenverkeer.be/ns/installatie#Switch"
+            , "IP": "https://lgc.data.wegenenverkeer.be/ns/installatie#IP"
+            , "Switch": "https://lgc.data.wegenenverkeer.be/ns/installatie#Switch"
             , "TT": "https://lgc.data.wegenenverkeer.be/ns/installatie#TT"
             ,
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Segmentcontroller": "https://lgc.data.wegenenverkeer.be/ns/installatie#SegC"
@@ -1990,6 +1994,7 @@ if __name__ == '__main__':
 
     bypass.import_data()
 
+    # todo de code verder in functies wrappen om de leesbaarheid te verbeteren.
     logging.info('Aanmaken Boomstructuur voor installaties onder Wegkantkast')
     logging.info('Aanmaken installaties')
     bypass.process_installatie(df=bypass.df_assets_wegkantkasten, column_name='Wegkantkast_Object assetId.identificator', asset_type=AssetType.WEGKANTKAST)
@@ -2013,7 +2018,7 @@ if __name__ == '__main__':
                           , parent_asset_info=parent_asset_info
                           , relatie_infos=[bevestigingsrelatie, voedingsrelatie])
 
-    logging.info('Aanmaken Switch (IP)')
+    logging.info('Aanmaken IP')
     asset_info = AssetInfo(asset_type=AssetType.IP, column_uuid='Switch gegevens_UUID Switch', column_name='Switch gegevens_Object assetId.identificator', column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#IP')
     parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET, column_parent_uuid='Wegkantkast_UUID Object')
     bevestigingsrelatie = RelatieInfo(uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging', bronAsset_uuid=None, doelAsset_uuid='Wegkantkast_UUID Object')
@@ -2059,8 +2064,8 @@ if __name__ == '__main__':
     # bypass.process_mivmeetpunten(df=bypass.df_assets_mivmeetpunten)
 
     logging.info('Aanmaken Seinbrug DVM')
-    asset_info = AssetInfo(asset_type=AssetType.SEINBRUGDVM, column_typeURI='Seinbrug_Object typeURI', column_uuid='Seinbrug_UUID Object', column_name='Seingbrug_Object assetId.identificator')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET)
+    asset_info = AssetInfo(asset_type=AssetType.SEINBRUGDVM, column_typeURI='Seinbrug_Object typeURI', column_uuid='Seinbrug_UUID Object', column_name='Seinbrug_Object assetId.identificator')
+    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
     eigenschap_info = EigenschapInfo(eminfra_eigenschap_name='vrije hoogte', column_eigenschap_name='Seinbrug_vrijeHoogte')
     bypass.process_assets(df=bypass.df_assets_portieken_seinbruggen, asset_info=asset_info, parent_asset_info=parent_asset_info, eigenschap_infos=[eigenschap_info])
 
@@ -2094,25 +2099,38 @@ if __name__ == '__main__':
     voedingsrelatie = RelatieInfo(uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt', bronAsset_uuid='Voedingsrelaties_Voedingsrelatie bronAssetId.identificator', doelAsset_uuid=None)
     bypass.process_assets(df=bypass.df_assets_RVMS_borden, asset_info=asset_info, parent_asset_info=parent_asset_info, eigenschap_infos=[eigenschap_info], relatie_infos=[hoortbijrelatie, bevestigingsrelatie, voedingsrelatie])
 
+    logging.info('Aanmaken Galgpaal')
+    asset_info = AssetInfo(asset_type=AssetType.GALGPAAL, column_typeURI='Galgpaal_Object typeURI', column_uuid='Galgpaal_UUID Object', column_name='Galgpaal_Object assetId.identificator')
+    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
+    bypass.process_assets(df=bypass.df_assets_galgpaal, asset_info=asset_info, parent_asset_info=parent_asset_info)
 
-    # todo camera's in een CamGroep plaatsen, maar de Camgroep niet in de boomstructuur.
-    # todo tot hier
-    # Waar kan de naam van de CamGroep afgeleid worden?
+
     logging.info('Aanmaken Camera-Groep')
-    asset_info = AssetInfo(asset_type=AssetType.CAMGROEP, column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#CamGroep', column_name='', column_uuid='HoortBij Relatie_UUID HoortBij doelAsset')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET, column_parent_name='Bevestigingsrelatie_Bevestigingsrelatie doelAssetId.identificator', column_parent_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
+    logging.debug('1 cameragroep per camera aanmaken')
+    asset_info = AssetInfo(asset_type=AssetType.CAMGROEP, column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#CamGroep', column_name='Camera_Object assetId.identificator', column_uuid='Camera_UUID Object')
+    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT, column_parent_name='Bevestigingsrelatie_Bevestigingsrelatie doelAssetId.identificator', column_parent_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
     bypass.process_assets(df=bypass.df_assets_cameras, asset_info=asset_info, parent_asset_info=parent_asset_info) # geen eigenschappen, noch relaties voor de RSS-groep
 
     logging.info('Aanmaken Camera')
-    asset_info = AssetInfo(asset_type=AssetType.CAMERA, column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#Camera', column_name='DVM-Bord_Object assetId.identificator', column_uuid='DVM-Bord_UUID Object')
-    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET, column_parent_name='HoortBij Relatie_HoortBij doelAssetId.identificator', column_parent_uuid='HoortBij Relatie_UUID HoortBij doelAsset')
-    eigenschap_info = EigenschapInfo(eminfra_eigenschap_name='merk', column_eigenschap_name='DVM-Bord_merk')
-    hoortbijrelatie = RelatieInfo(uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HoortBij', bronAsset_uuid=None, doelAsset_uuid='HoortBij Relatie_UUID HoortBij doelAsset')
-    bevestigingsrelatie = RelatieInfo(uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging', bronAsset_uuid=None, doelAsset_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
+    logging.debug('Camgroep onder 1 installatie plaatsen')
+    asset_info = AssetInfo(asset_type=AssetType.CAMERA, column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#Camera', column_name='Camera_Object assetId.identificator', column_uuid='Camera_UUID Object')
+    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET, column_parent_name='Bevestigingsrelatie_Bevestigingsrelatie doelAssetId.identificator', column_parent_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
+    eigenschap_1 = EigenschapInfo(eminfra_eigenschap_name='isPtz', column_eigenschap_name='isPtz')
+    eigenschap_2 = EigenschapInfo(eminfra_eigenschap_name='heeftAid', column_eigenschap_name='heeftAid')
     voedingsrelatie = RelatieInfo(uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt', bronAsset_uuid='Voedingsrelaties_Voedingsrelatie bronAssetId.identificator', doelAsset_uuid=None)
-    bypass.process_assets(df=bypass.df_assets_cameras, asset_info=asset_info, parent_asset_info=parent_asset_info, eigenschap_infos=[eigenschap_info], relatie_infos=[hoortbijrelatie, bevestigingsrelatie, voedingsrelatie])
-    # bypass.process_cameras(df=bypass.df_assets_cameras)
+    bevestigingsrelatie = RelatieInfo(uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging', bronAsset_uuid=None, doelAsset_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
+    bypass.process_assets(df=bypass.df_assets_cameras, asset_info=asset_info, parent_asset_info=parent_asset_info, eigenschap_infos=[eigenschap_1, eigenschap_2], relatie_infos=[voedingsrelatie, bevestigingsrelatie])
 
+    logging.info('Aanmaken Switch')
+    asset_info = AssetInfo(asset_type=AssetType.SWITCH, column_uuid='Netwerkgegevens_UUID Switch', column_name='Netwerkgegevens_Switch assetId.identificator', column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#Switch')
+    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET, column_parent_uuid='Camera_UUID Object', column_parent_name='Camera_Object assetId.identificator')
+    bypass.process_assets(df=bypass.df_assets_cameras, asset_info=asset_info, parent_asset_info=parent_asset_info)
+
+    logging.info('Aanmaken Poort')
+    asset_info = AssetInfo(asset_type=AssetType.POORT, column_uuid='Netwerkgegevens_UUID Poort', column_name='Netwerkgegevens_assetId.identificator Poort', column_typeURI='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Netwerkpoort')
+    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET, column_parent_uuid='Camera_UUID Object', column_parent_name='Camera_Object assetId.identificator')
+    sturingrelatie = RelatieInfo(uri=RelatieType.STURING, bronAsset_uuid='Netwerkgegevens_UUID Poort', doelAsset_uuid='Camera_UUID Object')
+    bypass.process_assets(df=bypass.df_assets_cameras, asset_info=asset_info, parent_asset_info=parent_asset_info, relatie_infos=[sturingrelatie])
 
 
     # Boomstructuur van de Hoogspanningscabine
@@ -2120,15 +2138,64 @@ if __name__ == '__main__':
     logging.info('Aanmaken installaties')
     bypass.process_installatie(df=bypass.df_assets_voeding, column_name='HSCabine_Object assetId.identificator', asset_type=AssetType.HSCABINE)
     logging.info('Aanmaken Hoogspannings Cabine')
-    # bypass.process_voeding_HS_cabine(df=bypass.df_assets_voeding)
-    #
-    # bypass.process_voeding_hoogspanningsdeel(df=bypass.df_assets_voeding)
-    # bypass.process_voeding_laagspanningsdeel(df=bypass.df_assets_voeding)
-    # bypass.process_voeding_hoogspanning(df=bypass.df_assets_voeding)
-    # bypass.process_voeding_DNBHoogspanning(df=bypass.df_assets_voeding)
-    # bypass.process_voeding_energiemeter_DNB(df=bypass.df_assets_voeding)
-    # bypass.process_voeding_segmentcontroller(df=bypass.df_assets_voeding)
-    # bypass.process_voeding_wegverlichting(df=bypass.df_assets_voeding)
-    # bypass.process_voeding_switch(df=bypass.df_assets_voeding)
 
-    # bypass.process_openbare_verlichting(df=bypass.df_assets_openbare_verlichting)
+    logging.info('Aanmaken HSCabine')
+    asset_info = AssetInfo(asset_type=AssetType.HSCABINE, column_name='HSCabine_Object assetId.identificator', column_uuid='HSCabine_UUID Object', column_typeURI='HSCabine_Object typeURI')
+    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT, column_parent_uuid=None, column_parent_name=None)
+    bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info)
+
+    logging.info('Aanmaken HSDeel')
+    asset_info = AssetInfo(asset_type=AssetType.HSDEEL, column_name='Hoogspanningsdeel_Naam HSDeel', column_uuid='Hoogspanningsdeel_UUID HSDeel', column_typeURI='Hoogspanningsdeel_HSDeel lgc:installatie')
+    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET, column_parent_uuid='HSCabine_UUID Object', column_parent_name='HSCabine_Object assetId.identificator')
+    bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid=None, doelAsset_uuid='HSCabine_UUID Object')
+    bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info, relatie_infos=[bevestigingsrelatie])
+
+    logging.info('Aanmaken LSDeel')
+    asset_info = AssetInfo(asset_type=AssetType.LSDEEL, column_name='Laagspanningsdeel_Naam LSDeel', column_uuid='Laagspanningsdeel_UUID LSDeel', column_typeURI='Laagspanningsdeel_LSDeel lgc:installatie')
+    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET, column_parent_uuid='HSCabine_UUID Object', column_parent_name='HSCabine_Object assetId.identificator')
+    bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid=None, doelAsset_uuid='HSCabine_UUID Object')
+    voedingsrelatie = RelatieInfo(uri=RelatieType.VOEDT, bronAsset_uuid='Hoogspanningsdeel_UUID HSDeel', doelAsset_uuid=None)
+    bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info, relatie_infos=[bevestigingsrelatie, voedingsrelatie])
+
+    logging.info('Aanmaken Hoogspanning')
+    asset_info = AssetInfo(asset_type=AssetType.HS, column_name='Hoogspanning_Naam HS', column_uuid='Hoogspanning_UUID HS', column_typeURI='Hoogspanning_HS lgc:installatie')
+    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET, column_parent_uuid='HSCabine_UUID Object', column_parent_name='HSCabine_Object assetId.identificator')
+    bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid=None, doelAsset_uuid='HSCabine_UUID Object')
+    bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info, relatie_infos=[bevestigingsrelatie])
+
+    logging.info('Aanmaken DNBHoogspanning')
+    asset_info = AssetInfo(asset_type=AssetType.DNBHOOGSPANNING, column_name='DNBHoogspanning_Object assetId.identificator', column_uuid='DNBHoogspanning_UUID Object', column_typeURI='DNBHoogspanning_Object typeURI')
+    eigenschappen = [EigenschapInfo(eminfra_eigenschap_name='eanNummer', column_eigenschap_name='DNBHoogspanning_eanNummer')]
+    eigenschappen.append(EigenschapInfo(eminfra_eigenschap_name='referentieDNB', column_eigenschap_name='DNBHoogspanning_referentieDNB'))
+    hoortbijrelatie = RelatieInfo(uri=RelatieType.HOORTBIJ, bronAsset_uuid=None, doelAsset_uuid='Hoogspanning_UUID HS') # Hoortbij relatie van OTL naar Legacy-asset
+    bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, eigenschap_infos=eigenschappen, relatie_infos=[hoortbijrelatie])
+
+    logging.info('Aanmaken EnergiemeterDNB')
+    asset_info = AssetInfo(asset_type=AssetType.ENERGIEMETERDNB, column_name='EnergiemeterDNB_Object assetId.identificator', column_uuid='EnergiemeterDNB_UUID Object', column_typeURI='EnergiemeterDNB_Object typeURI')
+    eigenschappen = [EigenschapInfo(eminfra_eigenschap_name='meternummer', column_eigenschap_name='meternummer')]
+    hoortbijrelatie = RelatieInfo(uri=RelatieType.HOORTBIJ, bronAsset_uuid=None, doelAsset_uuid='Hoogspanning_UUID HS') # Hoortbij relatie van OTL naar Legacy-asset
+    bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, eigenschap_infos=eigenschappen, relatie_infos=[hoortbijrelatie])
+
+    logging.info('Aanmaken SegmentController')
+    asset_info = AssetInfo(asset_type=AssetType.SEGC, column_name='Segmentcontroller_Naam SC', column_uuid='Segmentcontroller_UUID SC', column_typeURI='Segmentcontroller_SC TypeURI')
+    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT, column_parent_uuid=None, column_parent_name=None)
+    bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info)
+
+    logging.info('Aanmaken Wegverlichtingsgroep')
+    asset_info = AssetInfo(asset_type=AssetType.WVGROEP, column_name='Wegverlichtingsgroep_Naam WV', column_uuid='Wegverlichtingsgroep_UUID WV', column_typeURI='Wegverlichtingsgroep_WV lgc:installatie')
+    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT, column_parent_uuid=None, column_parent_name=None)
+    bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info)
+
+    logging.info('Aanmaken IP')
+    asset_info = AssetInfo(asset_type=AssetType.IP, column_name='Switch gegevens_Object assetId.identificator',
+                           column_uuid='Switch gegevens_UUID switch',
+                           column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#IP')
+    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT,
+                                        column_parent_uuid=None, column_parent_name=None) # Kan de juiste parent worden afgeleid?
+    bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info)
+
+    logging.info('Aanmaken WVLichtmast')
+    asset_info = AssetInfo(asset_type=AssetType.WVLICHTMAST, column_name='WVLichtmast_Object assetId.identificator', column_uuid='WVLichtmast_UUID Object', column_typeURI='WVLichtmast_Object typeURI')
+    parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT, column_parent_uuid=None, column_parent_name=None)
+    voedingsrelatie = RelatieInfo(uri=RelatieType.VOEDT, bronAsset_uuid='Voedingsrelaties_UUID Voedingsrelatie bronAsset', doelAsset_uuid=None)
+    bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info)
