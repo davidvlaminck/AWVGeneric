@@ -1434,3 +1434,15 @@ class EMInfraClient:
             self.search_asset_by_uuid(asset_uuid=asset_uuid_gemigreerd),
             None,
         )
+
+    def create_onderdeel(self, naam: str, typeUuid: str) -> dict | None:
+        json_body = {
+            "naam": naam,
+            "typeUuid": typeUuid
+        }
+        url = 'core/api/onderdeel'
+        response = self.requester.post(url, json=json_body)
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return response.json()
