@@ -53,6 +53,8 @@ class KenmerkTypeEnum(Enum):
     SLUITAANOPBRON = 'SluitAanOpBron'
     LIGTOPDOEL = 'LigtOpDoel'
     LIGTOPBRON = 'LigtOpBron'
+    EIGENSCHAPPEN = 'Eigenschappen'
+    HOORTBIJ = 'HoortBij'
     BESTEK = 'Bestek'
     LOCATIE = 'Locatie'
     BEVESTIGD_AAN = 'Bevestigd aan'
@@ -674,6 +676,7 @@ class KenmerkType(BaseDataclass):
     _type: str
     type: KenmerkTypeDTO
     links: [Link]
+    types: dict | None = None
     bestekRef: dict | None = None
     bestekKoppelingen: dict | None = None
     toezichter: dict | None =  None
@@ -730,6 +733,15 @@ class EigenschapValueDTO(BaseDataclass):
 
     def __post_init__(self):
         self._fix_nested_classes({('eigenschap', Eigenschap), ('kenmerkType', KenmerkTypeDTO)})
+
+@dataclass
+class EigenschapValueUpdateDTO(BaseDataclass):
+    typedValue: dict
+    eigenschap: Eigenschap
+
+    def __post_init__(self):
+        self._fix_nested_classes({('eigenschap', Eigenschap)})
+
 @dataclass
 class AssetTypeKenmerkTypeAddDTO(BaseDataclass):
     kenmerkType: ResourceRefDTO
