@@ -43,6 +43,25 @@ class LogicalOpEnum(Enum):
     AND = 'AND'
     OR = 'OR'
 
+class GeometryNiveau(Enum):
+    MIN_1 = 'MIN_1'
+    NUL = 'NUL'
+    PLUS_1 = 'PLUS_1'
+
+class GeometryBron(Enum):
+    MANUEEL = 'MANUEEL'
+    MEETTOESTEL = 'MEETTOESTEL'
+    OVERERVING = 'OVERERVING'
+
+class GeometryNauwkeurigheid(Enum):
+    _5 = '_5'
+    _10 = '_10'
+    _20 = '_20'
+    _30 = '_30'
+    _50 = '_50'
+    _100 = '_100'
+    _200 = '_200'
+
 class KenmerkTypeEnum(Enum):
     HEEFTBIJLAGEBRON = 'HeeftBijlageBron'
     HEEFTTOEGANGSPROCEDUREBRON = 'HeeftToegangsprocedureBron'
@@ -352,6 +371,30 @@ class LocatieKenmerk(BaseDataclass):
 
     def __post_init__(self):
          self._fix_nested_list_classes({('links', Link)})
+
+
+@dataclass
+class GeometryLog(BaseDataclass):
+    bron: GeometryBron
+    links: [Link]
+    nauwkeurigheid: GeometryNauwkeurigheid
+    niveau: GeometryNiveau
+    uuid: str
+    wkt: str
+
+    def __post_init__(self):
+         self._fix_nested_list_classes({('links', Link)})
+
+
+@dataclass
+class GeometrieKenmerk(BaseDataclass):
+    _type: str
+    type: dict
+    links: [Link]
+    logs: list[GeometryLog] | None = None
+
+    def __post_init__(self):
+         self._fix_nested_list_classes({('links', Link), ('logs', GeometryLog)})
 
 @dataclass
 class ToezichterKenmerk(BaseDataclass):
