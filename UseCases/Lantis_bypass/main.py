@@ -55,6 +55,7 @@ class RelatieInfo:
     uri: RelatieType
     bronAsset_uuid: str | None = None
     doelAsset_uuid: str | None = None
+    column_typeURI_relatie: str | None = None
 
 
 @dataclass
@@ -166,14 +167,14 @@ class BypassProcessor:
                                                                '#Netwerkelement')
         if execution_date > datetime(year=2025, month=6, day=13):
             self.typeURI_mapping_dict[
-                'lgc:installatie#RVMS'] = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRVMS'
+                'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRVMS'] = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRVMS'
             self.typeURI_mapping_dict[
                 'lgc:installatie#RVMSGroep'] = ''
         if execution_date > datetime(year=2025, month=6, day=17):
             self.typeURI_mapping_dict[
-                'lgc:installatie#RSSBord'] = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRSS'
+                'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRSS'] = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRSS'
             self.typeURI_mapping_dict[
-                'lgc:installatie#RSSGroep'] = 'https://wegenenverkeer.data.vlaanderen.be/ns/installatie#DynBordGroep'
+                'https://wegenenverkeer.data.vlaanderen.be/ns/installatie#DynBordGroep'] = 'https://wegenenverkeer.data.vlaanderen.be/ns/installatie#DynBordGroep'
         if execution_date > datetime(year=2025, month=6, day=20):
             self.typeURI_mapping_dict[
                 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Seinbrug'] = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Seinbrug'
@@ -405,7 +406,7 @@ class BypassProcessor:
             df.at[idx, "installatie_uuid"] = self.create_installatie_if_missing(naam=installatie_naam)
 
         with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-            df.to_excel(writer, sheet_name=f'Installaties_{asset_type.value}',
+            df.to_excel(writer, sheet_name=f'Beheerobject_{asset_type.value}',
                         columns=["installatie_uuid", "installatie_naam"],
                         index=False, freeze_panes=[1, 1])
         logging.info(f'Installaties bij het assettype {asset_type} aangemaakt')
@@ -472,9 +473,13 @@ class BypassProcessor:
             else:
                 asset_row_typeURI = asset_row.get(asset_info.column_typeURI)
             typeURI = self.typeURI_mapping_dict.get(asset_row_typeURI, asset_row_typeURI)
-            asset_row_name = asset_row.get(asset_info.column_name)
+            asset_row_name = asset_row.get(asset_info.column_name, None)
 
             logging.debug(f'Processing asset {idx}. uuid: {asset_row_uuid}, name: {asset_row_name}')
+
+            if not asset_row_name:
+                logging.debug('Asset lacks a name. Continuing with the next asset.')
+                continue
 
             if asset_row_uuid and asset_row_name:
                 logging.info('Valideer asset waarvoor reeds een uuid én een naam gekend is.')
@@ -548,15 +553,17 @@ class BypassProcessor:
 
                 # Aanmaken van relaties
                 for relatie_info in relatie_infos:
-                    relatie_descriptive_naam = relatie_info.uri.value.split('#')[-1]
-                    bronAsset_uuid = asset_row.get(relatie_info.bronAsset_uuid, asset.uuid)
-                    doelAsset_uuid = asset_row.get(relatie_info.doelAsset_uuid, asset.uuid)
-                    relatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=bronAsset_uuid,
-                                                                  doelAsset_uuid=doelAsset_uuid,
-                                                                  relatie_naam=relatie_info.uri.value)
-                    # append relatie_uuid to the dataframe
-                    df.at[idx, f'relatie_uuid_{relatie_descriptive_naam}'] = relatie_uuid
-                    df_output_columns.add(f'relatie_uuid_{relatie_descriptive_naam}')
+                    # uri aanweig in Excel-file
+                    if relatie_info.column_typeURI_relatie and asset_row.get(relatie_info.column_typeURI_relatie):
+                        relatie_descriptive_naam = relatie_info.uri.value.split('#')[-1]
+                        bronAsset_uuid = asset_row.get(relatie_info.bronAsset_uuid, asset.uuid)
+                        doelAsset_uuid = asset_row.get(relatie_info.doelAsset_uuid, asset.uuid)
+                        relatie_uuid = self.create_relatie_if_missing(bronAsset_uuid=bronAsset_uuid,
+                                                                      doelAsset_uuid=doelAsset_uuid,
+                                                                      relatie_naam=relatie_info.uri.value)
+                        # append relatie_uuid to the dataframe
+                        df.at[idx, f'relatie_uuid_{relatie_descriptive_naam}'] = relatie_uuid
+                        df_output_columns.add(f'relatie_uuid_{relatie_descriptive_naam}')
 
                 # Update toestand
                 self.update_toestand(asset=asset)
@@ -592,10 +599,12 @@ class BypassProcessor:
                                             column_parent_name='Wegkantkast_Object assetId.identificator')
         bevestigingsrelatie = RelatieInfo(bronAsset_uuid=None
                                           , doelAsset_uuid='Wegkantkast_UUID Object'
-                                          , uri=RelatieType.BEVESTIGING)
+                                          , uri=RelatieType.BEVESTIGING
+                                          , column_typeURI_relatie='Bevestigingsrelatie LSDeel_Bevestigingsrelatie typeURI')
         voedingsrelatie = RelatieInfo(bronAsset_uuid='Laagspanningsdeel_UUID LSDeel'
                                       , doelAsset_uuid='Voedingsrelatie (oorsprong)_UUID Voedingsrelatie bronAsset'
-                                      , uri=RelatieType.VOEDT)
+                                      , uri=RelatieType.VOEDT
+                                      , column_typeURI_relatie='Voedingsrelatie (oorsprong)_Voedingsrelatie typeURI')
         bypass.process_assets(df=bypass.df_assets_wegkantkasten, asset_info=asset_info,
                               parent_asset_info=parent_asset_info, relatie_infos=[bevestigingsrelatie, voedingsrelatie],
                               sheetname_prefix='Kast')
@@ -609,7 +618,8 @@ class BypassProcessor:
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
                                             column_parent_uuid='Wegkantkast_UUID Object')
         bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid=None,
-                                          doelAsset_uuid='Wegkantkast_UUID Object')
+                                          doelAsset_uuid='Wegkantkast_UUID Object',
+                                          column_typeURI_relatie='Bevestigingsrelatie switch_Bevestigingsrelatie typeURI')
         bypass.process_assets(df=bypass.df_assets_wegkantkasten, asset_info=asset_info,
                               parent_asset_info=parent_asset_info, relatie_infos=[bevestigingsrelatie],
                               sheetname_prefix='Kast')
@@ -622,7 +632,8 @@ class BypassProcessor:
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
                                             column_parent_uuid='Wegkantkast_UUID Object')
         bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid=None,
-                                          doelAsset_uuid='Wegkantkast_UUID Object')
+                                          doelAsset_uuid='Wegkantkast_UUID Object',
+                                          column_typeURI_relatie='Bevestigingsrelatie switch_Bevestigingsrelatie typeURI')
         bypass.process_assets(df=bypass.df_assets_wegkantkasten, asset_info=asset_info,
                               parent_asset_info=parent_asset_info, relatie_infos=[bevestigingsrelatie],
                               sheetname_prefix='Kast')
@@ -646,7 +657,8 @@ class BypassProcessor:
                                             column_parent_uuid='HSCabine_UUID Object',
                                             column_parent_name='HSCabine_Object assetId.identificator')
         bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid=None,
-                                          doelAsset_uuid='HSCabine_UUID Object')
+                                          doelAsset_uuid='HSCabine_UUID Object',
+                                          column_typeURI_relatie='Bevestigingsrelatie HSDeel_Bevestigingsrelatie typeURI')
         bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info,
                               relatie_infos=[bevestigingsrelatie], sheetname_prefix='HS')
 
@@ -659,11 +671,12 @@ class BypassProcessor:
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
                                             column_parent_uuid='HSCabine_UUID Object',
                                             column_parent_name='HSCabine_Object assetId.identificator')
-        # # todo aanpassen naar UUID-kolom en niet afleiden, want dat werkt niet voor Bevestigingsrelatie van LSDeel
         bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid=None,
-                                          doelAsset_uuid='HSCabine_UUID Object')
+                                          doelAsset_uuid='HSCabine_UUID Object',
+                                          column_typeURI_relatie='Bevestigingsrelatie LSDeel_Bevestigingsrelatie typeURI')
         voedingsrelatie = RelatieInfo(uri=RelatieType.VOEDT, bronAsset_uuid='Hoogspanningsdeel_UUID HSDeel',
-                                      doelAsset_uuid=None)
+                                      doelAsset_uuid=None,
+                                      column_typeURI_relatie='Voedingsrelatie HSDeel naar LSDeel_Voedingsrelatie typeURI')
         bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info,
                               relatie_infos=[bevestigingsrelatie, voedingsrelatie], sheetname_prefix='HS')
 
@@ -676,7 +689,8 @@ class BypassProcessor:
                                             column_parent_uuid='HSCabine_UUID Object',
                                             column_parent_name='HSCabine_Object assetId.identificator')
         bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid=None,
-                                          doelAsset_uuid='HSCabine_UUID Object')
+                                          doelAsset_uuid='HSCabine_UUID Object',
+                                          column_typeURI_relatie='Bevestigingsrelatie HS_Bevestigingsrelatie typeURI')
         bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info,
                               relatie_infos=[bevestigingsrelatie], sheetname_prefix='HS')
 
@@ -686,13 +700,19 @@ class BypassProcessor:
                                column_name='DNBHoogspanning_Object assetId.identificator',
                                column_uuid='DNBHoogspanning_UUID Object',
                                column_typeURI='DNBHoogspanning_Object typeURI')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
+                                            column_parent_uuid='Hoogspanning_UUID HS',
+                                            column_parent_name=None)
         eigenschappen = [
             EigenschapInfo(eminfra_eigenschap_name='eanNummer', column_eigenschap_name='DNBHoogspanning_eanNummer')]
         eigenschappen.append(EigenschapInfo(eminfra_eigenschap_name='referentieDNB',
                                             column_eigenschap_name='DNBHoogspanning_referentieDNB'))
         hoortbijrelatie = RelatieInfo(uri=RelatieType.HOORTBIJ, bronAsset_uuid=None,
-                                      doelAsset_uuid='Hoogspanning_UUID HS')  # Hoortbij relatie van OTL naar Legacy-asset
-        bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, eigenschap_infos=eigenschappen,
+                                      doelAsset_uuid='Hoogspanning_UUID HS',
+                                      column_typeURI_relatie='HoortBij Relatie voor DNBHoogspanning_HoortBij typeURI')  # Hoortbij relatie van OTL naar Legacy-asset
+        bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info,
+                              parent_asset_info=parent_asset_info,
+                              eigenschap_infos=eigenschappen,
                               relatie_infos=[hoortbijrelatie], sheetname_prefix='HS')
 
     def process_voeding_energiemeter_DNB(self):
@@ -701,11 +721,20 @@ class BypassProcessor:
                                column_name='EnergiemeterDNB_Object assetId.identificator',
                                column_uuid='EnergiemeterDNB_UUID Object',
                                column_typeURI='EnergiemeterDNB_Object typeURI')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
+                                            column_parent_uuid='Hoogspanning_UUID HS',
+                                            column_parent_name=None)
         eigenschappen = [EigenschapInfo(eminfra_eigenschap_name='meternummer', column_eigenschap_name='meternummer')]
-        hoortbijrelatie = RelatieInfo(uri=RelatieType.HOORTBIJ, bronAsset_uuid=None,
-                                      doelAsset_uuid='Hoogspanning_UUID HS')  # Hoortbij relatie van OTL naar Legacy-asset
-        bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, eigenschap_infos=eigenschappen,
-                              relatie_infos=[hoortbijrelatie], sheetname_prefix='HS')
+        hoortbijrelatie = RelatieInfo(uri=RelatieType.HOORTBIJ,
+                                      bronAsset_uuid=None,
+                                      doelAsset_uuid='Hoogspanning_UUID HS',
+                                      column_typeURI_relatie='HoortBij Relatie voor EnergiemeterDNB_HoortBij typeURI')  # Hoortbij relatie van OTL naar Legacy-asset
+        bypass.process_assets(df=bypass.df_assets_voeding,
+                              asset_info=asset_info,
+                              parent_asset_info=parent_asset_info,
+                              eigenschap_infos=eigenschappen,
+                              relatie_infos=[hoortbijrelatie],
+                              sheetname_prefix='HS')
 
     def process_voeding_segmentcontroller(self):
         logging.info('Aanmaken SegmentController')
@@ -735,7 +764,8 @@ class BypassProcessor:
                                             column_parent_uuid=None, column_parent_name=None)
         voedingsrelatie = RelatieInfo(uri=RelatieType.VOEDT,
                                       bronAsset_uuid='Voedingsrelaties_UUID Voedingsrelatie bronAsset',
-                                      doelAsset_uuid=None)
+                                      doelAsset_uuid=None,
+                                      column_typeURI_relatie='Voedingsrelaties_Voedingsrelatie typeURI')
         bypass.process_assets(df=bypass.df_assets_openbare_verlichting, asset_info=asset_info,
                               parent_asset_info=parent_asset_info, relatie_infos=[voedingsrelatie],
                               sheetname_prefix='HS')
@@ -747,15 +777,18 @@ class BypassProcessor:
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
                                             column_parent_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset',
                                             column_parent_name='Bevestigingsrelatie_Bevestigingsrelatie doelAssetId.identificator')
-        # todo temp disabled. Problem with eigenschap type.
-        # eigenschap_infos = [
-        #     EigenschapInfo(eminfra_eigenschap_name='type', column_eigenschap_name='LVE_Type')]
+
+        eigenschap_infos = [
+            EigenschapInfo(eminfra_eigenschap_name='type', column_eigenschap_name='LVE_Type')]
         voedingsrelatie = RelatieInfo(uri=RelatieType.VOEDT,
                                       bronAsset_uuid='Voedingsrelaties_UUID Voedingsrelatie bronAsset',
-                                      doelAsset_uuid=None)
+                                      doelAsset_uuid=None,
+                                      column_typeURI_relatie='Voedingsrelaties_Voedingsrelatie typeURI')
         bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid=None,
-                                          doelAsset_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
+                                          doelAsset_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset',
+                                          column_typeURI_relatie='Bevestigingsrelatie_Bevestigingsrelatie typeURI')
         bypass.process_assets(df=bypass.df_assets_mivlve, asset_info=asset_info, parent_asset_info=parent_asset_info,
+                              eigenschap_infos=eigenschap_infos,
                               relatie_infos=[voedingsrelatie, bevestigingsrelatie], sheetname_prefix='MIVLVE')
 
     def process_mivmeetpunten(self):
@@ -774,7 +807,8 @@ class BypassProcessor:
         ]
         sturingsrelatie = RelatieInfo(uri=RelatieType.STURING,
                                       bronAsset_uuid='Sturingsrelaties_UUID Sturingsrelatie bronAsset',
-                                      doelAsset_uuid=None)
+                                      doelAsset_uuid=None,
+                                      column_typeURI_relatie='Sturingsrelaties_Sturingsrelatie typeURI')
         bypass.process_assets(df=bypass.df_assets_mivmeetpunten, asset_info=asset_info,
                               parent_asset_info=parent_asset_info, eigenschap_infos=eigenschap_infos, add_geometry=True,
                               relatie_infos=[sturingsrelatie], sheetname_prefix='MIVLVE')
@@ -792,9 +826,11 @@ class BypassProcessor:
         eigenschap_infos.append(EigenschapInfo(eminfra_eigenschap_name='heeftAid', column_eigenschap_name='heeftAid'))
         voedingsrelatie = RelatieInfo(uri=RelatieType.VOEDT,
                                       bronAsset_uuid='Voedingsrelaties_Voedingsrelatie bronAssetId.identificator',
-                                      doelAsset_uuid=None)
+                                      doelAsset_uuid=None,
+                                      column_typeURI_relatie='Voedingsrelaties_Voedingsrelatie typeURI')
         bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid=None,
-                                          doelAsset_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
+                                          doelAsset_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset',
+                                          column_typeURI_relatie='Bevestigingsrelatie_Bevestigingsrelatie typeURI')
         bypass.process_assets(df=bypass.df_assets_cameras, asset_info=asset_info, parent_asset_info=parent_asset_info,
                               eigenschap_infos=eigenschap_infos, add_geometry=True,
                               relatie_infos=[voedingsrelatie, bevestigingsrelatie], sheetname_prefix='Camera')
@@ -807,15 +843,18 @@ class BypassProcessor:
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
                                             column_parent_name='HoortBij Relatie voor RSS-groep_HoortBij doelAssetId.identificator',
                                             column_parent_uuid='HoortBij Relatie voor RSS-groep_UUID HoortBij doelAsset')
-        # todo: activeer eigenschap na verweving
+        # todo: Activeer de eigenschap na de verweving. De eigenschap "merk" is pas beschikbaar na verweving
         # eigenschap_info = EigenschapInfo(eminfra_eigenschap_name='merk', column_eigenschap_name='DVM-Bord_merk')
         hoortbijrelatie = RelatieInfo(uri=RelatieType.HOORTBIJ, bronAsset_uuid=None,
-                                      doelAsset_uuid='HoortBij Relatie voor RSS-groep_UUID HoortBij doelAsset')
+                                      doelAsset_uuid='HoortBij Relatie voor RSS-groep_UUID HoortBij doelAsset',
+                                      column_typeURI_relatie='HoortBij Relatie voor RSS-groep_HoortBij typeURI')
         bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid=None,
-                                          doelAsset_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
+                                          doelAsset_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset',
+                                          column_typeURI_relatie='Bevestigingsrelatie_Bevestigingsrelatie typeURI')
         voedingsrelatie = RelatieInfo(uri=RelatieType.VOEDT,
                                       bronAsset_uuid='Voedingsrelaties_UUID Voedingsrelatie bronAsset',
-                                      doelAsset_uuid=None)
+                                      doelAsset_uuid=None,
+                                      column_typeURI_relatie='Voedingsrelaties_Voedingsrelatie typeURI')
         bypass.process_assets(df=bypass.df_assets_RSS_borden, asset_info=asset_info,
                               parent_asset_info=parent_asset_info,
                               # eigenschap_infos=[eigenschap_info],
@@ -824,22 +863,27 @@ class BypassProcessor:
 
     def process_RVMS_borden(self):
         logging.info('Aanmaken RVMS-Bord')
-        asset_info = AssetInfo(asset_type=AssetType.RSSBORD,
+        asset_info = AssetInfo(asset_type=AssetType.RVMSBORD,
                                column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#RVMSBord',
                                column_name='DVM-Bord_Object assetId.identificator', column_uuid='DVM-Bord_UUID Object')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
                                             column_parent_name='HoortBij Relatie_HoortBij doelAssetId.identificator',
                                             column_parent_uuid='HoortBij Relatie_UUID HoortBij doelAsset')
-        eigenschap_info = EigenschapInfo(eminfra_eigenschap_name='merk', column_eigenschap_name='DVM-Bord_merk')
+        # todo: Activeer de eigenschap na de verweving. De eigenschap "merk" is pas beschikbaar na verweving
+        # eigenschap_info = EigenschapInfo(eminfra_eigenschap_name='merk', column_eigenschap_name='DVM-Bord_merk')
         hoortbijrelatie = RelatieInfo(uri=RelatieType.HOORTBIJ, bronAsset_uuid=None,
-                                      doelAsset_uuid='HoortBij Relatie_UUID HoortBij doelAsset')
+                                      doelAsset_uuid='HoortBij Relatie_UUID HoortBij doelAsset',
+                                      column_typeURI_relatie='HoortBij Relatie_HoortBij typeURI')
         bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid=None,
-                                          doelAsset_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
+                                          doelAsset_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset',
+                                          column_typeURI_relatie='Bevestigingsrelatie_Bevestigingsrelatie typeURI')
         voedingsrelatie = RelatieInfo(uri=RelatieType.VOEDT,
                                       bronAsset_uuid='Voedingsrelaties_UUID Voedingsrelatie bronAsset',
-                                      doelAsset_uuid=None)
+                                      doelAsset_uuid=None,
+                                      column_typeURI_relatie='Voedingsrelaties_Voedingsrelatie typeURI')
         bypass.process_assets(df=bypass.df_assets_RVMS_borden, asset_info=asset_info,
-                              parent_asset_info=parent_asset_info, eigenschap_infos=[eigenschap_info],
+                              parent_asset_info=parent_asset_info,
+                              # eigenschap_infos=[eigenschap_info],
                               add_geometry=True, relatie_infos=[hoortbijrelatie, bevestigingsrelatie, voedingsrelatie],
                               sheetname_prefix='Seinbrug')
 
@@ -848,7 +892,7 @@ class BypassProcessor:
         asset_info = AssetInfo(asset_type=AssetType.SEINBRUGDVM, column_typeURI='Seinbrug_Object typeURI',
                                column_uuid='Seinbrug_UUID Object', column_name='Seinbrug_Object assetId.identificator')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
-        # todo activeren eigenschap na verweving. De eigenschap "vrije hoogte" is pas beschikbaar na verweving van Seinbrug naar OTL.
+        # todo Activeer de eigenschap na de verweving. De eigenschap "vrije hoogte" is pas beschikbaar na verweving van Seinbrug naar OTL.
         # eigenschap_info = EigenschapInfo(eminfra_eigenschap_name='vrije hoogte',
         #                                  column_eigenschap_name='Seinbrug_vrijeHoogte')
         bypass.process_assets(df=bypass.df_assets_portieken_seinbruggen, asset_info=asset_info,
@@ -1029,10 +1073,12 @@ class BypassProcessor:
             asset = assets_list[0]
         elif nbr_assets == 0:
             logging.debug(f'Asset {asset_naam} ({typeURI}) bestaat nog niet en wordt aangemaakt.')
-            # todo: op basis van de typeURI, aanmaken van ofwel een onderdeel, ofwel een installatie.
-            # installatie_dict = self.eminfra_client.create_installatie(naam=asset_naam, typeUuid=assettype.uuid)
-            onderdeel_dict = self.eminfra_client.create_onderdeel(naam=asset_naam, typeUuid=assettype.uuid)
-            asset_uuid = onderdeel_dict.get("uuid", None)
+            if 'installatie' in typeURI:
+                installatie_dict = self.eminfra_client.create_installatie(naam=asset_naam, typeUuid=assettype.uuid)
+                asset_uuid = installatie_dict.get("uuid", None)
+            if 'onderdeel' in typeURI:
+                onderdeel_dict = self.eminfra_client.create_onderdeel(naam=asset_naam, typeUuid=assettype.uuid)
+                asset_uuid = onderdeel_dict.get("uuid", None)
             asset = next(self.eminfra_client.search_asset_by_uuid(asset_uuid=asset_uuid), None)
 
         else:
@@ -1179,6 +1225,12 @@ class BypassProcessor:
             installatie_naam = naam[:-2]
         else:
             raise ValueError(f"De naam van de Seinbrug ({naam}) eindigt niet op '.S'")
+
+        if match := re.search(r'(.*)([MPN])(?!.*[MPN])', installatie_naam):
+            installatie_naam = match[1] + 'X' + installatie_naam[match.end():]
+        else:
+            raise ValueError("De syntax van de asset bevat geen letter 'P', 'N' of 'M'.")
+
         return installatie_naam
 
 
@@ -1390,7 +1442,7 @@ class BypassProcessor:
         asset_info = AssetInfo(asset_type=AssetType.IP, column_uuid='Netwerkgegevens_UUID Switch',
                                column_name='Netwerkgegevens_Switch assetId.identificator',
                                column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#IP')
-        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET)
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET, column_parent_uuid='LVE_UUID Object')
         bypass.process_assets(df=bypass.df_assets_mivlve, asset_info=asset_info, parent_asset_info=parent_asset_info,
                               sheetname_prefix='MIVLVE')
 
@@ -1405,7 +1457,7 @@ class BypassProcessor:
         sturingrelatie = RelatieInfo(uri=RelatieType.STURING, bronAsset_uuid='Netwerkgegevens_UUID Poort',
                                      doelAsset_uuid='LVE_UUID Object')
         bypass.process_assets(df=bypass.df_assets_mivlve, asset_info=asset_info, parent_asset_info=parent_asset_info,
-                              relatie_infos=[sturingrelatie], sheetname_prefix='Kast')
+                              relatie_infos=[sturingrelatie], sheetname_prefix='MIVLVE')
 
     def process_RSS_groep(self):
         logging.info('Aanmaken RSS-Groep')
@@ -1429,7 +1481,7 @@ class BypassProcessor:
                                             column_parent_uuid='DVM-Bord_UUID Object',
                                             column_parent_name='DVM-bord_Object assetId.identificator')
         bypass.process_assets(df=bypass.df_assets_RSS_borden, asset_info=asset_info,
-                              parent_asset_info=parent_asset_info, sheetname_prefix='Kast')
+                              parent_asset_info=parent_asset_info, sheetname_prefix='Seinbrug')
 
     def process_RSS_poort(self):
         logging.info('Aanmaken Poort')
@@ -1442,7 +1494,7 @@ class BypassProcessor:
         sturingrelatie = RelatieInfo(uri=RelatieType.STURING, bronAsset_uuid='Netwerkgegevens_UUID Poort',
                                      doelAsset_uuid='DVM-Bord_UUID Object')
         bypass.process_assets(df=bypass.df_assets_RSS_borden, asset_info=asset_info,
-                              parent_asset_info=parent_asset_info, relatie_infos=[sturingrelatie], sheetname_prefix='Kast')
+                              parent_asset_info=parent_asset_info, relatie_infos=[sturingrelatie], sheetname_prefix='Seinbrug')
 
     def process_RVMS_groep(self):
         logging.info('Aanmaken RVMS-Groep')
@@ -1455,7 +1507,7 @@ class BypassProcessor:
                                             column_parent_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
         bypass.process_assets(df=bypass.df_assets_RVMS_borden, asset_info=asset_info,
                               parent_asset_info=parent_asset_info,
-                              sheetname_prefix='Kast')  # geen eigenschappen, noch relaties voor de RSS-groep
+                              sheetname_prefix='Seinbrug')  # geen eigenschappen, noch relaties voor de RSS-groep
 
     def process_RVMS_Switch(self):
         logging.info('Aanmaken Switch')
@@ -1466,7 +1518,7 @@ class BypassProcessor:
                                             column_parent_uuid='DVM-Bord_UUID Object',
                                             column_parent_name='DVM-bord_Object assetId.identificator')
         bypass.process_assets(df=bypass.df_assets_RVMS_borden, asset_info=asset_info,
-                              parent_asset_info=parent_asset_info, sheetname_prefix='Kast')
+                              parent_asset_info=parent_asset_info, sheetname_prefix='Seinbrug')
 
     def process_RVMS_Poort(self):
         logging.info('Aanmaken Poort')
@@ -1479,7 +1531,7 @@ class BypassProcessor:
         sturingrelatie = RelatieInfo(uri=RelatieType.STURING, bronAsset_uuid='Netwerkgegevens_UUID Poort',
                                      doelAsset_uuid='DVM-Bord_UUID Object')
         bypass.process_assets(df=bypass.df_assets_RVMS_borden, asset_info=asset_info,
-                              parent_asset_info=parent_asset_info, relatie_infos=[sturingrelatie], sheetname_prefix='Kast')
+                              parent_asset_info=parent_asset_info, relatie_infos=[sturingrelatie], sheetname_prefix='Seinbrug')
 
     def process_galgpaal(self):
         logging.info('Aanmaken Galgpaal')
@@ -1487,7 +1539,7 @@ class BypassProcessor:
                                column_uuid='Galgpaal_UUID Object', column_name='Galgpaal_Object assetId.identificator')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
         bypass.process_assets(df=bypass.df_assets_galgpaal, asset_info=asset_info, parent_asset_info=parent_asset_info,
-                              add_geometry=True, sheetname_prefix='Kast')
+                              add_geometry=True, sheetname_prefix='Seinbrug')
 
     def process_camera_groep(self):
         logging.info('Aanmaken Camera-Groep')
@@ -1495,12 +1547,12 @@ class BypassProcessor:
         asset_info = AssetInfo(asset_type=AssetType.CAMGROEP,
                                column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#CamGroep',
                                column_name='Camera_Object assetId.identificator', column_uuid='Camera_UUID Object')
-        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT,
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
                                             column_parent_name='Bevestigingsrelatie_Bevestigingsrelatie doelAssetId.identificator',
                                             column_parent_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
         bypass.process_assets(df=bypass.df_assets_cameras, asset_info=asset_info,
                               parent_asset_info=parent_asset_info,
-                              sheetname_prefix='Kast')  # geen eigenschappen, noch relaties voor de RSS-groep
+                              sheetname_prefix='Camera')  # geen eigenschappen, noch relaties voor de RSS-groep
 
     def process_cameras_switch(self):
         logging.info('Aanmaken Switch')
