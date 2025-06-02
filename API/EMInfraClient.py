@@ -1318,14 +1318,17 @@ class EMInfraClient:
             raise ProcessLookupError(response.content.decode("utf-8"))
 
     def create_assetrelatie(self, bronAsset_uuid: str, doelAsset_uuid: str, relatieType_uuid: str) -> str:
+        bron_asset = next(self.search_asset_by_uuid(asset_uuid=bronAsset_uuid), None)
+        doel_asset = next(self.search_asset_by_uuid(asset_uuid=doelAsset_uuid), None)
+
         json_body = {
             "bronAsset": {
                 "uuid": f"{bronAsset_uuid}",
-                "_type": "installatie"
+                "_type": f"{bron_asset._type}"
             },
             "doelAsset": {
                 "uuid": f"{doelAsset_uuid}",
-                "_type": "installatie"
+                "_type": f"{doel_asset._type}"
             },
             "relatieType": {
                 "uuid": f"{relatieType_uuid}"
