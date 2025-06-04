@@ -304,7 +304,8 @@
         {"name": "Camera_Positie Y (Lambert 72)","type": "object", "nullable": true},
         {"name": "Camera_Positie Z (Lambert 72)","type": "object", "nullable": true},
         {"name": "Camera_Type Camera","type": "object", "nullable": true},
-        {"name": "Camera_Is AID of Is PTZ","type": "object", "nullable": true},
+        {"name": "Camera_heeftAid","type": "object", "nullable": true},
+        {"name": "Camera_isPtz","type": "object", "nullable": true},
         {"name": "Camera_Kijkrichting","type": "object", "nullable": true},
         {"name": "Voedingsrelaties_Voedingsrelatie assetId.identificator","type": "object", "nullable": true},
         {"name": "Voedingsrelaties_Voedingsrelatie typeURI","type": "object", "nullable": true},
@@ -330,7 +331,8 @@
         {"name": "Sturingsrelaties_UUID Sturingsrelatie","type": "object", "nullable": true},
         {"name": "Status_Geplande indienstname","type": "object", "nullable": true},
         {"name": "Status_In dienst genomen","type": "object", "nullable": true},
-        {"name": "Status_Status", "type": "object", "nullable": true}
+        {"name": "Status_Status", "type": "object", "nullable": true},
+        {"name": "parent_beheerobject_uuid","type": "object", "nullable": true}
     ],
     "Portieken-Seinbruggen": [
         {"name": "Seinbrug_Object naam ROCO","type": "object", "nullable": true},
@@ -345,7 +347,8 @@
         {"name": "Seinbrug_RWS/Standaardportiek/tijdelijke seinbrug","type": "object", "nullable": true},
         {"name": "Status_Geplande indienstname","type": "object", "nullable": true},
         {"name": "Status_In dienst genomen","type": "object", "nullable": true},
-        {"name": "Status_Status", "type": "object", "nullable": true}
+        {"name": "Status_Status", "type": "object", "nullable": true},
+        {"name": "parent_beheerobject_uuid", "type": "object", "nullable": true}
     ],
     "Galgpaal": [
         {"name": "Galgpaal_Object naam ROCO","type": "object", "nullable": true},
@@ -358,6 +361,7 @@
         {"name": "Galgpaal_Positie Z (Lambert 72, optioneel)","type": "object", "nullable": true},
         {"name": "Status_Geplande indienstname","type": "object", "nullable": true},
         {"name": "Status_In dienst genomen","type": "object", "nullable": true},
-        {"name": "Status_Status","type": "object", "nullable": true}
+        {"name": "Status_Status","type": "object", "nullable": true},
+        {"name": "parent_beheerobject_uuid", "type": "object", "nullable": true}
     ]
 }
