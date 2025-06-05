@@ -294,7 +294,7 @@ class EMInfraClient:
 
         return self.change_bestekkoppelingen_by_asset_uuid(asset_uuid, bestekkoppelingen)
 
-    def add_bestekkoppeling(self, asset_uuid: str, eDelta_besteknummer: str = None, eDelta_dossiernummer: str = None, start_datetime: datetime = datetime.now(), end_datetime: datetime = None, categorie: str = BestekCategorieEnum.WERKBESTEK) -> dict | None:
+    def add_bestekkoppeling(self, asset_uuid: str, eDelta_besteknummer: str = None, eDelta_dossiernummer: str = None, start_datetime: datetime = datetime.now(), end_datetime: datetime = None, categorie: str = BestekCategorieEnum.WERKBESTEK, insert_index: int=0) -> dict | None:
         """
         Add a new bestekkoppeling. Start date default the execution date. End date default open-ended.
         The optional parameters "eDelta_besteknummer" and "eDelta_dossiernummer" are mutually exclusive, meaning that one of both optional parameters must be provided.
@@ -335,7 +335,7 @@ class EMInfraClient:
                 categorie=categorie
             )
             # Insert the new bestekkoppeling at the first index position.
-            bestekkoppelingen.insert(0, new_bestekkoppeling)
+            bestekkoppelingen.insert(insert_index, new_bestekkoppeling)
 
             return self.change_bestekkoppelingen_by_asset_uuid(asset_uuid, bestekkoppelingen)
 
