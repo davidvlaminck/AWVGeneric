@@ -16,6 +16,7 @@ from pathlib import Path
 
 class AssetType(Enum):
     AB = 'Afstandsbewaking'
+    CABINECONTROLLER = 'Cabinecontroller'
     CAMERA = 'Camera'
     CAMGROEP = 'CAMGroep'
     DNBHOOGSPANNING = 'DNBHOOGSPANNING'
@@ -156,7 +157,8 @@ class BypassProcessor:
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRVMS": "https://lgc.data.wegenenverkeer.be/ns/installatie#RVMS",
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordVMS": "https://lgc.data.wegenenverkeer.be/ns/installatie#VMS",
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Seinbrug": "https://lgc.data.wegenenverkeer.be/ns/installatie#SeinbrugDVM",
-            "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Galgpaal": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Galgpaal"
+            "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Galgpaal": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Galgpaal",
+            "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Cabinecontroller": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Cabinecontroller"
         }
         # Update URI's na specifieke verwevingsdatum
         if execution_date > datetime(year=2025, month=6, day=30):
@@ -577,6 +579,15 @@ class BypassProcessor:
                               parent_asset_info=parent_asset_info,
                               eigenschap_infos=eigenschappen,
                               relatie_infos=[hoortbijrelatie],
+                              sheetname_prefix='HS')
+
+    def process_voeding_cabinecontroller(self):
+        logging.info('Aanmaken CabineController')
+        asset_info = AssetInfo(asset_type=AssetType.CABINECONTROLLER, column_name='CabineController_Naam CC',
+                               column_uuid='CabineController_UUID CC', column_typeURI='CabineController_CC TypeURI')
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT,
+                                            column_parent_uuid=None, column_parent_name=None)
+        bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info,
                               sheetname_prefix='HS')
 
     def process_voeding_segmentcontroller(self):
@@ -1040,7 +1051,13 @@ class BypassProcessor:
             installatie_naam = match[1] + 'X' + installatie_naam[match.end():]
         else:
             raise ValueError("De syntax van de asset bevat geen letter 'P', 'N' of 'M'.")
+        return installatie_naam
 
+    def _construct_installatie_naam_cabinecontroller(self, naam):
+        if naam.endswith('.CC1'):
+            installatie_naam = naam[:-4]
+        else:
+            raise ValueError(f"De naam van de CabineController ({naam}) eindigt niet op '.CC1'")
         return installatie_naam
 
 
@@ -1077,6 +1094,8 @@ class BypassProcessor:
             installatie_naam = self._construct_installatie_naam_seinbrug(naam=naam)
         elif asset_type.name == 'GALGPAAL':
             installatie_naam = self._construct_installatie_naam_seinbrug(naam=naam)
+        elif asset_type.name == 'CABINECONTROLLER':
+            installatie_naam = self._construct_installatie_naam_cabinecontroller(naam=naam)
         return installatie_naam
 
     def validate_asset(self, uuid: str = None, naam: str = None, stop_on_error: bool = True) -> None:
@@ -1371,6 +1390,7 @@ if __name__ == '__main__':
     bypass.process_voeding_DNBHoogspanning()
     bypass.process_voeding_energiemeter_DNB()
 
+    bypass.process_voeding_cabinecontroller()
     bypass.process_voeding_segmentcontroller()
     bypass.process_voeding_wegverlichtingsgroep()
 
