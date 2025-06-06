@@ -1351,6 +1351,7 @@ if __name__ == '__main__':
     bypass.process_wegkantkasten_lsdeel()
 
     bypass.process_mivlve()
+    # TODO tot hier. De bestaande sturing-relaties schrappen tussen MIVMeetpunt en MIVModule die over verschillende bomen loopt. Die zijn fout en belemmereren dat de juiste Sturing relatie wordt aangemaakt.
     bypass.process_mivmeetpunten()
 
     bypass.process_seinbruggen()
