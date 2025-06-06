@@ -614,8 +614,8 @@ class BypassProcessor:
         logging.info('Aanmaken WVLichtmast')
         asset_info = AssetInfo(asset_type=AssetType.WVLICHTMAST, column_name='WVLichtmast_Object assetId.identificator',
                                column_uuid='WVLichtmast_UUID Object', column_typeURI='WVLichtmast_Object typeURI')
-        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT,
-                                            column_parent_uuid=None, column_parent_name=None)
+        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
+                                            column_parent_uuid='parent_asset_uuid', column_parent_name=None)
         voedingsrelatie = RelatieInfo(uri=RelatieType.VOEDT,
                                       bronAsset_uuid='Voedingsrelaties_UUID Voedingsrelatie bronAsset',
                                       doelAsset_uuid=None,
@@ -1392,6 +1392,7 @@ if __name__ == '__main__':
 
     bypass.process_voeding_cabinecontroller()
     bypass.process_voeding_segmentcontroller()
+
     bypass.process_voeding_wegverlichtingsgroep()
 
     bypass.process_openbare_verlichting()

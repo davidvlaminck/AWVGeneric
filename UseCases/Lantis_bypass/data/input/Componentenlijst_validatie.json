@@ -115,7 +115,8 @@
         {"name": "Voedingsrelaties_Voedingsrelatie typeURI","type": "object", "nullable": true},
         {"name": "Voedingsrelaties_Voedinsgsrelatie bronAssetId.identificator","type": "object", "nullable": true},
         {"name": "Voedingsrelaties_UUID Voedingsrelatie bronAsset","type": "object", "nullable": true},
-        {"name": "Voedingsrelaties_UUID Voedingsrelatie","type": "object", "nullable": true}
+        {"name": "Voedingsrelaties_UUID Voedingsrelatie","type": "object", "nullable": true},
+        {"name": "parent_asset_uuid","type": "object", "nullable": true}
     ],
     "MIVLVE": [
         {"name": "LVE_Object naam ROCO","type": "object", "nullable": true},
