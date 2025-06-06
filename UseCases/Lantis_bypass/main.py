@@ -965,34 +965,32 @@ class BypassProcessor:
         :param naam:
         :return:
         """
-        if naam.endswith('.HSCabine'):
-            installatie_naam = naam[:-9]
-        elif naam.endswith('.HSCab'):
+        if naam.endswith('.HSCab'):
             installatie_naam = naam[:-6]
         elif naam.endswith('.LSBord'):
             installatie_naam = naam[:-7]
         else:
             raise ValueError(
-                f"De naam van de HSCabine ({naam}) eindigt niet op '.HSCabine' of '.HSCab of '.LSBord' (uitzondering)")
+                f"De naam van de HSCabine ({naam}) eindigt niet op '.HSCab of '.LSBord' (uitzondering)")
         return installatie_naam
 
     def _construct_installatie_naam_hoogspanningsdeel(self, naam: str) -> str:
         if naam.endswith('.HSDeel'):
-            installatie_naam = naam.replace('.HSDeel', '.HSCabine')
+            installatie_naam = naam.replace('.HSDeel', '.HSCab')
         else:
             raise ValueError(f"De naam van het Hoogspanningsdeel ({naam}) eindigt niet op '.HSDeel'")
         return installatie_naam
 
     def _construct_installatie_naam_laagspanningsdeel(self, naam: str) -> str:
         if naam.endswith('.LSDeel'):
-            installatie_naam = naam.replace('.LSDeel', '.HSCabine')
+            installatie_naam = naam.replace('.LSDeel', '.HSCab')
         else:
             raise ValueError(f"De naam van het Laagspanningsdeel ({naam}) eindigt niet op '.LSDeel'")
         return installatie_naam
 
     def _construct_installatie_naam_hoogspanning(self, naam: str) -> str:
         if naam.endswith('.HS'):
-            installatie_naam = naam.replace('.HS', '.HSCabine')
+            installatie_naam = naam.replace('.HS', '.HSCab')
         else:
             raise ValueError(f"De naam van de Hoogspanning ({naam}) eindigt niet op '.HS'")
         return installatie_naam
