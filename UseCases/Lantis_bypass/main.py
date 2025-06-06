@@ -1296,16 +1296,21 @@ class BypassProcessor:
 
     def process_cameras_poort(self):
         logging.info('Aanmaken Poort')
-        asset_info = AssetInfo(asset_type=AssetType.POORT, column_uuid='Netwerkgegevens_UUID Poort',
+        asset_info = AssetInfo(asset_type=AssetType.POORT,
+                               column_uuid='Netwerkgegevens_UUID Poort',
                                column_name='Netwerkgegevens_assetId.identificator Poort',
                                column_typeURI='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Netwerkpoort')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
                                             column_parent_uuid='Camera_UUID Object',
                                             column_parent_name='Camera_Object assetId.identificator')
-        sturingrelatie = RelatieInfo(uri=RelatieType.STURING, bronAsset_uuid='Netwerkgegevens_UUID Poort',
+        sturingrelatie = RelatieInfo(uri=RelatieType.STURING,
+                                     bronAsset_uuid='Netwerkgegevens_UUID Poort',
                                      doelAsset_uuid='Camera_UUID Object')
-        bypass.process_assets(df=bypass.df_assets_cameras, asset_info=asset_info, parent_asset_info=parent_asset_info,
-                              relatie_infos=[sturingrelatie], sheetname_prefix='Camera')
+        bypass.process_assets(df=bypass.df_assets_cameras,
+                              asset_info=asset_info,
+                              parent_asset_info=parent_asset_info,
+                              relatie_infos=[sturingrelatie],
+                              sheetname_prefix='Camera')
 
 
 if __name__ == '__main__':
@@ -1335,16 +1340,22 @@ if __name__ == '__main__':
 
     bypass.process_RSS_groep()
     bypass.process_RSS_borden()
-    bypass.process_RSS_poort()
+    # todo: enkel de sturingsrelatie toevoegen van de Poort.
+    # Activeer pas nadat de poort is aangemaakt door derde partij.
+    ## bypass.process_RSS_poort()
 
     bypass.process_RVMS_groep()
     bypass.process_RVMS_borden()
-    bypass.process_RVMS_poort()
+    # todo: enkel de sturingsrelatie toevoegen van de Poort.
+    # Activeer pas nadat de poort is aangemaakt door derde partij.
+    ## bypass.process_RVMS_poort()
 
     bypass.process_galgpaal()
 
     bypass.process_camera()
-    bypass.process_cameras_poort()
+    # todo: enkel de sturingsrelatie toevoegen van de Poort.
+    # Activeer pas nadat de poort is aangemaakt door derde partij.
+    ## bypass.process_cameras_poort()
 
     logging.info('Boomstructuur van de Hoogspanningscabine')
     logging.info('Aanmaken Boomstructuur voor installaties onder Wegkantkast')
