@@ -85,6 +85,9 @@
         {"name": "HoortBij Relatie voor EnergiemeterDNB_HoortBij assetId.identificator","type": "object", "nullable": true},
         {"name": "HoortBij Relatie voor EnergiemeterDNB_HoortBij typeURI","type": "object", "nullable": true},
         {"name": "HoortBij Relatie voor EnergiemeterDNB_UUID HoortBijrelatie","type": "object", "nullable": true},
+        {"name": "CabineController_Naam CC","type": "object", "nullable": true},
+        {"name": "CabineController_CC TypeURI","type": "object", "nullable": true},
+        {"name": "CabineController_UUID CC","type": "object", "nullable": true},
         {"name": "Segmentcontroller_Naam SC","type": "object", "nullable": true},
         {"name": "Segmentcontroller_SC TypeURI","type": "object", "nullable": true},
         {"name": "Segmentcontroller_UUID SC","type": "object", "nullable": true},
@@ -112,7 +115,8 @@
         {"name": "Voedingsrelaties_Voedingsrelatie typeURI","type": "object", "nullable": true},
         {"name": "Voedingsrelaties_Voedinsgsrelatie bronAssetId.identificator","type": "object", "nullable": true},
         {"name": "Voedingsrelaties_UUID Voedingsrelatie bronAsset","type": "object", "nullable": true},
-        {"name": "Voedingsrelaties_UUID Voedingsrelatie","type": "object", "nullable": true}
+        {"name": "Voedingsrelaties_UUID Voedingsrelatie","type": "object", "nullable": true},
+        {"name": "parent_asset_uuid","type": "object", "nullable": true}
     ],
     "MIVLVE": [
         {"name": "LVE_Object naam ROCO","type": "object", "nullable": true},
