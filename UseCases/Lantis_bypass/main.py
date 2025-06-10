@@ -152,6 +152,7 @@ class BypassProcessor:
             "lgc:installatie#IP": "https://lgc.data.wegenenverkeer.be/ns/installatie#IP",
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#WVLichtmast": "https://lgc.data.wegenenverkeer.be/ns/installatie#VPLMast",
             "https://wegenenverkeer.data.vlaanderen.be/ns/installatie#MIVModule": "https://wegenenverkeer.data.vlaanderen.be/ns/installatie#MIVModule",
+            "https://wegenenverkeer.data.vlaanderen.be/ns/installatie#MIVMeetpunt": "https://wegenenverkeer.data.vlaanderen.be/ns/installatie#MIVMeetpunt",
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#MIVLus": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#MIVLus",
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRSS": "https://lgc.data.wegenenverkeer.be/ns/installatie#RSSBord",
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRVMS": "https://lgc.data.wegenenverkeer.be/ns/installatie#RVMS",
@@ -404,10 +405,10 @@ class BypassProcessor:
 
                 # Aanmaken van eigenschappen
                 for eigenschap_info in eigenschap_infos:
-                    eigenschapwaarde_nieuw = asset_row.get(eigenschap_info.column_eigenschap_name)
+                    eigenschapwaarde_nieuw = str(asset_row.get(eigenschap_info.column_eigenschap_name)) # Cast to a string to handle the value 'False'
                     if eigenschapwaarde_nieuw: # Not None
                         self.update_eigenschap(asset=asset, eigenschapnaam_bestaand=eigenschap_info.eminfra_eigenschap_name,
-                                           eigenschapwaarde_nieuw=asset_row.get(eigenschap_info.column_eigenschap_name))
+                                           eigenschapwaarde_nieuw=eigenschapwaarde_nieuw)
                     else:
                         logging.debug(f'Eigenschap "{eigenschap_info.eminfra_eigenschap_name}" heeft een lege waarde en wordt niet geüpdatet.')
 
@@ -660,8 +661,8 @@ class BypassProcessor:
             # , EigenschapInfo(eminfra_eigenschap_name='wegdek', column_eigenschap_name='Meetpunt_Wegdek')
         ]
         sturingsrelatie = RelatieInfo(uri=RelatieType.STURING,
-                                      bronAsset_uuid='Sturingsrelaties_UUID Sturingsrelatie bronAsset',
-                                      doelAsset_uuid=None,
+                                      bronAsset_uuid=None,
+                                      doelAsset_uuid='Sturingsrelaties_UUID Sturingsrelatie bronAsset',
                                       column_typeURI_relatie='Sturingsrelaties_Sturingsrelatie typeURI')
         bypass.process_assets(df=bypass.df_assets_mivmeetpunten, asset_info=asset_info,
                               parent_asset_info=parent_asset_info, eigenschap_infos=eigenschap_infos, add_geometry=True,
@@ -1136,6 +1137,10 @@ class BypassProcessor:
             asset_row_z = 0
         if pd.isna(asset_row_x) or pd.isna(asset_row_y):
             return None
+        if asset_row_x <= 14637 or asset_row_x >= 297134 or asset_row_y <= 20909 or asset_row_y >= 246425:
+            error_message = f'Coordinates (x,y) "{asset_row_x}, {asset_row_y}" are OUTSIDE the boundaries of Belgium (https://epsg.io/31370).'
+            logging.critical(error_message)
+            raise ValueError(error_message)
         return f'POINT Z ({asset_row_x} {asset_row_y} {asset_row_z})'
 
     def add_bestekkoppeling_if_missing(self, asset_uuid: str, eDelta_dossiernummer: str,
@@ -1351,7 +1356,6 @@ if __name__ == '__main__':
     bypass.process_wegkantkasten_lsdeel()
 
     bypass.process_mivlve()
-    # TODO tot hier. De bestaande sturing-relaties schrappen tussen MIVMeetpunt en MIVModule die over verschillende bomen loopt. Die zijn fout en belemmereren dat de juiste Sturing relatie wordt aangemaakt.
     bypass.process_mivmeetpunten()
 
     bypass.process_seinbruggen()
@@ -1373,7 +1377,7 @@ if __name__ == '__main__':
     bypass.process_camera()
     # todo: enkel de sturingsrelatie toevoegen van de Poort.
     # Activeer pas nadat de poort is aangemaakt door derde partij.
-    ## bypass.process_cameras_poort()
+    # bypass.process_cameras_poort()
 
     logging.info('Boomstructuur van de Hoogspanningscabine')
     logging.info('Aanmaken Boomstructuur voor installaties onder Wegkantkast')
