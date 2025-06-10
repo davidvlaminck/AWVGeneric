@@ -162,14 +162,20 @@ class BypassProcessor:
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Cabinecontroller": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Cabinecontroller"
         }
         # Update URI's na specifieke verwevingsdatum
-        if execution_date > datetime(year=2025, month=6, day=30):
+        if execution_date > datetime(year=2025, month=6, day=2):
             self.typeURI_mapping_dict['lgc:installatie#IP'] = ('https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel'
                                                                '#Netwerkelement')
         if execution_date > datetime(year=2025, month=6, day=13):
+            # RVMS
             self.typeURI_mapping_dict[
                 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRVMS'] = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRVMS'
             self.typeURI_mapping_dict[
                 'lgc:installatie#RVMSGroep'] = ''
+            # VMS
+            self.typeURI_mapping_dict[
+                'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordVMS'] = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordVMS'
+            self.typeURI_mapping_dict[
+                'lgc:installatie#VMSGroep'] = ''
         if execution_date > datetime(year=2025, month=6, day=17):
             self.typeURI_mapping_dict[
                 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRSS'] = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRSS'
