@@ -1393,10 +1393,13 @@ class EMInfraClient:
         json_dict = self.requester.get(url).json()
         return [EigenschapValueDTO.from_dict(item) for item in json_dict['data']]
 
-    def get_eigenschapwaarden(self, assetId: str) -> list[EigenschapValueDTO]:
-        url = f'core/api/assets/{assetId}/eigenschapwaarden'
+    def get_eigenschapwaarden(self, assetId: str, eigenschap_naam: str = None) -> list[EigenschapValueDTO]:
+        url = f'core/api/assets/{assetId}/kenmerken/753c1268-68c2-4e67-a6cc-62c0622b576b/eigenschapwaarden'
         json_dict = self.requester.get(url).json()
-        return [EigenschapValueDTO.from_dict(item) for item in json_dict['data']]
+        eigenschap_value_list = [EigenschapValueDTO.from_dict(item) for item in json_dict['data']]
+        if eigenschap_naam:
+            eigenschap_value_list = [item for item in eigenschap_value_list if item.eigenschap.naam == eigenschap_naam]
+        return eigenschap_value_list
 
     def search_beheerobjecten(self, naam: str, beheerobjecttype: BeheerobjectTypeDTO = None, actief: bool = None, operator: OperatorEnum = OperatorEnum.CONTAINS) -> Generator[BeheerobjectDTO]:
         query_dto = QueryDTO(
