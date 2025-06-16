@@ -73,7 +73,7 @@ if __name__ == '__main__':
 
         startdate = format_datetime(get_startdate(asset=asset_otl))
         if not startdate:
-            logging.debug(f'Startdate cannot be determined. Skipping asset: {asset_otl.uuid}')
+            logging.critical(f'Startdate cannot be determined. Skipping asset: {asset_otl.uuid}')
             continue
 
         # Ophalen van de bestekken van de VRLegacy.
@@ -95,10 +95,9 @@ if __name__ == '__main__':
         bestekkoppelingAanwezig = False
         for bestekkoppeling in bestekken_lgc_update:
             if bestekkoppeling.bestekRef.uuid in (bestekref_yunex.uuid, bestekref_swarco.uuid):
-                logging.debug('Bestekkoppeling YUNEX reeds aanwezig')
-                logging.debug('Herneem de startdatum van het aanwezig bestek, en stel deze later in als einddatum van de nu nog bestaande, actieve bestekken.')
+                logging.debug('Bestekkoppeling YUNEX/SWARCO reeds aanwezig')
                 bestekkoppelingAanwezig = True
-                startdate = bestekkoppeling.startDatum
+                break
 
             elif bestekkoppeling.status.value == 'ACTIEF':
                 aannemer = bestekkoppeling.bestekRef.aannemerNaam
@@ -108,7 +107,7 @@ if __name__ == '__main__':
                 bestekkoppeling.eindDatum = startdate
 
         if bestekkoppelingAanwezig is False:
-            logging.debug('Bestekkoppeling is nog niet aanwezig, dus dient te worden aangemaakt')
+            logging.debug('Bestekkoppeling is nog niet aanwezig, dus wordt aangemaakt')
             # Nieuwe bestekkoppeling instantiëren
             if [aannemer for aannemer in aannemers if 'YUNEX' in aannemer]:
                 bestekkoppeling_nieuw = BestekKoppeling(bestekRef=bestekref_yunex, startDatum=startdate,
