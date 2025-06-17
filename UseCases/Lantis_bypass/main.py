@@ -418,6 +418,7 @@ class BypassProcessor:
                     else:
                         logging.debug(f'Eigenschap "{eigenschap_info.eminfra_eigenschap_name}" heeft een lege waarde en wordt niet geüpdatet.')
 
+                # Toevoegen van de geometrie
                 if add_geometry:
                     if wkt_geometry := self.parse_wkt_geometry(
                             asset_row=asset_row
@@ -453,6 +454,14 @@ class BypassProcessor:
                 self.add_bestekkoppeling_if_missing(asset_uuid=asset.uuid,
                                                     eDelta_dossiernummer=self.eDelta_dossiernummer,
                                                     start_datetime=self.start_datetime)
+
+                # Toezichter (LANTIS) toewijzen
+                # Toezichtsgroep (LANTIS) toewijzen
+                if asset.type.uri.startswith('https://lgc.data.wegenenverkeer.be'):
+                    self.eminfra_client.add_kenmerk_toezichter_by_asset_uuid(asset_uuid=asset.uuid, toezichter_uuid='b234e2b4-383c-4380-acae-49e45189bc10', toezichtgroep_uuid='f421e31c-27f6-486e-843b-5ad245dd613b')
+                else:
+                    self.eminfra_client.add_betrokkenerelatie(asset_uuid=asset.uuid, agent_uuid='b3dc8b00-2c34-448e-b178-04489164d778', rol='toezichter')
+                    self.eminfra_client.add_betrokkenerelatie(asset_uuid=asset.uuid, agent_uuid='f421e31c-27f6-486e-843b-5ad245dd613b', rol='toezichtsgroep')
 
         # Wegschrijven van het dataframe
         with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
