@@ -457,11 +457,8 @@ class BypassProcessor:
 
                 # Toezichter (LANTIS) toewijzen
                 # Toezichtsgroep (LANTIS) toewijzen
-                if asset.type.uri.startswith('https://lgc.data.wegenenverkeer.be'):
-                    self.eminfra_client.add_kenmerk_toezichter_by_asset_uuid(asset_uuid=asset.uuid, toezichter_uuid='b234e2b4-383c-4380-acae-49e45189bc10', toezichtgroep_uuid='f421e31c-27f6-486e-843b-5ad245dd613b')
-                else:
-                    self.eminfra_client.add_betrokkenerelatie(asset_uuid=asset.uuid, agent_uuid='b3dc8b00-2c34-448e-b178-04489164d778', rol='toezichter')
-                    self.eminfra_client.add_betrokkenerelatie(asset_uuid=asset.uuid, agent_uuid='f421e31c-27f6-486e-843b-5ad245dd613b', rol='toezichtsgroep')
+                self.add_toezichter_if_missing(asset=asset)
+
 
         # Wegschrijven van het dataframe
         with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
@@ -1348,6 +1345,40 @@ class BypassProcessor:
                               parent_asset_info=parent_asset_info,
                               relatie_infos=[sturingrelatie],
                               sheetname_prefix='Camera')
+
+    def add_toezichter_if_missing(self, asset: AssetDTO) -> None:
+        """
+        For both Legacy and OTL-assets.
+        Add toezichter and toezichtsgroep.
+        :param asset:
+        :return:
+        """
+        if asset.type.uri.startswith('https://lgc.data.wegenenverkeer.be'):
+            logging.info('Add kenmerk toezichter (LANTIS) en toezichtsgroep (LANTIS) for Legacy-asset.')
+            self.eminfra_client.add_kenmerk_toezichter_by_asset_uuid(asset_uuid=asset.uuid,
+                                                                     toezichter_uuid='b234e2b4-383c-4380-acae-49e45189bc10',
+                                                                     toezichtgroep_uuid='f421e31c-27f6-486e-843b-5ad245dd613b')
+        else:
+            logging.info('Add kenmerk toezichter (LANTIS) en toezichtsgroep (LANTIS) for OTL-asset.')
+            query_dto = QueryDTO(size=5, from_=0, pagingMode=PagingModeEnum.OFFSET,
+                                 selection=SelectionDTO(expressions=[
+                                     ExpressionDTO(terms=[
+                                         TermDTO(property='bronAsset', operator=OperatorEnum.EQ,
+                                                 value=f'{asset.uuid}')])]))
+            betrokkenerelaties = list(self.eminfra_client.search_betrokkenerelaties(query_dto=query_dto))
+
+            if not [item for item in betrokkenerelaties if
+                    item.rol == 'toezichter' and item.doel.get("naam") == 'LANTIS']:
+                logging.debug('Toezichter LANTIS toevoegen')
+                self.eminfra_client.add_betrokkenerelatie(asset=asset,
+                                                          agent_uuid='b3dc8b00-2c34-448e-b178-04489164d778',
+                                                          rol='toezichter')
+            if not [item for item in betrokkenerelaties if
+                    item.rol == 'toezichtsgroep' and item.doel.get("naam") == 'LANTIS']:
+                logging.debug('Toezichtsgroep LANTIS toevoegen')
+                self.eminfra_client.add_betrokkenerelatie(asset=asset,
+                                                          agent_uuid='b3dc8b00-2c34-448e-b178-04489164d778',
+                                                          rol='toezichtsgroep')
 
 
 if __name__ == '__main__':
