@@ -757,9 +757,9 @@ class Eigenschap(BaseDataclass):
     definitie: str
     categorie: str
     type: dict
-    kardinaliteitMin: int
-    kardinaliteitMax: int
     links: [Link]
+    kardinaliteitMin: int | None = None
+    kardinaliteitMax: int | None = None
 
     def __post_init__(self):
         self._fix_nested_list_classes({('links', Link)})
