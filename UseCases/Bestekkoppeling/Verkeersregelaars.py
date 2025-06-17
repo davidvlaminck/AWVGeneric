@@ -9,7 +9,7 @@ from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path
 
-print(""""
+print("""
         Wijzigen Bestekkoppelingen voor Verkeersregelaars (Legacy)
         Voor de bijhorende Verkeersregelaar (OTL) de eigenschap datumOprichtingObject ophalen.
         Nieuwe startdatum van een bestekkoppeling 2 jaar inverder plaatsen (+ 2 jaar).
@@ -20,15 +20,17 @@ print(""""
 
 def load_settings():
     """Load API settings from JSON"""
-    settings_path = Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
-    return settings_path
+    return Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
 
 
-def import_data():
+def import_data(filepath: Path):
     """Import Excel data in a Dataframe"""
-    filepath = Path().home() / 'Downloads' / 'VerkeersRegelinstallatie' / 'VR_OTL-Legacy.xlsx'
-    df_assets = pd.read_excel(filepath, sheet_name='VR_OTL-Legacy', header=0, usecols=["vr_otl_uuid", "vr_lgc_uuid"])
-    return df_assets
+    return pd.read_excel(
+        filepath,
+        sheet_name='VR_OTL-Legacy',
+        header=0,
+        usecols=["vr_otl_uuid", "vr_lgc_uuid"],
+    )
 
 
 def get_startdate(asset: AssetDTO) -> datetime.datetime | None:
@@ -68,7 +70,7 @@ if __name__ == '__main__':
     bestekref_swarco = eminfra_client.get_bestekref_by_eDelta_dossiernummer('VWT/INN/2020/011_004AWV/TLC_1')
     bestekref_yunex = eminfra_client.get_bestekref_by_eDelta_dossiernummer('VWT/INN/2020/011_004AWV/TLC_2')
 
-    df_assets = import_data()
+    df_assets = import_data(filepath=Path().home() / 'Downloads' / 'VerkeersRegelinstallatie' / 'VR_OTL-Legacy.xlsx')
 
     assets_without_datumoprichtingobject = []
     for df_index, asset in df_assets.iterrows():
