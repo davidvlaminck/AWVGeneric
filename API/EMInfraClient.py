@@ -131,6 +131,23 @@ class EMInfraClient:
             raise ProcessLookupError(response.content.decode("utf-8"))
         return ToezichterKenmerk.from_dict(response.json())
 
+    def add_kenmerk_toezichter_by_asset_uuid(self, asset_uuid: str, toezichtgroep_uuid: str, toezichter_uuid: str) -> None:
+        payload = {
+            "toezichtGroep": {
+                "uuid": toezichtgroep_uuid
+            },
+            "toezichter": {
+                "uuid": toezichter_uuid
+            }
+
+        }
+        response = self.requester.put(
+            url=f'core/api/assets/{asset_uuid}/kenmerken/f0166ba2-757c-4cf3-bf71-2e4fdff43fa3'
+            , json=payload
+        )
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
 
     def get_identiteit(self, toezichter_uuid: str) -> IdentiteitKenmerk:
         response = self.requester.get(
@@ -995,11 +1012,11 @@ class EMInfraClient:
             if query_dto.from_ >= dto_list_total:
                 break
 
-    def add_betrokkenerelatie(self, asset_uuid: str, agent_uuid: str, rol: str) -> dict:
+    def add_betrokkenerelatie(self, asset: AssetDTO, agent_uuid: str, rol: str) -> dict:
         json_body = {
             "bron": {
-                "uuid": f"{asset_uuid}"
-                , "_type": "onderdeel"
+                "uuid": f"{asset.uuid}"
+                , "_type": f"{asset._type}"
             },
             "doel": {
                 "uuid": f"{agent_uuid}"

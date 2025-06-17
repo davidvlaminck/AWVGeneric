@@ -15,6 +15,9 @@ from pathlib import Path
 
 
 class AssetType(Enum):
+    """
+    An enumeration of asset types with their corresponding values.
+    """
     AB = 'Afstandsbewaking'
     CABINECONTROLLER = 'Cabinecontroller'
     CAMERA = 'Camera'
@@ -44,6 +47,9 @@ class AssetType(Enum):
 
 
 class RelatieType(Enum):
+    """
+    An enumeration of relatie types with their corresponding values.
+    """
     BEVESTIGING = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging'
     VOEDT = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt'
     STURING = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Sturing'
@@ -52,6 +58,15 @@ class RelatieType(Enum):
 
 @dataclass
 class RelatieInfo:
+    """
+    A data class representing relationship information.
+
+    Args:
+        uri (RelatieType): The type of relationship.
+        bronAsset_uuid (str, optional): The UUID of the source asset. Defaults to None.
+        doelAsset_uuid (str, optional): The UUID of the target asset. Defaults to None.
+        column_typeURI_relatie (str, optional): The type URI of the relationship column. Defaults to None.
+    """
     uri: RelatieType
     bronAsset_uuid: str | None = None
     doelAsset_uuid: str | None = None
@@ -60,6 +75,16 @@ class RelatieInfo:
 
 @dataclass
 class AssetInfo:
+    """
+    A data class representing asset information.
+
+    Args:
+        asset_type (AssetType): The type of the asset.
+        column_uuid (str, optional): The UUID of the column. Defaults to None.
+        column_typeURI (str, optional): The type URI of the column. Defaults to None.
+        column_name (str, optional): The name of the column. Defaults to None.
+        column_asset_aanwezig (str, optional): The presence of the asset column. Defaults to None.
+    """
     asset_type: AssetType
     column_uuid: str | None = None
     column_typeURI: str | None = None
@@ -69,6 +94,14 @@ class AssetInfo:
 
 @dataclass
 class ParentAssetInfo:
+    """
+    A data class representing parent asset information.
+
+    Args:
+        parent_asset_type (BoomstructuurAssetTypeEnum): The type of the parent asset.
+        column_parent_uuid (str, optional): The UUID of the parent column. Defaults to None.
+        column_parent_name (str, optional): The name of the parent column. Defaults to None.
+    """
     parent_asset_type: BoomstructuurAssetTypeEnum
     column_parent_uuid: str | None = None
     column_parent_name: str | None = None
@@ -76,6 +109,13 @@ class ParentAssetInfo:
 
 @dataclass
 class EigenschapInfo:
+    """
+    A data class representing property information.
+
+    Args:
+        eminfra_eigenschap_name (str): The name of the EMInfra property.
+        column_eigenschap_name (str): The name of the column property.
+    """
     eminfra_eigenschap_name: str
     column_eigenschap_name: str
 
@@ -91,6 +131,20 @@ class BypassProcessor:
                 __file__).resolve().parent / 'data' / 'output' / f'lantis_bypass_{datetime.now().strftime(format="%Y-%m-%d")}.xlsx'
                  , startdatum_bestekkoppeling: datetime = datetime(2024, 9, 1)
                  ):
+        """
+        Initializes the LantisBypass class with specified parameters.
+
+        Args:
+            environment (Environment, optional): The environment to use. Defaults to Environment.TEI.
+            settings_path (Path, optional): The path to the settings file. Defaults to the default settings path.
+            eDelta_dossiernummer (str, optional): The eDelta dossier number. Defaults to "INTERN-095".
+            input_path_componentenlijst (Path, optional): The path to the input component list Excel file. Defaults to the default input path.
+            output_excel_path (Path, optional): The path to the output Excel file. Defaults to a file with the current date in the name.
+            startdatum_bestekkoppeling (datetime, optional): The start date of the contract link. Defaults to September 1, 2024.
+
+        Returns:
+            None
+        """
         self.setup_logging()
 
         self.excel_file = input_path_componentenlijst
@@ -133,6 +187,16 @@ class BypassProcessor:
         self.setup_mapping_dict_eigenschappen()
 
     def setup_mapping_dict_typeURI(self):
+        """
+        Sets up the mapping dictionary for typeURI based on the current execution date.
+        Takes into account "verweving"
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
         execution_date = datetime.now()
         self.typeURI_mapping_dict = {
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Wegkantkast": "https://lgc.data.wegenenverkeer.be/ns/installatie#Kast",
@@ -187,6 +251,15 @@ class BypassProcessor:
 
 
     def setup_mapping_dict_eigenschappen(self):
+        """
+        Sets up the mapping dictionary for properties (eigenschappen).
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
         self.eigenschappen_mapping_dict = {
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBHoogspanning": [
                 {
@@ -247,6 +320,15 @@ class BypassProcessor:
         }
 
     def setup_logging(self):
+        """
+        Sets up logging configuration for the LantisBypass class.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
         logging.basicConfig(filename="logs.log", level=logging.DEBUG,
                             format='%(levelname)s:\t%(asctime)s:\t%(message)s\t', filemode="w")
         logging.info('Lantis Bypass: \tAanmaken van assets en relaties voor de Bypass van de Oosterweelverbinding')
@@ -279,6 +361,16 @@ class BypassProcessor:
         self.df_assets_galgpaal = self.import_data_as_dataframe(filepath=self.excel_file, sheet_name="Galgpaal")
 
     def process_installatie(self, df: pd.DataFrame, column_name: str, asset_type: AssetType) -> None:
+        """
+        Process installations (installaties) for a specific asset type based on the provided DataFrame.
+        Args:
+            df (pd.DataFrame): The DataFrame containing asset data.
+            column_name (str): The name of the column in the DataFrame.
+            asset_type (AssetType): The type of the asset.
+
+        Returns:
+            None
+        """
         logging.info(f'Aanmaken van installaties bij het assettype: {asset_type}')
         for idx, asset_row in df.iterrows():
             asset_row_naam = asset_row.get(column_name)
@@ -413,15 +505,15 @@ class BypassProcessor:
                 for eigenschap_info in eigenschap_infos:
                     eigenschapwaarde_nieuw = str(asset_row.get(eigenschap_info.column_eigenschap_name)) # Cast to a string to handle the value 'False'
                     if eigenschapwaarde_nieuw: # Not None
+                        logging.debug(f'process asset: "{asset.uuid}", update eigenschap "{eigenschap_info.eminfra_eigenschap_name}" with value "{eigenschapwaarde_nieuw}".')
                         self.update_eigenschap(asset=asset, eigenschapnaam_bestaand=eigenschap_info.eminfra_eigenschap_name,
-                                           eigenschapwaarde_nieuw=eigenschapwaarde_nieuw)
+                                               eigenschapwaarde_nieuw=eigenschapwaarde_nieuw)
                     else:
                         logging.debug(f'Eigenschap "{eigenschap_info.eminfra_eigenschap_name}" heeft een lege waarde en wordt niet geüpdatet.')
 
+                # Toevoegen van de geometrie
                 if add_geometry:
-                    if wkt_geometry := self.parse_wkt_geometry(
-                            asset_row=asset_row
-                    ):
+                    if wkt_geometry := self.parse_wkt_point_geometry(asset_row=asset_row):
                         if typeURI.startswith('https://lgc.'):
                             logging.debug(f'Update eigenschap locatie (Legacy): "{asset.uuid}": "{wkt_geometry}"')
                             self.eminfra_client.update_kenmerk_locatie_by_asset_uuid(asset_uuid=asset.uuid,
@@ -453,6 +545,11 @@ class BypassProcessor:
                 self.add_bestekkoppeling_if_missing(asset_uuid=asset.uuid,
                                                     eDelta_dossiernummer=self.eDelta_dossiernummer,
                                                     start_datetime=self.start_datetime)
+
+                # Toezichter (LANTIS) toewijzen
+                # Toezichtsgroep (LANTIS) toewijzen
+                self.add_toezichter_if_missing(asset=asset)
+
 
         # Wegschrijven van het dataframe
         with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
@@ -660,18 +757,21 @@ class BypassProcessor:
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
                                             column_parent_uuid='Sturingsrelaties_UUID Sturingsrelatie bronAsset',
                                             column_parent_name='Sturingsrelatie_Sturingsrelatie bron AssetId.identificator')
-        eigenschap_infos = [
-            EigenschapInfo(eminfra_eigenschap_name='uitslijprichting',
-                           column_eigenschap_name='Meetpunt_Uitslijprichting')
+        # todo: activeer de eigenschap zodra ingevuld in Excel input-file
+        # eigenschap_infos = [
+        #     EigenschapInfo(eminfra_eigenschap_name='uitslijprichting',
+        #                    column_eigenschap_name='Meetpunt_Uitslijprichting')
             # , EigenschapInfo(eminfra_eigenschap_name='aansluiting', column_eigenschap_name='Meetpunt_Aansluiting')
             # , EigenschapInfo(eminfra_eigenschap_name='wegdek', column_eigenschap_name='Meetpunt_Wegdek')
-        ]
+        # ]
         sturingsrelatie = RelatieInfo(uri=RelatieType.STURING,
                                       bronAsset_uuid=None,
                                       doelAsset_uuid='Sturingsrelaties_UUID Sturingsrelatie bronAsset',
                                       column_typeURI_relatie='Sturingsrelaties_Sturingsrelatie typeURI')
         bypass.process_assets(df=bypass.df_assets_mivmeetpunten, asset_info=asset_info,
-                              parent_asset_info=parent_asset_info, eigenschap_infos=eigenschap_infos, add_geometry=True,
+                              parent_asset_info=parent_asset_info,
+                              # eigenschap_infos=eigenschap_infos,
+                              add_geometry=True,
                               relatie_infos=[sturingsrelatie], sheetname_prefix='MIVLVE')
 
     def process_camera(self):
@@ -766,9 +866,17 @@ class BypassProcessor:
                               , add_geometry=True, sheetname_prefix='Seinbrug')
 
     def import_data_as_dataframe(self, filepath: Path, sheet_name: str = None):
-        """Import data as a dataframe
+        """
+        Imports data from an Excel file into a Pandas DataFrame, validates the data structure, and returns the DataFrame.
 
-        Read input data Componententlijst into a DataFrame. Validate the data structure.
+        Args:
+            filepath (Path): The path to the Excel file.
+            sheet_name (str, optional): The name of the sheet in the Excel file. Defaults to None.
+
+        Returns:
+            pd.DataFrame: The DataFrame containing the imported data.
+        Raises:
+            ValueError: If the validation of the DataFrame structure fails.
         """
         # Read the Excel file
         sheet_df = pd.read_excel(
@@ -1132,7 +1240,18 @@ class BypassProcessor:
                     f'Asset {uuid} naam {naam} komt niet overeen met de bestaande naam {asset.naam}.')
         return None
 
-    def parse_wkt_geometry(self, asset_row) -> str:
+    def parse_wkt_point_geometry(self, asset_row) -> str:
+        """
+        Parses the Well-Known Text (WKT) Point geometry from the asset row data.
+
+        Args:
+            asset_row: The row data containing asset information.
+
+        Returns:
+            str: The WKT geometry string representing the asset location.
+        Raises:
+            ValueError: If the coordinates are outside the boundaries of Belgium.
+        """
         matching_column_x = [col for col in asset_row.index if 'Positie X (Lambert 72)' in col]
         asset_row_x = asset_row[matching_column_x[0]] if matching_column_x else None
         matching_column_y = [col for col in asset_row.index if 'Positie Y (Lambert 72)' in col]
@@ -1174,36 +1293,20 @@ class BypassProcessor:
         ):
             self.eminfra_client.add_bestekkoppeling(asset_uuid=asset_uuid, eDelta_dossiernummer=eDelta_dossiernummer,
                                                     start_datetime=start_datetime)
-
-    def append_columns(self, df: pd.DataFrame, columns: list = None) -> pd.DataFrame:
-        """
-        Append new columns to the dataframe with default value None.
-        :param df: Dataframe
-        :param columns: New columns
-        :return: Dataframe
-        """
-        if columns is None:
-            columns = ["asset_uuid"]
-        # append new columns
-        for col in columns:
-            df[col] = None
-        return df
-
-    def construct_rss_groep_naam(self, rss_naam: str) -> str:
-        if re.search(pattern='^.+\..*', string=rss_naam):
-            rss_groep_naam = rss_naam.split('.', 1)[0]
-        else:
-            raise ValueError(f"De naam van de RSS ({rss_naam}) voldoet niet aan de syntax regels.")
-        return rss_groep_naam
-
-    def construct_rvms_groep_naam(self, rvms_naam: str) -> str:
-        if re.search(pattern='^.+\..*', string=rvms_naam):
-            rvms_groep_naam = rvms_naam.split('.', 1)[0]
-        else:
-            raise ValueError(f"De naam van de RVMS ({rvms_naam}) voldoet niet aan de syntax regels.")
-        return rvms_groep_naam
-
     def update_eigenschap(self, asset: AssetDTO, eigenschapnaam_bestaand: str, eigenschapwaarde_nieuw: str) -> None:
+        """
+        Updates a property of an asset with a new value.
+
+        Args:
+            asset (AssetDTO): The asset to update the property for.
+            eigenschapnaam_bestaand (str): The existing property name.
+            eigenschapwaarde_nieuw (str): The new value for the property.
+
+        Returns:
+            None
+        Raises:
+            ValueError: If the existing property is not found or if multiple properties are found.
+        """
         uri = next((item["uri"] for items in self.eigenschappen_mapping_dict.values() for item in items if
                     item.get("eigenschap_naam") == eigenschapnaam_bestaand), None)
         eigenschappen_list = bypass.eminfra_client.search_eigenschappen(eigenschap_naam=eigenschapnaam_bestaand,
@@ -1339,6 +1442,40 @@ class BypassProcessor:
                               parent_asset_info=parent_asset_info,
                               relatie_infos=[sturingrelatie],
                               sheetname_prefix='Camera')
+
+    def add_toezichter_if_missing(self, asset: AssetDTO) -> None:
+        """
+        For both Legacy and OTL-assets.
+        Add toezichter and toezichtsgroep.
+        :param asset:
+        :return:
+        """
+        if asset.type.uri.startswith('https://lgc.data.wegenenverkeer.be'):
+            logging.info('Add kenmerk toezichter (LANTIS) en toezichtsgroep (LANTIS) for Legacy-asset.')
+            self.eminfra_client.add_kenmerk_toezichter_by_asset_uuid(asset_uuid=asset.uuid,
+                                                                     toezichter_uuid='b234e2b4-383c-4380-acae-49e45189bc10',
+                                                                     toezichtgroep_uuid='f421e31c-27f6-486e-843b-5ad245dd613b')
+        else:
+            logging.info('Add kenmerk toezichter (LANTIS) en toezichtsgroep (LANTIS) for OTL-asset.')
+            query_dto = QueryDTO(size=5, from_=0, pagingMode=PagingModeEnum.OFFSET,
+                                 selection=SelectionDTO(expressions=[
+                                     ExpressionDTO(terms=[
+                                         TermDTO(property='bronAsset', operator=OperatorEnum.EQ,
+                                                 value=f'{asset.uuid}')])]))
+            betrokkenerelaties = list(self.eminfra_client.search_betrokkenerelaties(query_dto=query_dto))
+
+            if not [item for item in betrokkenerelaties if
+                    item.rol == 'toezichter' and item.doel.get("naam") == 'LANTIS']:
+                logging.debug('Toezichter LANTIS toevoegen')
+                self.eminfra_client.add_betrokkenerelatie(asset=asset,
+                                                          agent_uuid='b3dc8b00-2c34-448e-b178-04489164d778',
+                                                          rol='toezichter')
+            if not [item for item in betrokkenerelaties if
+                    item.rol == 'toezichtsgroep' and item.doel.get("naam") == 'LANTIS']:
+                logging.debug('Toezichtsgroep LANTIS toevoegen')
+                self.eminfra_client.add_betrokkenerelatie(asset=asset,
+                                                          agent_uuid='b3dc8b00-2c34-448e-b178-04489164d778',
+                                                          rol='toezichtsgroep')
 
 
 if __name__ == '__main__':
