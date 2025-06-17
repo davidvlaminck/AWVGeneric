@@ -413,8 +413,9 @@ class BypassProcessor:
                 for eigenschap_info in eigenschap_infos:
                     eigenschapwaarde_nieuw = str(asset_row.get(eigenschap_info.column_eigenschap_name)) # Cast to a string to handle the value 'False'
                     if eigenschapwaarde_nieuw: # Not None
+                        logging.debug(f'process asset: "{asset.uuid}", update eigenschap "{eigenschap_info.eminfra_eigenschap_name}" with value "{eigenschapwaarde_nieuw}".')
                         self.update_eigenschap(asset=asset, eigenschapnaam_bestaand=eigenschap_info.eminfra_eigenschap_name,
-                                           eigenschapwaarde_nieuw=eigenschapwaarde_nieuw)
+                                               eigenschapwaarde_nieuw=eigenschapwaarde_nieuw)
                     else:
                         logging.debug(f'Eigenschap "{eigenschap_info.eminfra_eigenschap_name}" heeft een lege waarde en wordt niet geüpdatet.')
 
@@ -666,18 +667,21 @@ class BypassProcessor:
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
                                             column_parent_uuid='Sturingsrelaties_UUID Sturingsrelatie bronAsset',
                                             column_parent_name='Sturingsrelatie_Sturingsrelatie bron AssetId.identificator')
-        eigenschap_infos = [
-            EigenschapInfo(eminfra_eigenschap_name='uitslijprichting',
-                           column_eigenschap_name='Meetpunt_Uitslijprichting')
+        # todo: activeer de eigenschap zodra ingevuld in Excel input-file
+        # eigenschap_infos = [
+        #     EigenschapInfo(eminfra_eigenschap_name='uitslijprichting',
+        #                    column_eigenschap_name='Meetpunt_Uitslijprichting')
             # , EigenschapInfo(eminfra_eigenschap_name='aansluiting', column_eigenschap_name='Meetpunt_Aansluiting')
             # , EigenschapInfo(eminfra_eigenschap_name='wegdek', column_eigenschap_name='Meetpunt_Wegdek')
-        ]
+        # ]
         sturingsrelatie = RelatieInfo(uri=RelatieType.STURING,
                                       bronAsset_uuid=None,
                                       doelAsset_uuid='Sturingsrelaties_UUID Sturingsrelatie bronAsset',
                                       column_typeURI_relatie='Sturingsrelaties_Sturingsrelatie typeURI')
         bypass.process_assets(df=bypass.df_assets_mivmeetpunten, asset_info=asset_info,
-                              parent_asset_info=parent_asset_info, eigenschap_infos=eigenschap_infos, add_geometry=True,
+                              parent_asset_info=parent_asset_info,
+                              # eigenschap_infos=eigenschap_infos,
+                              add_geometry=True,
                               relatie_infos=[sturingsrelatie], sheetname_prefix='MIVLVE')
 
     def process_camera(self):
