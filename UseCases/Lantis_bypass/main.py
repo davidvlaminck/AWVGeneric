@@ -1294,6 +1294,19 @@ class BypassProcessor:
             self.eminfra_client.add_bestekkoppeling(asset_uuid=asset_uuid, eDelta_dossiernummer=eDelta_dossiernummer,
                                                     start_datetime=start_datetime)
     def update_eigenschap(self, asset: AssetDTO, eigenschapnaam_bestaand: str, eigenschapwaarde_nieuw: str) -> None:
+        """
+        Updates a property of an asset with a new value.
+
+        Args:
+            asset (AssetDTO): The asset to update the property for.
+            eigenschapnaam_bestaand (str): The existing property name.
+            eigenschapwaarde_nieuw (str): The new value for the property.
+
+        Returns:
+            None
+        Raises:
+            ValueError: If the existing property is not found or if multiple properties are found.
+        """
         uri = next((item["uri"] for items in self.eigenschappen_mapping_dict.values() for item in items if
                     item.get("eigenschap_naam") == eigenschapnaam_bestaand), None)
         eigenschappen_list = bypass.eminfra_client.search_eigenschappen(eigenschap_naam=eigenschapnaam_bestaand,
