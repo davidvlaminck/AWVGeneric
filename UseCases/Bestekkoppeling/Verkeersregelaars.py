@@ -31,7 +31,7 @@ def import_data():
     return df_assets
 
 
-def get_startdate(asset: AssetDTO) -> datetime.datetime:
+def get_startdate(asset: AssetDTO) -> datetime.datetime | None:
     start_date = None
     # Ophalen van de eigenschap "datumOprichtingObject" van de VR (OTL)
     eigenschapwaarden = eminfra_client.get_eigenschapwaarden(assetId=asset.uuid,
@@ -46,6 +46,15 @@ def get_startdate(asset: AssetDTO) -> datetime.datetime:
 
         # Nieuwe bestekdatum = Eigenschap datumOprichtingObject + 2 jaar
         start_date = datumOprichtingObject + relativedelta(years=2)
+
+    if not start_date:
+        logging.critical(f'Startdate cannot be determined for asset: {asset.uuid}')
+        start_date = None
+    else:
+        logging.info(
+            'Formatting datetime from a date to a string, inluding the winter/summer time interval.'
+        )
+        start_date = format_datetime(start_date)
     return start_date
 
 
@@ -61,6 +70,7 @@ if __name__ == '__main__':
 
     df_assets = import_data()
 
+    assets_without_datumoprichtingobject = []
     for df_index, asset in df_assets.iterrows():
         logging.debug(f'Processing assets: {asset.vr_otl_uuid} (OTL) en {asset.vr_lgc_uuid} (Legacy).')
         if pd.isna(asset.vr_otl_uuid) or pd.isna(asset.vr_lgc_uuid):
@@ -71,22 +81,13 @@ if __name__ == '__main__':
         asset_otl = next(eminfra_client.search_asset_by_uuid(asset_uuid=asset.vr_otl_uuid), None)
         asset_lgc = next(eminfra_client.search_asset_by_uuid(asset_uuid=asset.vr_lgc_uuid), None)
 
-        startdate = format_datetime(get_startdate(asset=asset_otl))
+        startdate = get_startdate(asset=asset_otl)
         if not startdate:
-            logging.critical(f'Startdate cannot be determined. Skipping asset: {asset_otl.uuid}')
+            assets_without_datumoprichtingobject.append(asset_otl.uuid)
             continue
 
         # Ophalen van de bestekken van de VRLegacy.
         bestekken_lgc = eminfra_client.get_bestekkoppelingen_by_asset_uuid(asset_uuid=asset_lgc.uuid)
-
-        # Info tijdelijk wegschrijven
-        # for idx, i in enumerate(bestekken_lgc):
-        #     df_assets.at[df_index, f'bestek_{idx}_aannemernaam'] = i.bestekRef.aannemerNaam
-        #     df_assets.at[df_index, f'bestek_{idx}_dossiernummer'] = i.bestekRef.eDeltaDossiernummer
-        #     # debug: te veel actieve bestekken.
-        #     df_assets.at[df_index, f'bestek_{idx}_status'] = i.status.value
-        #     df_assets.at[df_index, f'bestek_{idx}_data'] = f'{i.startDatum} {i.eindDatum}'
-
         bestekken_lgc_update = copy.deepcopy(bestekken_lgc)
 
         # Logica toepassen in functie van de aannemer (Swarco of Yunex).
@@ -101,7 +102,7 @@ if __name__ == '__main__':
 
             elif bestekkoppeling.status.value == 'ACTIEF':
                 aannemer = bestekkoppeling.bestekRef.aannemerNaam
-                logging.debug(f'De overige ACTIEVE bestekkoppeling heeft aannemer: {aannemer}')
+                logging.debug(f'Deze ACTIEVE bestekkoppeling heeft aannemer: {aannemer}')
                 aannemers.append(aannemer)
                 logging.debug(f'Beëindig de bestekkoppeling met als datum: {startdate}')
                 bestekkoppeling.eindDatum = startdate
@@ -121,9 +122,21 @@ if __name__ == '__main__':
             logging.debug("Nieuwe bestekkoppeling van YUNEX/Swarco toevoegen op de eerste index-positie")
             bestekken_lgc_update.insert(0, bestekkoppeling_nieuw)
 
-        # todo: onderstaande code activeren. Opgepast voor de omgeving.
         # Alle Bestekkoppelingen updaten
-        # eminfra_client.change_bestekkoppelingen_by_asset_uuid(asset_uuid=asset_lgc.uuid, bestekkoppelingen=bestekken_lgc)
+        if len(bestekken_lgc_update) > len(bestekken_lgc):
+            logging.info(f'Process asset: "{asset_lgc.uuid}". Updating bestekkoppelingen.')
+            eminfra_client.change_bestekkoppelingen_by_asset_uuid(asset_uuid=asset_lgc.uuid, bestekkoppelingen=bestekken_lgc_update)
+
+        # Info tijdelijk wegschrijven
+        # for idx, i in enumerate(bestekken_lgc):
+        #     df_assets.at[df_index, f'bestek_{idx}_aannemernaam'] = i.bestekRef.aannemerNaam
+        #     df_assets.at[df_index, f'bestek_{idx}_dossiernummer'] = i.bestekRef.eDeltaDossiernummer
+        #     # debug: te veel actieve bestekken.
+        #     df_assets.at[df_index, f'bestek_{idx}_status'] = i.status.value
+        #     df_assets.at[df_index, f'bestek_{idx}_data'] = f'{i.startDatum} {i.eindDatum}'
+
+    logging.debug(f'Assets die geen eigenschap "datumOprichtingObject" hebben: {assets_without_datumoprichtingobject}')
+    logging.debug('Deze worden manueel aangepast.')
 
     # info tijdelijk wegschrijven om de huidige bestekkoppelingen beter te kunnen analyseren.
     # df_assets.to_excel(Path().home() / 'Downloads' / 'VerkeersRegelinstallatie' / 'info_bestekkoppelingen.xlsx'
