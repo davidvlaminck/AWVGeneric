@@ -53,6 +53,6 @@ if __name__ == '__main__':
         #################################################################################
         ####  Add a new betrokkenerelatie - type: toezichter - to OTL-asset
         #################################################################################
-        response = eminfra_client.add_betrokkenerelatie(asset_uuid=asset_uuid_otl, agent_uuid=agent_uuid_lgc,
-                                                        rol='toezichter')
+        asset = eminfra_client.search_asset_by_uuid(asset_uuid=asset_uuid_otl)
+        response = eminfra_client.add_betrokkenerelatie(asset=asset, agent_uuid=agent_uuid_lgc, rol='toezichter')
         betrokkenerelatie_uuid_otl_new = response.get('uuid')
