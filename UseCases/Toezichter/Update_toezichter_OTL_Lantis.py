@@ -77,21 +77,20 @@ if __name__ == '__main__':
                  "naam": asset.naam, "typeURI": asset.type.korteUri, "actief": asset.actief, "toestand": asset.toestand.value}
             )
 
-            # todo Uncomment code below to change the toezichter (deactivate and add Lantis)
-            # # Remove the existing betrokkenerelatie (Ruben/Kristof)
-            # logging.info('Remove existing betrokkenerelatie')
-            # query_betrokkenerelaties = build_query_search_betrokkenerelaties(asset=asset)
-            # betrokkenerelaties = list(eminfra_client.search_betrokkenerelaties(query_dto=query_betrokkenerelaties))
-            #
-            # for betrokkenerelatie in betrokkenerelaties:
-            #     if betrokkenerelatie.rol == 'toezichter' and betrokkenerelatie.doel.get("uuid") == toezichter.uuid:
-            #         logging.info(f'Deactiveer betrokkenerelaties van de toezichter {toezichter.naam}')
-            #         eminfra_client.remove_betrokkenerelatie(betrokkenerelatie_uuid=betrokkenerelatie.uuid)
-            #
-            # if not [item for item in betrokkenerelaties if item.rol == 'toezichter' and item.doel.get("uuid") == toezichter_lantis.uuid]:
-            #     # Add a new betrokkenerelatie Lantis
-            #     logging.info('Add new betrokkenerelatie LANTIS')
-            #     eminfra_client.add_betrokkenerelatie(asset=asset, agent_uuid=toezichter_lantis.uuid, rol='toezichter')
+            # Remove the existing betrokkenerelatie (Ruben/Kristof)
+            logging.info('Remove existing betrokkenerelatie')
+            query_betrokkenerelaties = build_query_search_betrokkenerelaties(asset=asset)
+            betrokkenerelaties = list(eminfra_client.search_betrokkenerelaties(query_dto=query_betrokkenerelaties))
+
+            for betrokkenerelatie in betrokkenerelaties:
+                if betrokkenerelatie.rol == 'toezichter' and betrokkenerelatie.doel.get("uuid") == toezichter.uuid:
+                    logging.info(f'Deactiveer betrokkenerelaties van de toezichter {toezichter.naam}')
+                    eminfra_client.remove_betrokkenerelatie(betrokkenerelatie_uuid=betrokkenerelatie.uuid)
+
+            if not [item for item in betrokkenerelaties if item.rol == 'toezichter' and item.doel.get("uuid") == toezichter_lantis.uuid]:
+                # Add a new betrokkenerelatie Lantis
+                logging.info('Add new betrokkenerelatie LANTIS')
+                eminfra_client.add_betrokkenerelatie(asset=asset, agent_uuid=toezichter_lantis.uuid, rol='toezichter')
 
         # Convert to DataFrame
         df_assets = pd.DataFrame(data)
