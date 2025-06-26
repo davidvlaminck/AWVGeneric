@@ -43,6 +43,25 @@ class LogicalOpEnum(Enum):
     AND = 'AND'
     OR = 'OR'
 
+class GeometryNiveau(Enum):
+    MIN_1 = 'MIN_1'
+    NUL = 'NUL'
+    PLUS_1 = 'PLUS_1'
+
+class GeometryBron(Enum):
+    MANUEEL = 'MANUEEL'
+    MEETTOESTEL = 'MEETTOESTEL'
+    OVERERVING = 'OVERERVING'
+
+class GeometryNauwkeurigheid(Enum):
+    _5 = '_5'
+    _10 = '_10'
+    _20 = '_20'
+    _30 = '_30'
+    _50 = '_50'
+    _100 = '_100'
+    _200 = '_200'
+
 class KenmerkTypeEnum(Enum):
     HEEFTBIJLAGEBRON = 'HeeftBijlageBron'
     HEEFTTOEGANGSPROCEDUREBRON = 'HeeftToegangsprocedureBron'
@@ -53,6 +72,8 @@ class KenmerkTypeEnum(Enum):
     SLUITAANOPBRON = 'SluitAanOpBron'
     LIGTOPDOEL = 'LigtOpDoel'
     LIGTOPBRON = 'LigtOpBron'
+    EIGENSCHAPPEN = 'Eigenschappen'
+    HOORTBIJ = 'HoortBij'
     BESTEK = 'Bestek'
     LOCATIE = 'Locatie'
     BEVESTIGD_AAN = 'Bevestigd aan'
@@ -350,6 +371,30 @@ class LocatieKenmerk(BaseDataclass):
 
     def __post_init__(self):
          self._fix_nested_list_classes({('links', Link)})
+
+
+@dataclass
+class GeometryLog(BaseDataclass):
+    bron: GeometryBron
+    links: [Link]
+    nauwkeurigheid: GeometryNauwkeurigheid
+    niveau: GeometryNiveau
+    uuid: str
+    wkt: str
+
+    def __post_init__(self):
+         self._fix_nested_list_classes({('links', Link)})
+
+
+@dataclass
+class GeometrieKenmerk(BaseDataclass):
+    _type: str
+    type: dict
+    links: [Link]
+    logs: list[GeometryLog] | None = None
+
+    def __post_init__(self):
+         self._fix_nested_list_classes({('links', Link), ('logs', GeometryLog)})
 
 @dataclass
 class ToezichterKenmerk(BaseDataclass):
@@ -674,6 +719,7 @@ class KenmerkType(BaseDataclass):
     _type: str
     type: KenmerkTypeDTO
     links: [Link]
+    types: dict | None = None
     bestekRef: dict | None = None
     bestekKoppelingen: dict | None = None
     toezichter: dict | None =  None
@@ -711,9 +757,9 @@ class Eigenschap(BaseDataclass):
     definitie: str
     categorie: str
     type: dict
-    kardinaliteitMin: int
-    kardinaliteitMax: int
     links: [Link]
+    kardinaliteitMin: int | None = None
+    kardinaliteitMax: int | None = None
 
     def __post_init__(self):
         self._fix_nested_list_classes({('links', Link)})
@@ -730,6 +776,15 @@ class EigenschapValueDTO(BaseDataclass):
 
     def __post_init__(self):
         self._fix_nested_classes({('eigenschap', Eigenschap), ('kenmerkType', KenmerkTypeDTO)})
+
+@dataclass
+class EigenschapValueUpdateDTO(BaseDataclass):
+    typedValue: dict
+    eigenschap: Eigenschap
+
+    def __post_init__(self):
+        self._fix_nested_classes({('eigenschap', Eigenschap)})
+
 @dataclass
 class AssetTypeKenmerkTypeAddDTO(BaseDataclass):
     kenmerkType: ResourceRefDTO

@@ -15,7 +15,8 @@ from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO
     LogicalOpEnum, ToezichterKenmerk, IdentiteitKenmerk, AssetTypeKenmerkTypeDTO, KenmerkTypeDTO, \
     AssetTypeKenmerkTypeAddDTO, ResourceRefDTO, Eigenschap, Event, EventType, ObjectType, EventContext, ExpansionsDTO, \
     RelatieTypeDTO, KenmerkType, EigenschapValueDTO, RelatieTypeDTOList, BeheerobjectDTO, ToezichtgroepTypeEnum, \
-     ToezichtgroepDTO, BaseDataclass, BeheerobjectTypeDTO, BoomstructuurAssetTypeEnum, KenmerkTypeEnum, AssetDTOToestand
+    ToezichtgroepDTO, BaseDataclass, BeheerobjectTypeDTO, BoomstructuurAssetTypeEnum, KenmerkTypeEnum, AssetDTOToestand, \
+    EigenschapValueUpdateDTO, GeometryNiveau, GeometryBron, GeometryNauwkeurigheid, GeometrieKenmerk
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 from utils.date_helpers import validate_dates, format_datetime
@@ -91,6 +92,37 @@ class EMInfraClient:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
+    def get_kenmerk_geometrie(self, asset_uuid: str) -> GeometrieKenmerk:
+        response = self.requester.get(url=f'core/api/assets/{asset_uuid}/kenmerken/aabe29e0-9303-45f1-839e-159d70ec2859')
+        if response.status_code != 200:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return GeometrieKenmerk.from_dict(response.json())
+        
+
+    def update_geometrie_by_asset_uuid(self, asset_uuid: str, wkt_geometry: str) -> None:
+        """
+        Update de bestaande geometrie eigenschap door 3 hulpfuncties in te roepen:
+        - get_kenmerk_geometrie()
+        - delete_kenmerk_geometrie()
+        - add_kenmerk_geometrie()
+
+        :param asset_uuid:
+        :param wkt_geometry:
+        :return:
+        """
+        # step 1: search existing geometry
+        geometriekenmerk = self.get_kenmerk_geometrie(asset_uuid=asset_uuid)
+
+        # step 2: remove existing geometry
+        if geometriekenmerk.logs:
+            if log_id := geometriekenmerk.logs[0].uuid:
+                self.delete_kenmerk_geometrie(asset_uuid, log_id)
+
+        # step 3: add new geometry
+        self.add_kenmerk_geometrie(asset_uuid=asset_uuid, wkt_geometry=wkt_geometry)
+
+
     def get_kenmerk_toezichter_by_asset_uuid(self, asset_uuid: str) -> ToezichterKenmerk:
         response = self.requester.get(
             url=f'core/api/assets/{asset_uuid}/kenmerken/f0166ba2-757c-4cf3-bf71-2e4fdff43fa3')
@@ -99,6 +131,23 @@ class EMInfraClient:
             raise ProcessLookupError(response.content.decode("utf-8"))
         return ToezichterKenmerk.from_dict(response.json())
 
+    def add_kenmerk_toezichter_by_asset_uuid(self, asset_uuid: str, toezichtgroep_uuid: str, toezichter_uuid: str) -> None:
+        payload = {
+            "toezichtGroep": {
+                "uuid": toezichtgroep_uuid
+            },
+            "toezichter": {
+                "uuid": toezichter_uuid
+            }
+
+        }
+        response = self.requester.put(
+            url=f'core/api/assets/{asset_uuid}/kenmerken/f0166ba2-757c-4cf3-bf71-2e4fdff43fa3'
+            , json=payload
+        )
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
 
     def get_identiteit(self, toezichter_uuid: str) -> IdentiteitKenmerk:
         response = self.requester.get(
@@ -262,7 +311,7 @@ class EMInfraClient:
 
         return self.change_bestekkoppelingen_by_asset_uuid(asset_uuid, bestekkoppelingen)
 
-    def add_bestekkoppeling(self, asset_uuid: str, eDelta_besteknummer: str = None, eDelta_dossiernummer: str = None, start_datetime: datetime = datetime.now(), end_datetime: datetime = None, categorie: str = BestekCategorieEnum.WERKBESTEK) -> dict | None:
+    def add_bestekkoppeling(self, asset_uuid: str, eDelta_besteknummer: str = None, eDelta_dossiernummer: str = None, start_datetime: datetime = datetime.now(), end_datetime: datetime = None, categorie: str = BestekCategorieEnum.WERKBESTEK, insert_index: int=0) -> dict | None:
         """
         Add a new bestekkoppeling. Start date default the execution date. End date default open-ended.
         The optional parameters "eDelta_besteknummer" and "eDelta_dossiernummer" are mutually exclusive, meaning that one of both optional parameters must be provided.
@@ -303,7 +352,7 @@ class EMInfraClient:
                 categorie=categorie
             )
             # Insert the new bestekkoppeling at the first index position.
-            bestekkoppelingen.insert(0, new_bestekkoppeling)
+            bestekkoppelingen.insert(insert_index, new_bestekkoppeling)
 
             return self.change_bestekkoppelingen_by_asset_uuid(asset_uuid, bestekkoppelingen)
 
@@ -352,6 +401,31 @@ class EMInfraClient:
         url = f"core/api/assettypes/{assettype_id}"
         json_dict = self.requester.get(url).json()
         return AssettypeDTO.from_dict(json_dict)
+
+    def search_assettype(self, uri: str) -> AssettypeDTO:
+        """
+        Searches assettype based on the URI. One single Assettype is returned, based on an exact search of the URI.
+        :param uri:
+        :return:
+        """
+        query_dto = QueryDTO(
+            size=1,
+            from_=0,
+            pagingMode=PagingModeEnum.OFFSET,
+            selection=SelectionDTO(
+                expressions=[ExpressionDTO(
+                    terms=[
+                        TermDTO(property='uri', operator=OperatorEnum.EQ, value=uri)
+                    ])
+                ])
+        )
+        url = "core/api/assettypes/search"
+        json_dict = self.requester.post(url, data=query_dto.json()).json()
+        assettypes = [AssettypeDTO.from_dict(item) for item in json_dict['data']]
+        if len(assettypes) != 1:
+            raise ValueError(f'Exactly one Assettype should be returned when searching for uri: "{uri}" Check URI.')
+        return assettypes[0]
+
 
     def get_all_assettypes(self, size: int = 100) -> Generator[AssettypeDTO]:
         from_ = 0
@@ -938,11 +1012,11 @@ class EMInfraClient:
             if query_dto.from_ >= dto_list_total:
                 break
 
-    def add_betrokkenerelatie(self, asset_uuid: str, agent_uuid: str, rol: str) -> dict:
+    def add_betrokkenerelatie(self, asset: AssetDTO, agent_uuid: str, rol: str) -> dict:
         json_body = {
             "bron": {
-                "uuid": f"{asset_uuid}"
-                , "_type": "onderdeel"
+                "uuid": f"{asset.uuid}"
+                , "_type": f"{asset._type}"
             },
             "doel": {
                 "uuid": f"{agent_uuid}"
@@ -982,7 +1056,16 @@ class EMInfraClient:
             if from_ >= dto_list_total:
                 break
 
-    def search_eigenschappen(self, eigenschap_naam: str) -> [Eigenschap]:
+    def search_eigenschappen(self, eigenschap_naam: str, uri: str = None) -> [Eigenschap]:
+        """
+        Search Eigenschap with "eigenschap_naam" (mandatory) and "uri" (optional) parameters.
+        The optional parameter "uri" results in one single list item Eigenschap.
+        This is usefull when searching for a common eigenschap like e.g. 'merk', 'hoogte',
+
+        :param eigenschap_naam:
+        :param uri:
+        :return:
+        """
         query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              selection=SelectionDTO(
                                  expressions=[ExpressionDTO(
@@ -990,12 +1073,29 @@ class EMInfraClient:
                                                     operator=OperatorEnum.EQ,
                                                     value=eigenschap_naam)])]))
 
+        if uri:
+            expression_uri = ExpressionDTO(
+                                     terms=[TermDTO(property='uri',
+                                                    operator=OperatorEnum.CONTAINS,
+                                                    value=uri)], logicalOp=LogicalOpEnum.AND)
+            query_dto.selection.expressions.append(expression_uri)
+
         response = self.requester.post('core/api/eigenschappen/search', data=query_dto.json())
         if response.status_code != 200:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
         return [Eigenschap.from_dict(item) for item in response.json()['data']]
+
+    def search_eigenschapwaarden(self, assetId: str) -> [EigenschapValueDTO]:
+        # 'https://services.apps-tei.mow.vlaanderen.be/eminfra/core/api/assets/efc780ec-ad42-4df6-8cf6-3233756f5832/kenmerken/cef6a3c0-fd1b-48c3-8ee0-f723e55dd02b/eigenschapwaarden'
+        url = f'core/api/assets/{assetId}/kenmerken/cef6a3c0-fd1b-48c3-8ee0-f723e55dd02b/eigenschapwaarden'
+        response = self.requester.post(url=url)
+        if response.status_code != 200:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+
+        return [EigenschapValueDTO.from_dict(item) for item in response.json()['data']]
 
     def search_toezichtgroep_lgc(self, naam: str, type: ToezichtgroepTypeEnum = None) -> Generator[
         ToezichtgroepDTO]:  # todo wijzig dict naar een toezichtgroep object
@@ -1056,7 +1156,13 @@ class EMInfraClient:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-    def update_eigenschap(self, assetId: str, eigenschap: EigenschapValueDTO) -> None:
+    def update_eigenschap(self, assetId: str, eigenschap: EigenschapValueDTO | EigenschapValueUpdateDTO) -> None:
+        """
+        Updates an eigenschap value on an asset, handling both DTO types.
+
+        :param assetId: The ID of the asset.
+        :param eigenschap: Either an EigenschapValueDTO or EigenschapValueUpdateDTO.
+        """
         request_body = {
             "data": [
                 {
@@ -1064,11 +1170,23 @@ class EMInfraClient:
                     "typedValue": eigenschap.typedValue
                 }]
         }
-        kenmerk_uuid = eigenschap.kenmerkType.uuid
+
+        # Determine how to retrieve the UUID for the kenmerk
+        if hasattr(eigenschap, "kenmerkType") and hasattr(eigenschap.kenmerkType, "uuid"):
+            kenmerk_uuid = eigenschap.kenmerkType.uuid
+        else:
+            kenmerk_eigenschap = self.get_kenmerken(assetId=assetId, naam=KenmerkTypeEnum.EIGENSCHAPPEN)
+            kenmerk_uuid = kenmerk_eigenschap.type.get("uuid", None)
+
         response = self.requester.patch(url=f'core/api/assets/{assetId}/kenmerken/{kenmerk_uuid}/eigenschapwaarden', json=request_body)
         if response.status_code != 202:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
+
+    def list_eigenschap(self, kenmerktypeId: str) -> [Eigenschap]:
+        url = f"core/api/kenmerkypes/{kenmerktypeId}/eigenschappen"
+        json_dict = self.requester.get(url).json()
+        return [Eigenschap.from_dict(item) for item in json_dict['data']]
 
     def update_kenmerk(self, asset_uuid: str, kenmerk_uuid: str, request_body: dict) -> None:
         response = self.requester.put(url=f'core/api/assets/{asset_uuid}/kenmerken/{kenmerk_uuid}', json=request_body)
@@ -1217,14 +1335,17 @@ class EMInfraClient:
             raise ProcessLookupError(response.content.decode("utf-8"))
 
     def create_assetrelatie(self, bronAsset_uuid: str, doelAsset_uuid: str, relatieType_uuid: str) -> str:
+        bron_asset = next(self.search_asset_by_uuid(asset_uuid=bronAsset_uuid), None)
+        doel_asset = next(self.search_asset_by_uuid(asset_uuid=doelAsset_uuid), None)
+
         json_body = {
             "bronAsset": {
                 "uuid": f"{bronAsset_uuid}",
-                "_type": "installatie"
+                "_type": f"{bron_asset._type}"
             },
             "doelAsset": {
                 "uuid": f"{doelAsset_uuid}",
-                "_type": "installatie"
+                "_type": f"{doel_asset._type}"
             },
             "relatieType": {
                 "uuid": f"{relatieType_uuid}"
@@ -1262,7 +1383,6 @@ class EMInfraClient:
             raise ProcessLookupError(response.content.decode("utf-8"))
         return response.json().get("@graph")
 
-
     def get_kenmerken(self, assetId: str, naam: KenmerkTypeEnum = None) -> list[KenmerkType] | KenmerkType:
         """
 
@@ -1277,7 +1397,7 @@ class EMInfraClient:
             raise ProcessLookupError(response.content.decode("utf-8"))
         all_kenmerken = [KenmerkType.from_dict(item) for item in response.json()['data']]
         if naam:
-            all_kenmerken = [item for item in all_kenmerken if item.type.get("naam") == naam.value][0]
+            all_kenmerken = [item for item in all_kenmerken if item.type.get("naam").startswith(naam.value)][0]
         return all_kenmerken
 
     def get_eigenschappen(self, assetId: str) -> list[EigenschapValueDTO]:
@@ -1290,10 +1410,13 @@ class EMInfraClient:
         json_dict = self.requester.get(url).json()
         return [EigenschapValueDTO.from_dict(item) for item in json_dict['data']]
 
-    def get_eigenschapwaarden(self, assetId: str) -> list[EigenschapValueDTO]:
-        url = f'core/api/assets/{assetId}/eigenschapwaarden'
+    def get_eigenschapwaarden(self, assetId: str, eigenschap_naam: str = None) -> list[EigenschapValueDTO]:
+        url = f'core/api/assets/{assetId}/kenmerken/753c1268-68c2-4e67-a6cc-62c0622b576b/eigenschapwaarden'
         json_dict = self.requester.get(url).json()
-        return [EigenschapValueDTO.from_dict(item) for item in json_dict['data']]
+        eigenschap_value_list = [EigenschapValueDTO.from_dict(item) for item in json_dict['data']]
+        if eigenschap_naam:
+            eigenschap_value_list = [item for item in eigenschap_value_list if item.eigenschap.naam == eigenschap_naam]
+        return eigenschap_value_list
 
     def search_beheerobjecten(self, naam: str, beheerobjecttype: BeheerobjectTypeDTO = None, actief: bool = None, operator: OperatorEnum = OperatorEnum.CONTAINS) -> Generator[BeheerobjectDTO]:
         query_dto = QueryDTO(
@@ -1434,3 +1557,48 @@ class EMInfraClient:
             self.search_asset_by_uuid(asset_uuid=asset_uuid_gemigreerd),
             None,
         )
+
+    def create_onderdeel(self, naam: str, typeUuid: str) -> dict | None:
+        json_body = {
+            "naam": naam,
+            "typeUuid": typeUuid
+        }
+        url = 'core/api/onderdelen'
+        response = self.requester.post(url, json=json_body)
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return response.json()
+
+    def delete_kenmerk_geometrie(self, asset_uuid: str, log_id: str):
+        response = self.requester.delete(
+            url=f'core/api/assets/{asset_uuid}/kenmerken/aabe29e0-9303-45f1-839e-159d70ec2859/logs/{log_id}')
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+
+    def add_kenmerk_geometrie(self, asset_uuid, wkt_geometry, geometry_log:GeometryNiveau = GeometryNiveau.MIN_1
+            , geometry_bron:GeometryBron = GeometryBron.MANUEEL
+            , geometry_nauwkeurigheid:GeometryNauwkeurigheid = GeometryNauwkeurigheid._50):
+        """
+
+        :param asset_uuid:
+        :param wkt_geometry: Well Known Text geometrie
+        :param geometry_log: default waarde "-1"
+        :param geometry_bron: default waarde "Manueel"
+        :param geometry_nauwkeurigheid: default waarde "<50 cm"
+        :return:
+        """
+        json_body = {
+            "wkt": f"{wkt_geometry}",
+            "niveau": f"{geometry_log.value}",
+            "nauwkeurigheid": f"{geometry_nauwkeurigheid.value}",
+            "bron": f"{geometry_bron.value}"
+        }
+        response = self.requester.post(
+            url=f'core/api/assets/{asset_uuid}/kenmerken/aabe29e0-9303-45f1-839e-159d70ec2859/logs'
+            , data=json.dumps(json_body)
+        )
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
