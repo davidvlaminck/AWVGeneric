@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 
 from pandas import DataFrame
+import pyarrow as pa
 from pyarrow import json
 
 from API.Enums import AuthType, Environment
@@ -20,8 +21,6 @@ def download_file_from_fs(file_path: Path) -> None:
 
 @print_timing
 def from_file_to_df_using_pyarrow(file_path) -> DataFrame:
-    import pyarrow as pa
-
     table = json.read_json(file_path)
 
     # Unnest the 'properties' column using pyarrow
