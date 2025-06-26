@@ -1,46 +1,57 @@
 import json
 import logging
-import time
 from pathlib import Path
 
 from pandas import DataFrame
+from pyarrow import json
 
 from API.Enums import AuthType, Environment
 from API.FSClient import FSClient
-import cProfile
+from utils.decorators import print_timing
 
 
-def main(chunk_size: int):
-    logging.basicConfig(level=logging.INFO)
-
+@print_timing
+def download_file_from_fs(file_path: Path) -> None:
     settings_path = Path('C:\\Users\\vlaminda\\Documents\\resources\\settings_SyncOTLDataToLegacy.json')
     settings_path = Path('/home/davidlinux/Documents/AWV/resources/settings_SyncOTLDataToLegacy.json')
-
     fs_client = FSClient(settings_path=settings_path, auth_type=AuthType.JWT, env=Environment.PRD)
+    fs_client.download_layer(layer='fietspaden_wrapp', file_path=file_path)
 
-    layers = [
-        #'innames',
-        # "bebouwdekommen_wrapp",
-        # "fietspaden_wrapp",
-        'uvroutes',
-        #"referentiepunten2",
-    ]
 
-    for layer in layers:
-        records=[]
-        for record in fs_client.download_layer_to_records(layer=layer, chunk_size=chunk_size):
-            record = json.loads(record)
-            record.update(record.pop('properties'))
-            records.append(record)
+@print_timing
+def from_file_to_df_using_pyarrow(file_path) -> DataFrame:
+    import pyarrow as pa
 
-        df = DataFrame(records)
-        print(df.head())
-    # df.to_excel('fietspaden.xlsx', index=False)
+    table = json.read_json(file_path)
+
+    # Unnest the 'properties' column using pyarrow
+    if 'properties' in table.column_names:
+        # Flatten the struct column into individual columns
+        properties_struct_type = table.schema.field('properties').type
+        properties_chunked_array = table.column('properties')
+        # For each field in the struct, extract the array and append as a new column
+        for field in properties_struct_type:
+            # Extract the field from each struct in each chunk, then concatenate
+            arrays = [chunk.field(field.name) for chunk in properties_chunked_array.chunks]
+            full_array = pa.concat_arrays(arrays)
+            table = table.append_column(field.name, full_array)
+        # Remove the original 'properties' column
+        table = table.remove_column(table.schema.get_field_index('properties'))
+
+    return table.to_pandas()
+
+
+@print_timing
+def main():
+    logging.basicConfig(level=logging.INFO)
+    file_path = Path('fietspaden_wrapp.json')
+
+    download_file_from_fs(file_path)
+
+    return from_file_to_df_using_pyarrow(file_path)
 
 
 if __name__ == '__main__':
-    for chunk_size in [1024*256]:
-        start = time.time()
-        main(chunk_size=chunk_size)
-        stop = time.time()
-        print(f"Execution time with chunk_size {chunk_size}: {round(stop - start, 2)}")
+    df = main()
+    print(df.info(verbose=True))
+
