@@ -26,14 +26,16 @@ def from_file_to_df_using_pyarrow(file_path) -> DataFrame:
 
     # Unnest the 'properties' column using pyarrow
     if 'properties' in table.column_names:
-        # Flatten the struct column into individual columns
+        # Flatten the struct column into individual columns efficiently
         properties_struct_type = table.schema.field('properties').type
         properties_chunked_array = table.column('properties')
-        # For each field in the struct, extract the array and append as a new column
+        # Precompute all fields for all chunks to minimize Python overhead
+        field_arrays = {field.name: [] for field in properties_struct_type}
+        for chunk in properties_chunked_array.chunks:
+            for field in properties_struct_type:
+                field_arrays[field.name].append(chunk.field(field.name))
         for field in properties_struct_type:
-            # Extract the field from each struct in each chunk, then concatenate
-            arrays = [chunk.field(field.name) for chunk in properties_chunked_array.chunks]
-            full_array = pa.concat_arrays(arrays)
+            full_array = pa.concat_arrays(field_arrays[field.name])
             table = table.append_column(field.name, full_array)
         # Remove the original 'properties' column
         table = table.remove_column(table.schema.get_field_index('properties'))
