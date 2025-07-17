@@ -4,7 +4,7 @@ from API.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path
-from otlmow_model.OtlmowModel.Helpers.RelationCreator import create_betrokkenerelation, create_relation
+from otlmow_model.OtlmowModel.Helpers.RelationCreator import create_betrokkenerelation, create_relation, is_valid_relation
 from otlmow_converter.OtlmowConverter import OtlmowConverter
 from otlmow_model.OtlmowModel.Classes.Onderdeel.Bevestiging import Bevestiging
 
@@ -67,8 +67,8 @@ if __name__ == '__main__':
             relation_type=Bevestiging()
             , source_typeURI='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#PTVerwerkingseenheid'
             , source_uuid=asset.get("uuid_PT-verwerkingseenheid")
-            , target_typeURI='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#PTRegelaar'
-            # 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#PTDemodulatoren'
+            , target_typeURI='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#PTDemodulatoren'
+            # 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#PTRegelaar'
             , target_uuid=asset.get("uuid_PT-demodulator")
         )
         nieuwe_relatie.isActief = True
@@ -81,7 +81,7 @@ if __name__ == '__main__':
     if bevestiging_relaties:
         filepath = Path().home() / 'Downloads' / 'Assetrelaties' / f'BevestigingRelatie_PT-verwerkingseenheid_PT-demodulator_{datetime.now().strftime("%Y%m%d")}.xlsx'
         OtlmowConverter.from_objects_to_file(
-            file_path= filepath
+            file_path=filepath
             , sequence_of_objects=bevestiging_relaties
         )
         print(f"DAVIE-file weggeschreven naar:\n\t{filepath}")
