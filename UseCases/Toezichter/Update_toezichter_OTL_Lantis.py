@@ -77,7 +77,7 @@ if __name__ == '__main__':
                  "naam": asset.naam, "typeURI": asset.type.korteUri, "actief": asset.actief, "toestand": asset.toestand.value}
             )
 
-            # Remove the existing betrokkenerelatie (Ruben/Kristof)
+            # # Remove the existing betrokkenerelatie (Ruben/Kristof)
             logging.info('Remove existing betrokkenerelatie')
             query_betrokkenerelaties = build_query_search_betrokkenerelaties(asset=asset)
             betrokkenerelaties = list(eminfra_client.search_betrokkenerelaties(query_dto=query_betrokkenerelaties))
