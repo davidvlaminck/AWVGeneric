@@ -62,13 +62,11 @@ if __name__ == '__main__':
             continue
 
         # Genereer relatie volgens het OTLMOW-model
-        # todo vervang parameter target_typeURI door de juiste URI. Momenteel tijdelijk assettype PTRegelaar gebruikt ter afwachting van de release van de nieuwe OTL.
         nieuwe_relatie = create_relation(
             relation_type=Bevestiging()
             , source_typeURI='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#PTVerwerkingseenheid'
             , source_uuid=asset.get("uuid_PT-verwerkingseenheid")
-            , target_typeURI='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#PTDemodulatoren'
-            # 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#PTRegelaar'
+            , target_typeURI='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#PTRegelaar'
             , target_uuid=asset.get("uuid_PT-demodulator")
         )
         nieuwe_relatie.isActief = True
