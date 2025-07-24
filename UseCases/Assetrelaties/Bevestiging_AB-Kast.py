@@ -5,7 +5,7 @@ import pandas as pd
 from pathlib import Path
 
 print(
-    """"
+    """
     Aanmaken van een Bevestiging-Relatie tussen de Legacy assets Afstandsbewaking en Kast
     """)
 
@@ -15,7 +15,7 @@ def load_settings():
     return settings_path
 
 
-def read_excel_as_dataframe(filepath: Path, usecols: [str]):
+def read_excel_as_dataframe(filepath: Path, usecols: list[str]):
     """Read RSA-report as input into a DataFrame."""
     if usecols is None:
         usecols = ["uuid"]
