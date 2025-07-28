@@ -18,9 +18,9 @@ def read_excel_as_dataframe(filepath: Path, usecols: list[str]):
     """Read RSA-report as input into a DataFrame."""
     if usecols is None:
         usecols = ["uuid"]
-    df_assets = pd.read_excel(filepath, sheet_name='Netwerkelement', header=0, usecols=usecols)
-    # df_assets = df_assets.dropna(subset=usecols)     # filter rows with NaN in specific columns
-    return df_assets
+    return pd.read_excel(
+        filepath, sheet_name='Netwerkelement', header=0, usecols=usecols
+    )
 
 if __name__ == '__main__':
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s', filemode="w")
