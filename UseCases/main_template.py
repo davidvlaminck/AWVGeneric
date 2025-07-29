@@ -6,10 +6,6 @@ from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path
 
-print(""""
-        Beschrijving van de use-case
-      """)
-
 def load_settings():
     """Load API settings from JSON"""
     settings_path = Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
