@@ -1,8 +1,28 @@
 import json
+import dataclasses
 from dataclasses import dataclass
 from enum import Enum
 from json import dumps
 
+_asdict_inner_actual = dataclasses._asdict_inner
+def _asdict_inner(obj, dict_factory):
+
+    # if override exists, intercept and return that instead
+    if dataclasses._is_dataclass_instance(obj):
+        if getattr(obj, '__dict_factory_override__', None):
+            user_dict = obj.__dict_factory_override__()
+
+            for k, v in user_dict.items(): # in case of further nesting
+                if isinstance(v, list) and len(v) > 0 and dataclasses._is_dataclass_instance(v[0]):
+                    user_dict[k] = [_asdict_inner(vv, dict_factory) for vv in v]
+                if dataclasses._is_dataclass_instance(v):
+                    user_dict[k] = _asdict_inner(v, dict_factory)
+            return user_dict
+
+    # otherwise do original behavior
+    return _asdict_inner_actual(obj, dict_factory)
+dataclasses._asdict_inner = _asdict_inner
+asdict = dataclasses.asdict
 
 class WegsegmenttypeEnum(Enum):
     WEGSEGMENTPUNTLOCATIE = 'WegsegmentPuntLocatie'
@@ -76,8 +96,34 @@ class JSONGeom(BaseDataclass):
     crs: dict
 
 @dataclass
+class Wegnummer(BaseDataclass):
+    nummer: str
+
+@dataclass
+class Referentiepunt(BaseDataclass):
+    opschrift: float
+    wegnummer: Wegnummer
+
+    def __post_init__(self):
+        self._fix_nested_classes({('wegnummer', Wegnummer)})
+
+@dataclass
+class RelatievePositie(BaseDataclass):
+    afstand: float
+    referentiepunt: Referentiepunt
+    wegnummer: Wegnummer
+
+    def __post_init__(self):
+        self._fix_nested_classes({('referentiepunt', Referentiepunt), ('wegnummer', Wegnummer)})
+
+@dataclass
 class WegsegmentPuntLocatie(BaseDataclass):
    type: WegsegmenttypeEnum
    geometry: JSONGeom
    projectie: JSONGeom
    wegsegmentId: WegsegmentId
+   relatief: RelatievePositie = None
+
+   def __post_init__(self):
+       self._fix_enums({('type', WegsegmenttypeEnum)})
+       self._fix_nested_classes({('geometry', JSONGeom), ('projectie', JSONGeom), ('wegsegmentId', WegsegmentId), ('relatief', RelatievePositie)})
