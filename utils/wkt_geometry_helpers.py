@@ -1,3 +1,5 @@
+import math
+
 import pandas as pd
 
 from API.EMInfraDomain import LocatieKenmerk
@@ -34,6 +36,15 @@ def parse_coordinates(wkt_geom: str) -> []:
 
     return [int(float(c)) for c in coordinates]
 
+def coordinates_2_wkt(coords: list[float]) -> str:
+    """
+    Transform a list of 2 (or 3) coordinates into a WKT Point Z
+    :param coords:
+    :return:
+    """
+    if len(coords) == 2:
+        coords.append(0.0)
+    return f'POINT Z({coords[0]} {coords[1]} {coords[2]})'
 
 def geometries_are_identical(wkt_geom1, wkt_geom2) -> bool:
     """
@@ -46,3 +57,27 @@ def geometries_are_identical(wkt_geom1, wkt_geom2) -> bool:
     coordinates_1 = parse_coordinates(wkt_geom1)
     coordinates_2 = parse_coordinates(wkt_geom2)
     return coordinates_1 == coordinates_2
+
+def get_euclidean_distance_coordinates(x1: float, y1: float, x2: float, y2: float) -> float:
+    """
+    Returns the Euclidean distance between 2 points
+
+    :param x1:
+    :param y1:
+    :param x2:
+    :param y2:
+    :return:
+    """
+    return math.sqrt((x2-x1)**2 + (y2-y1)**2)
+
+def get_euclidean_distance_wkt(wkt1: str, wkt2: str) -> float:
+    """
+    Returns the Euclidean distance between 2 wkt Point geometries
+
+    :param wkt1:
+    :param wkt2:
+    :return:
+    """
+    coords1 = parse_coordinates(wkt1)
+    coords2 = parse_coordinates(wkt2)
+    return get_euclidean_distance_coordinates(x1=coords1[0], y1=coords1[1], x2=coords2[0], y2=coords2[1])
