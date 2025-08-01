@@ -9,9 +9,10 @@ def convert_ident8(ident8: str, direction: str = 'P') -> str:
     :return: 8 character number
     """
     if direction not in ('N', 'P'):
-        raise ValueError('Parameter direction should be ''P'' (positive) or ''N'' (negative).')
+        direction = 'P'
+        # raise ValueError('Parameter direction should be ''P'' (positive) or ''N'' (negative).')
     weg_letter = ident8[:1]
-    weg_nummer = ident8[1:].ljust(4, 0)
+    weg_nummer = ident8[1:].rjust(3, '0')
     if direction == 'P':
         richting = '0001'
     else:
