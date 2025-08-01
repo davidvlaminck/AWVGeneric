@@ -78,6 +78,8 @@ def get_euclidean_distance_wkt(wkt1: str, wkt2: str) -> float:
     :param wkt2:
     :return:
     """
+    if pd.isna(wkt1) or pd.isna(wkt2):
+        return None
     coords1 = parse_coordinates(wkt1)
     coords2 = parse_coordinates(wkt2)
     return get_euclidean_distance_coordinates(x1=coords1[0], y1=coords1[1], x2=coords2[0], y2=coords2[1])
