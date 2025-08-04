@@ -2,6 +2,9 @@ import logging
 import re
 
 import pandas as pd
+import geopandas as gpd
+from shapely.wkt import loads
+from shapely.errors import ShapelyError
 
 from API.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
@@ -48,6 +51,59 @@ def parse_lichtmast_naam(naam: str):
     return positie_rijweg, ident8, opschrift
 
 
+# Function to convert WKT to an OSM-link
+def generate_osm_link(wkt_str, crs_input: str = 'EPSG:31370', crs_output: str = 'EPSG:4326', osm_zoom: int = 18):
+    """
+    Parse een WKT-string naar coordinaten en nadien naar een OSM-link.
+
+    :param wkt_str:
+    :param crs_input:
+    :param crs_output:
+    :param osm_zoom:
+    :return:
+    """
+    try:
+        geom = loads(wkt_str)
+        gdf = gpd.GeoDataFrame(geometry=[geom], crs=crs_input)
+        gdf = gdf.to_crs(crs_output)
+        transformed = gdf.geometry.iloc[0]
+        x, y = transformed.x, transformed.y
+        return f'https://www.openstreetmap.org/#map={osm_zoom}/{y}/{x}'
+    except (TypeError, ShapelyError, AttributeError):
+        return None  # or (None, None, None)
+
+
+def asset_naam_past_in_boomstructuur(naampad: str) -> bool:
+    """
+    Detecteer of de naam van een asset identiek is aan die van de boomstructuur op basis van een volledig naampad.
+    Voorbeeld:
+    A14X15.2/A14P15.2 > True
+    A14X15.2/N8M8.4 > False
+
+    :param naampad:
+    :return: boolean
+    """
+    logging.debug(f'Naampad: {naampad}')
+    naampad_delen = str(naampad).split('/')
+    installatie_naam = naampad_delen[0]
+    asset_naam = naampad_delen[-1]
+
+    logging.debug(f'Installatie_naam: {installatie_naam} en asset_naam: {asset_naam}')
+
+    if not installatie_naam or not asset_naam:
+        return None
+    try:
+        i_pos, i_ident8, i_opschrift = parse_lichtmast_naam(naam=installatie_naam)
+        a_pos, a_ident8, a_opschrift = parse_lichtmast_naam(naam=asset_naam)
+    except Exception:
+        return None
+
+    logging.debug(f'installatie: {installatie_naam}')
+    logging.debug(f'ident8: {i_ident8[:4]} en opschrift: {i_opschrift}')
+    logging.debug(f'asset: {asset_naam}')
+    logging.debug(f'ident8: {a_ident8[:4]} en opschrift: {a_opschrift}')
+    return i_ident8[:4] == a_ident8[:4] and i_opschrift == a_opschrift
+
 if __name__ == '__main__':
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s', filemode="w")
     logging.info('Test Locatieservices2 (LS2)')
@@ -55,22 +111,9 @@ if __name__ == '__main__':
     ls2_client = Locatieservices2Client(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
 
-    # logging.debug('Debug functie zoek_puntlocatie_via_xy()')
-    # x = 158190.21
-    # y = 164766.15
-    # wegsegment_puntlocatie = ls2_client.zoek_puntlocatie_via_xy(x=x, y=y)
-    # logging.debug(f'Gevonden Puntlocatie: {wegsegment_puntlocatie}')
-    #
-    # logging.debug('Debug functie zoek_puntlocatie_via_wegsegment()')
-    # ident8='N0080001'
-    # opschrift='4.6'
-    # afstand='1.5'
-    # wegsegment_puntlocatie = ls2_client.zoek_puntlocatie_via_wegsegment(ident8=ident8, opschrift=opschrift, afstand=afstand)
-    # logging.debug(f'Gevonden Puntlocatie: {wegsegment_puntlocatie}')
-
     # Import Excel-file as pandas dataframe
-    filepath_excel_input = Path().home() / 'Downloads' / 'Lichtmast' / 'DA-2025-43571_export.xlsx'
-    filepath_excel_output = Path().home() / 'Downloads' / 'Lichtmast' / 'DA-2025-XXXXX_import.xlsx'
+    filepath_excel_input = Path().home() / 'Downloads' / 'Lichtmast' / 'DA-2025-44841_export_20250804.xlsx'
+    filepath_excel_output = Path().home() / 'Downloads' / 'Lichtmast' / 'DA-2025-XXXXX_import_20250804.xlsx'
     usecols = ['typeURI', 'assetId.identificator', 'naam', 'naampad', 'toestand', 'geometry']
     df_assets = pd.read_excel(filepath_excel_input, sheet_name='Lichtmast', usecols=usecols)
 
@@ -116,13 +159,17 @@ if __name__ == '__main__':
         geometrie_refentiepunt.append(wkt_geom_referentiepunt)
         afstand.append(distance)
 
-
     # Append to dataframe
     df_assets["geometrie_referentiepunt"] = geometrie_refentiepunt
     df_assets["afstand"] = afstand
 
-    # Append hyperlink
+    # Append hyperlink eminfra
     df_assets["eminfra"] = 'https://apps.mow.vlaanderen.be/eminfra/assets/' + df_assets["assetId.identificator"][:36]
+
+    # Append hyperlink to openstreetmap
+    df_assets[["osm_link"]] = df_assets["geometrie_referentiepunt"].apply(lambda wkt: pd.Series(generate_osm_link(wkt)))
+
+    df_assets[["asset_naam_gelijk_aan_installatie_naam"]] = df_assets["naampad"].apply(lambda naampad: pd.Series(asset_naam_past_in_boomstructuur(naampad)))
 
     logging.debug(f'Write pandas dataframe to Excel: {filepath_excel_output}')
     df_assets.to_excel(filepath_excel_output, sheet_name='Lichtmast', freeze_panes=[1,2], index=False)
