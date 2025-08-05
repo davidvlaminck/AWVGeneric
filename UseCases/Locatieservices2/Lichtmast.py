@@ -11,13 +11,15 @@ from API.Locatieservices2Client import Locatieservices2Client
 from utils.locatieservice_helpers import convert_ident8
 from utils.wkt_geometry_helpers import coordinates_2_wkt, get_euclidean_distance_wkt, generate_osm_link
 
+# Regex pattern for Lichtmast name matching
+LICHTMAST_REGEX_PATTERN = r'[a-zA-Z]{1}\d{1,3}[NPMXnpmx]{1}\d+\.?\d*\.[P]\d*'
 
 def load_settings():
     """Load API settings from JSON"""
     settings_path = Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
     return settings_path
 
-def is_full_match(name: str, pattern: str = '[a-zA-Z]{1}\d{1,3}[NPMXnpmx]{1}\d+\.?\d*\.[P]\d*') -> bool:
+def is_full_match(name: str, pattern: str = LICHTMAST_REGEX_PATTERN) -> bool:
     """
     Returns True if the entire string matches the given regex pattern.
 
@@ -36,10 +38,13 @@ def parse_lichtmast_naam(naam: str) -> tuple[str, str, str]:
     :return:
     """
     logging.info('Extraheer het eerste deel van een string')
-    lichtmast_naam_basis = re.match(pattern='[a-zA-Z]{1}\d{1,3}[NPMXnpmx]{1}\d+\.?\d*', string=naam)[0]
+    if not (match_lichtmast_naam_basis := re.match(pattern='[a-zA-Z]{1}\d{1,3}[NPMXnpmx]{1}\d+\.?\d*', string=naam)):
+        raise ValueError('De naam van de Lichtmast kan niet worden afgeleid op basis van de input.')
+    lichtmast_naam_basis = match_lichtmast_naam_basis[0]
 
     logging.info('Extraheer de aanduiding van de richting (NMPX), alsook de indexpositie in de string')
-    match = re.search(pattern=r"(?<=[0-9])([MNPX])(?=[0-9])", string=lichtmast_naam_basis, flags=re.IGNORECASE)
+    if not (match := re.search(pattern=r"(?<=[0-9])([MNPX])(?=[0-9])", string=lichtmast_naam_basis, flags=re.IGNORECASE)):
+        raise ValueError('De positie van de rijweg kan niet worden afgeleid op basis van de naam van de Lichtmast')
     index = match.start()
     positie_rijweg = match.group()
 
@@ -106,7 +111,7 @@ if __name__ == '__main__':
             afstand.append(None)
             continue
 
-        if not is_full_match(name=asset.naam, pattern='[a-zA-Z]{1}\d{1,3}[NPMXnpmx]{1}\d+\.?\d*\.[P]\d*'):
+        if not is_full_match(name=asset.naam, pattern=LICHTMAST_REGEX_PATTERN):
             logging.debug(f'{asset.type.label}: {asset.naam} volgt NIET de naamconventie')
             geometrie_refentiepunt.append(None)
             afstand.append(None)
