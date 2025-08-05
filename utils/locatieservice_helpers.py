@@ -16,11 +16,10 @@ def convert_ident8(ident8: str, direction: str = 'P') -> str:
         raise ValueError(f'De wegletter kon niet worden achterhaald uit ident8: {ident8}')
     weg_letter = match_weg_letter[1]
 
-    if not (match_weg_nummer := re.search(string=ident8, pattern=r'\d+')):
-    # if not (match_weg_nummer := re.search(string=ident8, pattern=r'[a-zA-Z][^a-zA-Z]*?(\d+)')):
+    if not (match_weg_nummer := re.search(string=ident8, pattern=r'(\d+)')):
         raise ValueError(f'Het wegnummer kon niet worden achterhaald uit ident8: {ident8}')
-    print(match_weg_nummer[1])
-    weg_nummer = match_weg_nummer[1].rjust(3, '0')
+    weg_nummer = match_weg_nummer[1]
+    weg_nummer = weg_nummer.rjust(3, '0')
 
     if match := re.search(string=ident8, pattern='([a-zA-Z])$', flags=re.IGNORECASE):
         ident8_suffix = match[1].lower()
