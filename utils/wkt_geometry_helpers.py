@@ -1,3 +1,4 @@
+import logging
 import math
 
 import pandas as pd
@@ -44,9 +45,10 @@ def coordinates_2_wkt(coords: list[float]) -> str:
     :param coords:
     :return:
     """
-    if len(coords) == 2:
-        coords.append(0.0)
-    return f'POINT Z({coords[0]} {coords[1]} {coords[2]})'
+    output_coords = coords
+    if len(output_coords) == 2:
+        output_coords.append(0.0)
+    return f'POINT Z({output_coords[0]} {output_coords[1]} {output_coords[2]})'
 
 def geometries_are_identical(wkt_geom1, wkt_geom2) -> bool:
     """
@@ -103,5 +105,12 @@ def generate_osm_link(wkt_str, crs_input: str = 'EPSG:31370', crs_output: str = 
         transformed = gdf.geometry.iloc[0]
         x, y = transformed.x, transformed.y
         return f'https://www.openstreetmap.org/#map={osm_zoom}/{y}/{x}'
-    except (TypeError, ShapelyError, AttributeError):
-        return None  # or (None, None, None)
+    except TypeError as e:
+        logging.debug(f'TypeError {e} occured')
+        return None
+    except ShapelyError as e:
+        logging.debug(f'ShapelyEror {e} occured')
+        return None
+    except AttributeError as e:
+        logging.debug(f'AttributeError {e} occured')
+        return None
