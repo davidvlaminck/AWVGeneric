@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Generator
 from API.EMInfraClient import EMInfraClient
 from API.EMInfraDomain import AssetDTO
@@ -7,6 +8,18 @@ from pathlib import Path
 from otlmow_model.OtlmowModel.Classes.ImplementatieElement.RelatieObject import RelatieObject
 from otlmow_model.OtlmowModel.Helpers.RelationCreator import create_betrokkenerelation
 from otlmow_converter.OtlmowConverter import OtlmowConverter
+
+DICT_TOEZICHTSGROEPEN = {
+    "V&W-WA": "V&W Antwerpen",
+    "V&W-WVB": "V&W Vlaams-Brabant",
+    "V&W-WL": "V&W Limburg",
+    "V&W-WO": "V&W Oost-Vlaanderen",
+    "V&W-WW": "V&W West-Vlaanderen",
+    "EMT_TELE": "EMT_TELE",
+    "EMT_VHS": "EMT_VHS",
+    "Tunnel Organ. VL.": "Afdeling Tunnelorganisatie",
+    'Afdeling Wegen en Verkeer West-Vlaanderen': "V&W West-Vlaanderen"
+}
 
 def load_settings():
     """Load API settings from JSON"""
@@ -30,7 +43,7 @@ def build_betrokkenerelatie(source: AssetDTO, agent_naam :str, rol: str) -> Rela
         , filter_dict={"naam": agent_naam})
     agents = list(generator_agents)
     if len(agents) != 1:
-        print('Agent was not found or returned multiple results.')
+        logging.debug('Agent was not found or returned multiple results.')
         return None
     agent_uri = agents[0].get('@type')
     agent_uuid = agents[0].get('purl:Agent.agentId').get('DtcIdentificator.identificator')[:36]
@@ -58,7 +71,7 @@ def get_bestaande_betrokkenerelaties(asset: AssetDTO, rol: str, isActief: bool) 
         relatie.assetId.identificator = betrokkenerelatie_uuid  # Assign existing UUID
         relatie.isActief = isActief
         yield relatie
-            
+
 def map_toezichtgroep(existing_toezichtgroep, json_file = 'mapping_toezichtsgroepen.json') -> str:
     """
     Maps the input value to a new value, based on a mapping file
@@ -80,15 +93,6 @@ def map_toezichtgroep(existing_toezichtgroep, json_file = 'mapping_toezichtsgroe
         existing_toezichtgroep,
     )
 
-dict_toezichtsgroepen = {
-    "V&W-WA": "V&W Antwerpen",
-    "V&W-WVB": "V&W Vlaams-Brabant",
-    "V&W-WL": "V&W Limburg",
-    "V&W-WO": "V&W Oost-Vlaanderen",
-    "V&W-WW": "V&W West-Vlaanderen",
-    "EMT_TELE": "EMT_TELE",
-    "EMT_VHS": "EMT_VHS"
-}
 
 def map_toezichtsgroep(toezichtsgroep: str) -> str:
     """
@@ -96,16 +100,26 @@ def map_toezichtsgroep(toezichtsgroep: str) -> str:
     :param toezichtsgroep: Legacy
     :return: naam toezichtsgroep OTL
     """
-    return dict_toezichtsgroepen[toezichtsgroep]
+    return DICT_TOEZICHTSGROEPEN[toezichtsgroep]
 
 
 if __name__ == '__main__':
+    logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s', filemode="w")
+    logging.info('''
+        OTL Toezichters en toezichtsgroepen aanpassen.
+        Op basis van de actuele LGC toezichter en LGC toezichtsgroep, de OTL Agent rol: toezichter en OTL Agent rol: toezichtsgroep updaten.
+        We beschouwen de Legacy informatie als correct en passen de OTL-informatie daaraan aan.
+        Input: RSA-rapporten 137 tot en met 140: bijhorende assets hebben een verschillende toezichthouder.
+        Output: DAVIE-conforme aanlever bestanden om de huidige Agents (toezichter en toezichtsgroep) te deactiveren en een nieuwe te instantiëren. 
+        ''')
+
     settings_path = load_settings()
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
 
     # assettype = 'Signaalkabel'
-    # assettype = 'Voedingskabel'
-    assettype = 'Beschermbuis'
+    assettype = 'Voedingskabel'
+    # assettype = 'Beschermbuis'
+    # assettype = 'WVLichtmast'
     df_assets = read_report(
         downloads_subpath=f'toezichter/input/[RSA] Bijhorende assets hebben een verschillende toezichtshouder (assettype = {assettype}).xlsx',
         usecols=["otl_uuid", "otl_uri", "lgc_uuid", "lgc_toezichthouder_gebruikersnaam", "lgc_toezichtsgroep_naam",
@@ -114,7 +128,7 @@ if __name__ == '__main__':
     existing_assets = []
     created_assets = []
     for index, asset in df_assets.iterrows():
-        print(f'Processing asset: {asset.otl_uuid}')
+        logging.info(f'Processing asset {index}: {asset.otl_uuid}')
         #################################################################################
         ####  Ophalen van de bestaande asset
         #################################################################################
@@ -123,7 +137,7 @@ if __name__ == '__main__':
         #################################################################################
         ####  Wis de bestaande betrokkenerelatie. Set isActief = False
         #################################################################################
-        print('\tListing existing relations toezichter and toezichtsgroep')
+        logging.info('\tListing existing relations toezichter and toezichtsgroep')
         bestaande_relatie_toezichter = list(get_bestaande_betrokkenerelaties(asset=otl_asset, rol='toezichter', isActief=False))
         # existing_assets.extend(
         #     list(get_bestaande_betrokkenerelaties(asset=otl_asset, rol='toezichter', isActief=False)))
@@ -135,14 +149,14 @@ if __name__ == '__main__':
         #################################################################################
         ####  Maak nieuwe BetrokkeneRelaties
         #################################################################################
-        print('\tCreating new relations toezichter and toezichtsgroep')
+        logging.info('\tCreating new relations toezichter and toezichtsgroep')
         # search toezichter and extract the uuid of the toezichter. This ensures that the toezichter exists.
         toezichter_naam = construct_full_name(first_name=asset.lgc_toezichthouder_voornaam,
                                               last_name=asset.lgc_toezichthouder_naam)
         toezichtgroep_naam = asset.lgc_toezichtsgroep_naam
 
         if toezichter_naam:
-            print(f'\t\tToezichter: {toezichter_naam}')
+            logging.info(f'\t\tToezichter: {toezichter_naam}')
             nieuwe_relatie_toezichter = build_betrokkenerelatie(source=otl_asset, agent_naam=toezichter_naam, rol='toezichter')
             if nieuwe_relatie_toezichter is None:
                 continue
@@ -152,7 +166,7 @@ if __name__ == '__main__':
         if toezichtgroep_naam:
             toezichtgroep_naam = map_toezichtgroep(toezichtgroep_naam)
 
-            print(f'\t\tToezichtsgroep: {toezichtgroep_naam}')
+            logging.info(f'\t\tToezichtsgroep: {toezichtgroep_naam}')
             nieuwe_relatie_toezichtsgroep = build_betrokkenerelatie(source=otl_asset, agent_naam=map_toezichtsgroep(toezichtgroep_naam),
                                                                     rol='toezichtsgroep')
             if nieuwe_relatie_toezichtsgroep is None:
