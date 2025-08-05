@@ -1,7 +1,12 @@
+import logging
+import math
+
 import pandas as pd
 
 from API.EMInfraDomain import LocatieKenmerk
-
+import geopandas as gpd
+from shapely.wkt import loads
+from shapely.errors import ShapelyError
 
 def format_locatie_kenmerk_lgc_2_wkt(locatie: LocatieKenmerk) -> str:
     """
@@ -34,6 +39,16 @@ def parse_coordinates(wkt_geom: str) -> []:
 
     return [int(float(c)) for c in coordinates]
 
+def coordinates_2_wkt(coords: list[float]) -> str:
+    """
+    Transform a list of 2 (or 3) coordinates into a WKT Point Z
+    :param coords:
+    :return:
+    """
+    output_coords = coords
+    if len(output_coords) == 2:
+        output_coords.append(0.0)
+    return f'POINT Z({output_coords[0]} {output_coords[1]} {output_coords[2]})'
 
 def geometries_are_identical(wkt_geom1, wkt_geom2) -> bool:
     """
@@ -46,3 +61,56 @@ def geometries_are_identical(wkt_geom1, wkt_geom2) -> bool:
     coordinates_1 = parse_coordinates(wkt_geom1)
     coordinates_2 = parse_coordinates(wkt_geom2)
     return coordinates_1 == coordinates_2
+
+def get_euclidean_distance_coordinates(x1: float, y1: float, x2: float, y2: float) -> float:
+    """
+    Returns the Euclidean distance between 2 points
+
+    :param x1:
+    :param y1:
+    :param x2:
+    :param y2:
+    :return:
+    """
+    return math.sqrt((x2-x1)**2 + (y2-y1)**2)
+
+def get_euclidean_distance_wkt(wkt1: str, wkt2: str) -> float:
+    """
+    Returns the Euclidean distance between 2 wkt Point geometries
+
+    :param wkt1:
+    :param wkt2:
+    :return:
+    """
+    if pd.isna(wkt1) or pd.isna(wkt2):
+        return None
+    coords1 = parse_coordinates(wkt1)
+    coords2 = parse_coordinates(wkt2)
+    return get_euclidean_distance_coordinates(x1=coords1[0], y1=coords1[1], x2=coords2[0], y2=coords2[1])
+
+def generate_osm_link(wkt_str, crs_input: str = 'EPSG:31370', crs_output: str = 'EPSG:4326', osm_zoom: int = 18) -> str:
+    """
+    Parse een WKT-string naar coordinaten en nadien naar een OSM-link.
+
+    :param wkt_str: WKT punt-geometrie
+    :param crs_input:
+    :param crs_output:
+    :param osm_zoom:
+    :return: OSM-link
+    """
+    try:
+        geom = loads(wkt_str)
+        gdf = gpd.GeoDataFrame(geometry=[geom], crs=crs_input)
+        gdf = gdf.to_crs(crs_output)
+        transformed = gdf.geometry.iloc[0]
+        x, y = transformed.x, transformed.y
+        return f'https://www.openstreetmap.org/#map={osm_zoom}/{y}/{x}'
+    except TypeError as e:
+        logging.debug(f'TypeError {e} occured')
+        return None
+    except ShapelyError as e:
+        logging.debug(f'ShapelyEror {e} occured')
+        return None
+    except AttributeError as e:
+        logging.debug(f'AttributeError {e} occured')
+        return None
