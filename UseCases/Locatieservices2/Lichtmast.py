@@ -2,9 +2,6 @@ import logging
 import re
 
 import pandas as pd
-import geopandas as gpd
-from shapely.wkt import loads
-from shapely.errors import ShapelyError
 
 from API.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
@@ -12,7 +9,7 @@ from pathlib import Path
 
 from API.Locatieservices2Client import Locatieservices2Client
 from utils.locatieservice_helpers import convert_ident8
-from utils.wkt_geometry_helpers import coordinates_2_wkt, get_euclidean_distance_wkt
+from utils.wkt_geometry_helpers import coordinates_2_wkt, get_euclidean_distance_wkt, generate_osm_link
 
 
 def load_settings():
@@ -32,8 +29,12 @@ def is_full_match(name: str, pattern: str = '[a-zA-Z]{1}\d{1,3}[NPMXnpmx]{1}\d+\
     """
     return re.fullmatch(pattern, name) is not None
 
-
-def parse_lichtmast_naam(naam: str):
+def parse_lichtmast_naam(naam: str) -> tuple[str, str, str]:
+    """
+    Ontleden (parse) van de naam van de lichtmast in verschillende componenten: positie_rijwel, ident8 en opschrift
+    :param naam:
+    :return:
+    """
     logging.info('Extraheer het eerste deel van een string')
     lichtmast_naam_basis = re.match(pattern='[a-zA-Z]{1}\d{1,3}[NPMXnpmx]{1}\d+\.?\d*', string=naam)[0]
 
@@ -45,32 +46,9 @@ def parse_lichtmast_naam(naam: str):
     ident8_raw = lichtmast_naam_basis[:index]
     opschrift = str(round(float(lichtmast_naam_basis[index+1:]), 1)) # afronden tot op 1 decimaal getal
 
-
     ident8 = convert_ident8(ident8=ident8_raw, direction=positie_rijweg)
 
     return positie_rijweg, ident8, opschrift
-
-
-# Function to convert WKT to an OSM-link
-def generate_osm_link(wkt_str, crs_input: str = 'EPSG:31370', crs_output: str = 'EPSG:4326', osm_zoom: int = 18):
-    """
-    Parse een WKT-string naar coordinaten en nadien naar een OSM-link.
-
-    :param wkt_str:
-    :param crs_input:
-    :param crs_output:
-    :param osm_zoom:
-    :return:
-    """
-    try:
-        geom = loads(wkt_str)
-        gdf = gpd.GeoDataFrame(geometry=[geom], crs=crs_input)
-        gdf = gdf.to_crs(crs_output)
-        transformed = gdf.geometry.iloc[0]
-        x, y = transformed.x, transformed.y
-        return f'https://www.openstreetmap.org/#map={osm_zoom}/{y}/{x}'
-    except (TypeError, ShapelyError, AttributeError):
-        return None  # or (None, None, None)
 
 
 def asset_naam_past_in_boomstructuur(naampad: str) -> bool:
@@ -106,7 +84,7 @@ def asset_naam_past_in_boomstructuur(naampad: str) -> bool:
 
 if __name__ == '__main__':
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s', filemode="w")
-    logging.info('Test Locatieservices2 (LS2)')
+    logging.info('Analyse van de locatie van de Lichtmasten.\nAfleiden van de locatie op basis van de naam van de Lichtmast, door gebruik te maken van de Locatieservice2 API.')
     settings_path = load_settings()
     ls2_client = Locatieservices2Client(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
