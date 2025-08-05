@@ -3,7 +3,9 @@ import math
 import pandas as pd
 
 from API.EMInfraDomain import LocatieKenmerk
-
+import geopandas as gpd
+from shapely.wkt import loads
+from shapely.errors import ShapelyError
 
 def format_locatie_kenmerk_lgc_2_wkt(locatie: LocatieKenmerk) -> str:
     """
@@ -83,3 +85,23 @@ def get_euclidean_distance_wkt(wkt1: str, wkt2: str) -> float:
     coords1 = parse_coordinates(wkt1)
     coords2 = parse_coordinates(wkt2)
     return get_euclidean_distance_coordinates(x1=coords1[0], y1=coords1[1], x2=coords2[0], y2=coords2[1])
+
+def generate_osm_link(wkt_str, crs_input: str = 'EPSG:31370', crs_output: str = 'EPSG:4326', osm_zoom: int = 18) -> str:
+    """
+    Parse een WKT-string naar coordinaten en nadien naar een OSM-link.
+
+    :param wkt_str: WKT punt-geometrie
+    :param crs_input:
+    :param crs_output:
+    :param osm_zoom:
+    :return: OSM-link
+    """
+    try:
+        geom = loads(wkt_str)
+        gdf = gpd.GeoDataFrame(geometry=[geom], crs=crs_input)
+        gdf = gdf.to_crs(crs_output)
+        transformed = gdf.geometry.iloc[0]
+        x, y = transformed.x, transformed.y
+        return f'https://www.openstreetmap.org/#map={osm_zoom}/{y}/{x}'
+    except (TypeError, ShapelyError, AttributeError):
+        return None  # or (None, None, None)
