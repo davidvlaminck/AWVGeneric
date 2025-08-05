@@ -8,8 +8,7 @@ from pathlib import Path
 
 def load_settings():
     """Load API settings from JSON"""
-    settings_path = Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
-    return settings_path
+    return Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
 
 def read_report():
     """Read RSA-report as input into a DataFrame."""
