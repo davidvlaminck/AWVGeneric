@@ -18,7 +18,13 @@ DICT_TOEZICHTSGROEPEN = {
     "EMT_TELE": "EMT_TELE",
     "EMT_VHS": "EMT_VHS",
     "Tunnel Organ. VL.": "Afdeling Tunnelorganisatie",
-    'Afdeling Wegen en Verkeer West-Vlaanderen': "V&W West-Vlaanderen"
+    'Afdeling Wegen en Verkeer West-Vlaanderen': "V&W West-Vlaanderen",
+    'AWV_414_SINT-NIKLAAS': 'District St-Niklaas 414',
+    'EMT_WHA': 'EMT_WHA',
+    'EMT_WHG': 'EMT_WHG',
+    'EMT_WHM': 'EMT_WHM',
+    'EMT_WHO': 'EMT_WHO',
+    'EMT_WHW': 'EMT_WHW'
 }
 
 def load_settings():
@@ -117,9 +123,9 @@ if __name__ == '__main__':
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
 
     # assettype = 'Signaalkabel'
-    assettype = 'Voedingskabel'
+    # assettype = 'Voedingskabel'
     # assettype = 'Beschermbuis'
-    # assettype = 'WVLichtmast'
+    assettype = 'WVLichtmast'
     df_assets = read_report(
         downloads_subpath=f'toezichter/input/[RSA] Bijhorende assets hebben een verschillende toezichtshouder (assettype = {assettype}).xlsx',
         usecols=["otl_uuid", "otl_uri", "lgc_uuid", "lgc_toezichthouder_gebruikersnaam", "lgc_toezichtsgroep_naam",
