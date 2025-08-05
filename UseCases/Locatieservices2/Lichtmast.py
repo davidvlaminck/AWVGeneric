@@ -16,8 +16,7 @@ LICHTMAST_REGEX_PATTERN = r'[a-zA-Z]{1}\d{1,3}[NPMXnpmx]{1}\d+\.?\d*\.[P]\d*'
 
 def load_settings():
     """Load API settings from JSON"""
-    settings_path = Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
-    return settings_path
+    return Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
 
 def is_full_match(name: str, pattern: str = LICHTMAST_REGEX_PATTERN) -> bool:
     """
@@ -78,7 +77,9 @@ def asset_naam_past_in_boomstructuur(naampad: str) -> bool:
     try:
         i_pos, i_ident8, i_opschrift = parse_lichtmast_naam(naam=installatie_naam)
         a_pos, a_ident8, a_opschrift = parse_lichtmast_naam(naam=asset_naam)
-    except Exception:
+    except Exception as e:
+        logging.exception("Failed to parse lichtmast naam for installatie_naam '%s' or asset_naam '%s'",
+                          installatie_naam, asset_naam)
         return None
 
     logging.debug(f'installatie: {installatie_naam}')
@@ -134,8 +135,8 @@ if __name__ == '__main__':
             else:
                 distance = round(get_euclidean_distance_wkt(wkt1=df_asset.get("geometry"), wkt2=wkt_geom_referentiepunt))
 
-        except:
-            logging.debug('Locatieservices kon de locatie niet ophalen.')
+        except Exception as e:
+            logging.debug(f'Locatieservices kon de locatie niet ophalen. Foutmelding: {e}')
             wkt_geom_referentiepunt = 'werd niet teruggevonden'
             distance = None
 
@@ -147,7 +148,7 @@ if __name__ == '__main__':
     df_assets["afstand"] = afstand
 
     # Append hyperlink eminfra
-    df_assets["eminfra"] = 'https://apps.mow.vlaanderen.be/eminfra/assets/' + df_assets["assetId.identificator"][:36]
+    df_assets["eminfra"] = 'https://apps.mow.vlaanderen.be/eminfra/assets/' + df_assets["assetId.identificator"].str[:36]
 
     # Append hyperlink to openstreetmap
     df_assets[["osm_link"]] = df_assets["geometrie_referentiepunt"].apply(lambda wkt: pd.Series(generate_osm_link(wkt)))
