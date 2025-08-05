@@ -12,18 +12,19 @@ def convert_ident8(ident8: str, direction: str = 'P') -> str:
     :param direction P (positive) or N (negative) direction
     :return: 8 character number
     """
-    if direction not in ('N', 'P'):
-        direction = 'P'
+    if not (match_weg_letter := re.search(string=ident8, pattern=r'^([a-zA-Z])')):
+        raise ValueError(f'De wegletter kon niet worden achterhaald uit ident8: {ident8}')
+    weg_letter = match_weg_letter[1]
 
-    weg_letter = ident8[:1]
-    weg_nummer = ident8[1:].rjust(3, '0')
+    if not (match_weg_nummer := re.search(string=ident8, pattern=r'[a-zA-Z][^a-zA-Z]*?(\d+)')):
+        raise ValueError(f'De wegnummer kon niet worden achterhaald uit ident8: {ident8}')
+    weg_nummer = match_weg_nummer[1].rjust(3, '0')
 
-    if match := re.search(
-        string=ident8, pattern='([a-zA-Z])$', flags=re.IGNORECASE
-    ):
+    if match := re.search(string=ident8, pattern='([a-zA-Z])$', flags=re.IGNORECASE):
         ident8_suffix = match[1].lower()
         richting_deel1 = 901 + (ord(ident8_suffix) - ord('a'))  # 'a' → 901, ..., 'z' → 926
     else:
         richting_deel1 = '000'
-    richting_deel2 = '1' if direction == 'P' else '2'
+    richting_deel2 = '2' if direction == 'N' else '1'
+
     return f'{weg_letter}{weg_nummer}{richting_deel1}{richting_deel2}'
