@@ -44,8 +44,6 @@ if __name__ == '__main__':
 
     STARTDATE = format_datetime(datetime.datetime(year=2025, month=8, day=12))
 
-    # todo: huidige besteknaam toevoegen, nieuw bestek toevoegen moest het ontbreken (dezelfde code logica als vorig script).
-
     for idx, asset in df_assets.iterrows():
         logging.debug(f'Processing assets: {asset.vr_otl_uuid} (OTL) en {asset.vr_lgc_uuid} (Legacy).')
         if pd.isna(asset.vr_otl_uuid) or pd.isna(asset.vr_lgc_uuid):
@@ -74,8 +72,7 @@ if __name__ == '__main__':
                     # Bestekkoppelingen updaten
                     logging.info(f'Process asset: "{asset_lgc.uuid}". Updating bestekkoppelingen.')
 
-                    # todo temp disabled
-                    # eminfra_client.change_bestekkoppelingen_by_asset_uuid(asset_uuid=asset_lgc.uuid, bestekkoppelingen=bestekken_lgc_update)
+                    eminfra_client.change_bestekkoppelingen_by_asset_uuid(asset_uuid=asset_lgc.uuid, bestekkoppelingen=bestekken_lgc_update)
 
                 df_assets.loc[idx, "eDeltaDossiernummer"] = bestekkoppeling.bestekRef.eDeltaDossiernummer
                 df_assets.loc[idx, "startdatum"] = bestekkoppeling.startDatum
