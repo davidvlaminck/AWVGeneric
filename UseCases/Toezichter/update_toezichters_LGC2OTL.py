@@ -192,8 +192,8 @@ if __name__ == '__main__':
             (nieuwe_relatie_toezichter, nieuwe_relatie_toezichtsgroep)
         )
 
-        # break out the loop after 10000 iteration
-        if index+1 % 10000 == 0:
+        # break out the loop after 5000 iteration
+        if index+1 % 5000 == 0:
             break
 
     OtlmowConverter.from_objects_to_file(file_path=Path(Path().home() / 'Downloads' / 'toezichter' / 'output' / f'{assettype}' / f'assets_delete_toezichter_toezichtsgroep_{assettype}.xlsx'),
