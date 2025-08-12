@@ -132,6 +132,12 @@ if __name__ == '__main__':
         usecols=["otl_uuid", "otl_uri", "lgc_uuid", "lgc_toezichthouder_gebruikersnaam", "lgc_toezichtsgroep_naam",
                  "lgc_toezichthouder_voornaam", "lgc_toezichthouder_naam"])
 
+    logging.info('Verwijder gedupliceerde records op basis van de kolommen: otl_uuid, lgc_toezichthouder_gebruikersnaam')
+    logging.info('Dit zijn records waarbij er bijvoorbeeld 2 HoortBij-relaties bestaan tussen een OTL- en een Legacy-asset en waarbij dan de toezichter van de Legacy-asset ook identiek is.')
+    logging.info(f'Aantal records VOOR opkuis: {len(df_assets)}')
+    df_assets.drop_duplicates(subset=['otl_uuid', 'lgc_toezichthouder_gebruikersnaam'], inplace=True)
+    logging.info(f'Aantal records NA opkuis: {len(df_assets)}')
+
     existing_assets = []
     created_assets = []
     for index, asset in df_assets.iterrows():
@@ -189,6 +195,7 @@ if __name__ == '__main__':
         # break out the loop after 10000 iteration
         if index+1 % 10000 == 0:
             break
+
     OtlmowConverter.from_objects_to_file(file_path=Path(Path().home() / 'Downloads' / 'toezichter' / 'output' / f'{assettype}' / f'assets_delete_toezichter_toezichtsgroep_{assettype}.xlsx'),
                                          sequence_of_objects=existing_assets)
     OtlmowConverter.from_objects_to_file(file_path=Path(Path().home() / 'Downloads' / 'toezichter' / 'output' / f'{assettype}' / f'assets_update_toezichter_toezichtsgroep_{assettype}.xlsx'),
