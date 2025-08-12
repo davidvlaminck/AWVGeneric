@@ -24,7 +24,8 @@ DICT_TOEZICHTSGROEPEN = {
     'EMT_WHG': 'EMT_WHG',
     'EMT_WHM': 'EMT_WHM',
     'EMT_WHO': 'EMT_WHO',
-    'EMT_WHW': 'EMT_WHW'
+    'EMT_WHW': 'EMT_WHW',
+    'PCO': 'PCO'
 }
 
 def load_settings():
@@ -184,6 +185,10 @@ if __name__ == '__main__':
         created_assets.extend(
             (nieuwe_relatie_toezichter, nieuwe_relatie_toezichtsgroep)
         )
+
+        # break out the loop after 10000 iteration
+        if index+1 % 10000 == 0:
+            break
     OtlmowConverter.from_objects_to_file(file_path=Path(Path().home() / 'Downloads' / 'toezichter' / 'output' / f'{assettype}' / f'assets_delete_toezichter_toezichtsgroep_{assettype}.xlsx'),
                                          sequence_of_objects=existing_assets)
     OtlmowConverter.from_objects_to_file(file_path=Path(Path().home() / 'Downloads' / 'toezichter' / 'output' / f'{assettype}' / f'assets_update_toezichter_toezichtsgroep_{assettype}.xlsx'),
