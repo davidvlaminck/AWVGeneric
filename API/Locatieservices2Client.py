@@ -1,22 +1,10 @@
 import logging
 
-from dataclasses import dataclass
-
 from pathlib import Path
 
-from API.EMInfraDomain import BaseDataclass
 from API.Enums import AuthType, Environment
 from API.Locatieservices2Domain import WegsegmentPuntLocatie
 from API.RequesterFactory import RequesterFactory
-
-
-
-@dataclass
-class Query(BaseDataclass):
-    size: int
-    filters: dict
-    orderByProperty: str
-    fromCursor: str | None = None
 
 
 class Locatieservices2Client:
