@@ -187,9 +187,7 @@ def point_in_polygons(point_wkt: str, polygons_gdf: gpd.GeoDataFrame, name_colum
     mask = polygons_gdf.geometry.contains(point)
     match = polygons_gdf[mask]
 
-    if not match.empty:
-        return match.iloc[0][f"{name_column}"]  # Return the first polygon name
-    return None
+    return None if match.empty else match.iloc[0][f"{name_column}"]
 
 if __name__ == '__main__':
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s',
@@ -199,8 +197,6 @@ if __name__ == '__main__':
     settings_path = load_settings()
 
     ls2_client = Locatieservices2Client(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
-    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
-
 
     filepath_excel_input = Path().home() / 'Downloads' / 'Lichtmast' / 'lichtmast_zonder_afgeleide_locatie' / 'DA-2025-46771_export.xlsx'
     filepath_excel_output = Path().home() / 'Downloads' / 'Lichtmast' / 'lichtmast_zonder_afgeleide_locatie' / 'DA-2025-XXXXX_import.xlsx'
@@ -214,13 +210,13 @@ if __name__ == '__main__':
     df_assets["naam"] = df_assets["naam"].apply(str)
 
     logging.info('Afleiden geometrie op basis van de naam')
-    df_assets["geometrie_afgeleid"] = df_assets["naam"].apply(lambda naam: pd.Series(get_wkt_from_name(naam=naam)))
+    df_assets["geometrie_afgeleid"] = df_assets["naam"].apply(lambda naam: get_wkt_from_name(naam=naam))
 
     logging.info('Afleiden locatie op basis van de geometrie')
-    df_assets["naam_afgeleid"] = df_assets["geometry"].apply(lambda geometry: pd.Series(get_name_from_geometry(geometry=geometry)))
+    df_assets["naam_afgeleid"] = df_assets["geometry"].apply(lambda geometry: get_name_from_geometry(geometry=geometry))
 
     logging.info('Berekenen (euclidische) afstand tussen geometrie en afgeleide geometrie')
-    df_assets['afstand'] = df_assets.apply(lambda row: pd.Series(get_euclidean_distance_wkt(row['geometry'], row['geometrie_afgeleid'])), axis=1)
+    df_assets['afstand'] = df_assets.apply(lambda row: get_euclidean_distance_wkt(row['geometry'], row['geometrie_afgeleid']), axis=1)
 
     if add_hyperlink_eminfra:
         logging.info('Toevoegen hyperlink naar de toepassing em-infra.')
@@ -228,13 +224,13 @@ if __name__ == '__main__':
                                                                               :36]
     if add_hyperlink_osm:
         logging.info('Toevoegen hyperlink naar Openstreetmap (OSM)')
-        df_assets[["osm_link"]] = df_assets["geometrie_referentiepunt"].apply(lambda wkt: pd.Series(generate_osm_link(wkt)))
+        df_assets[["osm_link"]] = df_assets["geometrie_referentiepunt"].apply(lambda wkt: generate_osm_link(wkt))
 
     if add_provincie:
         df_gemeenten = load_gemeente_to_gdf(filename='gemeente.json')
 
-        df_assets[["gemeente"]] = df_assets.apply(lambda row: pd.Series(point_in_polygons(point_wkt=row['geometry'], polygons_gdf=df_gemeenten, name_column='gemeente')), axis = 1)
-        df_assets[["provincie"]] = df_assets.apply(lambda row: pd.Series(point_in_polygons(point_wkt=row['geometry'], polygons_gdf=df_gemeenten, name_column='provincie')), axis = 1)
+        df_assets[["gemeente"]] = df_assets.apply(lambda row: point_in_polygons(point_wkt=row['geometry'], polygons_gdf=df_gemeenten, name_column='gemeente'), axis = 1)
+        df_assets[["provincie"]] = df_assets.apply(lambda row: point_in_polygons(point_wkt=row['geometry'], polygons_gdf=df_gemeenten, name_column='provincie'), axis = 1)
 
     logging.debug(f'Write pandas dataframe to Excel: {filepath_excel_output}')
     df_assets.to_excel(filepath_excel_output, sheet_name='Lichtmast', freeze_panes=[1, 2], index=False)

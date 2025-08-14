@@ -52,7 +52,7 @@ def coordinates_2_wkt(coords: list[float]) -> str:
     elif len(output_coords) in {3, 4}:
         wkt = f'POINT Z({output_coords[0]} {output_coords[1]} {output_coords[2]})'
     else:
-        raise NotImplemented(
+        raise NotImplementedError(
             'Function coordinates_2_wkt() is only implemented to generate POINT-geometries. The number of coordinates '
             'is 2, 3 or 4 (measure).'
         )
