@@ -8,6 +8,7 @@ import geopandas as gpd
 from shapely.wkt import loads
 from shapely.errors import ShapelyError
 
+
 def format_locatie_kenmerk_lgc_2_wkt(locatie: LocatieKenmerk) -> str:
     """
     Format LocatieKenmerk as input to a WKT string as output
@@ -47,8 +48,15 @@ def coordinates_2_wkt(coords: list[float]) -> str:
     """
     output_coords = coords
     if len(output_coords) == 2:
-        output_coords.append(0.0)
-    return f'POINT Z({output_coords[0]} {output_coords[1]} {output_coords[2]})'
+        wkt = f'POINT Z({output_coords[0]} {output_coords[1]} 0.0)'
+    elif len(output_coords) in {3, 4}:
+        wkt = f'POINT Z({output_coords[0]} {output_coords[1]} {output_coords[2]})'
+    else:
+        raise NotImplemented(
+            'Function coordinates_2_wkt() is only implemented to generate POINT-geometries. The number of coordinates '
+            'is 2, 3 or 4 (measure).'
+        )
+    return wkt
 
 def geometries_are_identical(wkt_geom1, wkt_geom2) -> bool:
     """
@@ -61,18 +69,6 @@ def geometries_are_identical(wkt_geom1, wkt_geom2) -> bool:
     coordinates_1 = parse_coordinates(wkt_geom1)
     coordinates_2 = parse_coordinates(wkt_geom2)
     return coordinates_1 == coordinates_2
-
-def get_euclidean_distance_coordinates(x1: float, y1: float, x2: float, y2: float) -> float:
-    """
-    Returns the Euclidean distance between 2 points
-
-    :param x1:
-    :param y1:
-    :param x2:
-    :param y2:
-    :return:
-    """
-    return math.sqrt((x2-x1)**2 + (y2-y1)**2)
 
 def get_euclidean_distance_wkt(wkt1: str, wkt2: str) -> float:
     """
@@ -87,6 +83,18 @@ def get_euclidean_distance_wkt(wkt1: str, wkt2: str) -> float:
     coords1 = parse_coordinates(wkt1)
     coords2 = parse_coordinates(wkt2)
     return get_euclidean_distance_coordinates(x1=coords1[0], y1=coords1[1], x2=coords2[0], y2=coords2[1])
+
+def get_euclidean_distance_coordinates(x1: float, y1: float, x2: float, y2: float) -> float:
+    """
+    Returns the Euclidean distance between 2 points
+
+    :param x1:
+    :param y1:
+    :param x2:
+    :param y2:
+    :return:
+    """
+    return math.sqrt((x2-x1)**2 + (y2-y1)**2)
 
 def generate_osm_link(wkt_str, crs_input: str = 'EPSG:31370', crs_output: str = 'EPSG:4326', osm_zoom: int = 18) -> str:
     """
