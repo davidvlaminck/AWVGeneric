@@ -432,7 +432,9 @@ class BypassProcessor:
         if eigenschap_infos is None:
             eigenschap_infos = []
 
-        df_output_columns = {asset_info.column_name}
+        df_output_columns = []
+        df_output_columns.append(asset_info.column_name)
+
         for idx, asset_row in df.iterrows():
             if asset_info.column_asset_aanwezig and asset_row.get(asset_info.column_asset_aanwezig) and asset_row.get(
                     asset_info.column_asset_aanwezig).lower() == 'nee':
@@ -499,7 +501,7 @@ class BypassProcessor:
 
             if asset:
                 df.at[idx, "asset_uuid"] = asset.uuid
-                df_output_columns.add("asset_uuid")
+                df_output_columns.insert(0, "asset_uuid")
 
                 # Aanmaken van eigenschappen
                 for eigenschap_info in eigenschap_infos:
@@ -536,7 +538,7 @@ class BypassProcessor:
                                                                       relatie_naam=relatie_info.uri.value)
                         # append relatie_uuid to the dataframe
                         df.at[idx, f'relatie_uuid_{relatie_descriptive_naam}'] = relatie_uuid
-                        df_output_columns.add(f'relatie_uuid_{relatie_descriptive_naam}')
+                        df_output_columns.append(f'relatie_uuid_{relatie_descriptive_naam}')
 
                 # Update toestand
                 self.update_toestand(asset=asset)
@@ -550,11 +552,10 @@ class BypassProcessor:
                 # Toezichtsgroep (LANTIS) toewijzen
                 self.add_toezichter_if_missing(asset=asset)
 
-
         # Wegschrijven van het dataframe
         with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
             df.to_excel(writer, sheet_name=f'{sheetname_prefix}_{asset_info.asset_type.value}',
-                        columns=sorted(list(df_output_columns)), index=False, freeze_panes=[1, 1])
+                        columns=list(dict.fromkeys(df_output_columns)), index=False, freeze_panes=[1, 1])
         logging.info(f'Assets aangemaakt (assettype: {asset_info.asset_type.value})')
 
     def process_wegkantkasten(self):
@@ -1482,7 +1483,7 @@ if __name__ == '__main__':
     bypass = BypassProcessor(
         environment=Environment.TEI
         , input_path_componentenlijst=Path(
-            __file__).resolve().parent / 'data' / 'input' / 'Componentenlijst_20250606_TEI.xlsx'
+            __file__).resolve().parent / 'data' / 'input' / 'Componentenlijst_20250613_TEI.xlsx'
         , output_excel_path=Path(
             __file__).resolve().parent / 'data' / 'output' / f'lantis_bypass_{datetime.now().strftime(format="%Y-%m-%d")}.xlsx'
     )
