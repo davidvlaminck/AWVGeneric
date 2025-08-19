@@ -23,6 +23,7 @@ class AssetType(Enum):
     CAMERA = 'Camera'
     CAMGROEP = 'CAMGroep'
     DNBHOOGSPANNING = 'DNBHOOGSPANNING'
+    DYNBORDGROEP = 'DYNBORDGROEP'
     ENERGIEMETERDNB = 'ENERGIEMETERDNB'
     GALGPAAL = 'GALGPAAL'
     HS = 'HS'
@@ -35,11 +36,11 @@ class AssetType(Enum):
     MPT = 'Meetpunt'
     POORT = 'Poort'
     RSSBORD = 'RSSBord'
-    RSSGROEP = 'RSSGroep'
+    RSSGROEP = 'DynBordGroep'
     RVMSBORD = 'RVMSBord'
-    RVMSGROEP = 'RVMSGroep'
+    RVMSGROEP = 'DynBordGroep'
     SEGC = 'Segmentcontroller'
-    SEINBRUGDVM = 'SeinbrugDVM'
+    SEINBRUG = 'Seinbrug'
     TT = 'Teletransmissieverbinding'
     WEGKANTKAST = 'Wegkantkast'
     WVGROEP = 'Wegverlichtingsgroep'
@@ -209,46 +210,39 @@ class BypassProcessor:
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBHoogspanning": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBHoogspanning",
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBLaagspanning": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBLaagspanning",
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#EnergiemeterDNB": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#EnergiemeterDNB",
-            "IP": "https://lgc.data.wegenenverkeer.be/ns/installatie#IP",
+            "IP": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Netwerkelement",
             "TT": "https://lgc.data.wegenenverkeer.be/ns/installatie#TT",
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Segmentcontroller": "https://lgc.data.wegenenverkeer.be/ns/installatie#SegC",
             "lgc:installatie#WV": "https://lgc.data.wegenenverkeer.be/ns/installatie#WV",
-            "lgc:installatie#IP": "https://lgc.data.wegenenverkeer.be/ns/installatie#IP",
+            "lgc:installatie#IP": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Netwerkelement",
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#WVLichtmast": "https://lgc.data.wegenenverkeer.be/ns/installatie#VPLMast",
             "https://wegenenverkeer.data.vlaanderen.be/ns/installatie#MIVModule": "https://wegenenverkeer.data.vlaanderen.be/ns/installatie#MIVModule",
             "https://wegenenverkeer.data.vlaanderen.be/ns/installatie#MIVMeetpunt": "https://wegenenverkeer.data.vlaanderen.be/ns/installatie#MIVMeetpunt",
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#MIVLus": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#MIVLus",
-            "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRSS": "https://lgc.data.wegenenverkeer.be/ns/installatie#RSSBord",
-            "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRVMS": "https://lgc.data.wegenenverkeer.be/ns/installatie#RVMS",
-            "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordVMS": "https://lgc.data.wegenenverkeer.be/ns/installatie#VMS",
-            "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Seinbrug": "https://lgc.data.wegenenverkeer.be/ns/installatie#SeinbrugDVM",
+            "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRSS": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRSS",
+            "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRVMS": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRVMS",
+            "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordVMS": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordVMS",
+            "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Seinbrug": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Seinbrug",
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Galgpaal": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Galgpaal",
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Cabinecontroller": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Cabinecontroller"
         }
         # Update URI's na specifieke verwevingsdatum
-        if execution_date > datetime(year=2025, month=6, day=2):
-            self.typeURI_mapping_dict['lgc:installatie#IP'] = ('https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel'
-                                                               '#Netwerkelement')
         if execution_date > datetime(year=2025, month=6, day=13):
             # RVMS
             self.typeURI_mapping_dict[
                 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRVMS'] = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRVMS'
             self.typeURI_mapping_dict[
-                'lgc:installatie#RVMSGroep'] = ''
+                'lgc:installatie#RVMSGroep'] = 'https://wegenenverkeer.data.vlaanderen.be/ns/installatie#DynBordGroep'
             # VMS
             self.typeURI_mapping_dict[
                 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordVMS'] = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordVMS'
             self.typeURI_mapping_dict[
-                'lgc:installatie#VMSGroep'] = ''
+                'lgc:installatie#VMSGroep'] = 'https://wegenenverkeer.data.vlaanderen.be/ns/installatie#DynBordGroep'
         if execution_date > datetime(year=2025, month=6, day=17):
             self.typeURI_mapping_dict[
                 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRSS'] = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordRSS'
             self.typeURI_mapping_dict[
                 'https://wegenenverkeer.data.vlaanderen.be/ns/installatie#DynBordGroep'] = 'https://wegenenverkeer.data.vlaanderen.be/ns/installatie#DynBordGroep'
-        if execution_date > datetime(year=2025, month=6, day=20):
-            self.typeURI_mapping_dict[
-                'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Seinbrug'] = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Seinbrug'
-
 
     def setup_mapping_dict_eigenschappen(self):
         """
@@ -829,7 +823,7 @@ class BypassProcessor:
     def process_RVMS_borden(self):
         logging.info('Aanmaken RVMS-Bord')
         asset_info = AssetInfo(asset_type=AssetType.RVMSBORD,
-                               column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#RVMSBord',
+                               column_typeURI='DVM-Bord_Object typeURI',
                                column_name='DVM-Bord_Object assetId.identificator', column_uuid='DVM-Bord_UUID Object')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
                                             column_parent_name='HoortBij Relatie_HoortBij doelAssetId.identificator',
@@ -854,7 +848,7 @@ class BypassProcessor:
 
     def process_seinbruggen(self):
         logging.info('Aanmaken Seinbrug DVM')
-        asset_info = AssetInfo(asset_type=AssetType.SEINBRUGDVM, column_typeURI='Seinbrug_Object typeURI',
+        asset_info = AssetInfo(asset_type=AssetType.SEINBRUG, column_typeURI='Seinbrug_Object typeURI',
                                column_uuid='Seinbrug_UUID Object', column_name='Seinbrug_Object assetId.identificator')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT,
                                             column_parent_uuid='parent_beheerobject_uuid')
@@ -988,6 +982,7 @@ class BypassProcessor:
 
         :param typeURI: asset typeURI
         :asset_naam: asset naam
+        :parent_uuid: parent uuid
         :parent_uuid: parent uuid
         :parent_asset_type:
         :return: asset
@@ -1206,7 +1201,7 @@ class BypassProcessor:
             installatie_naam = self._construct_installatie_naam_teletransmissieverbinding(naam=naam)
         elif asset_type.name == 'WVLICHTMAST':
             installatie_naam = self._construct_installatie_naam_wvlichtmast(naam=naam)
-        elif asset_type.name == 'SEINBRUGDVM':
+        elif asset_type.name == 'SEINBRUG':
             installatie_naam = self._construct_installatie_naam_seinbrug(naam=naam)
         elif asset_type.name == 'GALGPAAL':
             installatie_naam = self._construct_installatie_naam_seinbrug(naam=naam)
@@ -1367,8 +1362,8 @@ class BypassProcessor:
 
     def process_RSS_groep(self):
         logging.info('Aanmaken RSS-Groep')
-        asset_info = AssetInfo(asset_type=AssetType.RSSGROEP,
-                               column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#RSSGroep',
+        asset_info = AssetInfo(asset_type=AssetType.DYNBORDGROEP,
+                               column_typeURI='https://wegenenverkeer.data.vlaanderen.be/ns/installatie#DynBordGroep',
                                column_name='HoortBij Relatie voor RSS-groep_HoortBij doelAssetId.identificator',
                                column_uuid='HoortBij Relatie voor RSS-groep_UUID HoortBij doelAsset')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
@@ -1376,7 +1371,7 @@ class BypassProcessor:
                                             column_parent_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
         bypass.process_assets(df=bypass.df_assets_RSS_borden, asset_info=asset_info,
                               parent_asset_info=parent_asset_info,
-                              sheetname_prefix='Seinbrug')  # geen eigenschappen, noch relaties voor de RSS-groep
+                              sheetname_prefix='Seinbrug_RSS')  # geen eigenschappen, noch relaties voor de RSS-groep
 
     def process_RSS_poort(self):
         logging.info('Aanmaken Poort')
@@ -1393,8 +1388,8 @@ class BypassProcessor:
 
     def process_RVMS_groep(self):
         logging.info('Aanmaken RVMS-Groep')
-        asset_info = AssetInfo(asset_type=AssetType.RVMSGROEP,
-                               column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#RVMSGroep',
+        asset_info = AssetInfo(asset_type=AssetType.DYNBORDGROEP,
+                               column_typeURI='https://wegenenverkeer.data.vlaanderen.be/ns/installatie#DynBordGroep',
                                column_name='HoortBij Relatie_HoortBij doelAssetId.identificator',
                                column_uuid='HoortBij Relatie_UUID HoortBij doelAsset')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
@@ -1402,7 +1397,7 @@ class BypassProcessor:
                                             column_parent_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
         bypass.process_assets(df=bypass.df_assets_RVMS_borden, asset_info=asset_info,
                               parent_asset_info=parent_asset_info,
-                              sheetname_prefix='Seinbrug')  # geen eigenschappen, noch relaties voor de RSS-groep
+                              sheetname_prefix='Seinbrug_RVMS')  # geen eigenschappen, noch relaties voor de RSS-groep
 
     def process_RVMS_poort(self):
         logging.info('Aanmaken Poort')
@@ -1543,5 +1538,4 @@ if __name__ == '__main__':
     bypass.process_voeding_segmentcontroller()
 
     bypass.process_voeding_wegverlichtingsgroep()
-
     bypass.process_openbare_verlichting()
