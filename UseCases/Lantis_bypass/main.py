@@ -545,6 +545,7 @@ class BypassProcessor:
                 # Toezichter (LANTIS) toewijzen
                 # Toezichtsgroep (LANTIS) toewijzen
                 self.add_toezichter_if_missing(asset=asset)
+                self.add_schadebeheerder_if_missing(asset=asset)
 
         # Wegschrijven van het dataframe
         with pd.ExcelWriter(self.output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
@@ -797,18 +798,19 @@ class BypassProcessor:
     def process_RSS_borden(self):
         logging.info('Aanmaken RSSBord')
         asset_info = AssetInfo(asset_type=AssetType.RSSBORD,
-                               column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#RSSBord',
+                               column_typeURI='DVM-Bord_Object typeURI',
                                column_name='DVM-Bord_Object assetId.identificator', column_uuid='DVM-Bord_UUID Object')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
                                             column_parent_name='HoortBij Relatie voor RSS-groep_HoortBij doelAssetId.identificator',
                                             column_parent_uuid='HoortBij Relatie voor RSS-groep_UUID HoortBij doelAsset')
         # todo: Activeer de eigenschap na de verweving. De eigenschap "merk" is pas beschikbaar na verweving
-        # eigenschap_info = EigenschapInfo(eminfra_eigenschap_name='merk', column_eigenschap_name='DVM-Bord_merk')
+        eigenschap_info = EigenschapInfo(eminfra_eigenschap_name='merk', column_eigenschap_name='DVM-Bord_merk')
         hoortbijrelatie = RelatieInfo(uri=RelatieType.HOORTBIJ, bronAsset_uuid=None,
                                       doelAsset_uuid='HoortBij Relatie voor RSS-groep_UUID HoortBij doelAsset',
                                       column_typeURI_relatie='HoortBij Relatie voor RSS-groep_HoortBij typeURI')
-        bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid=None,
-                                          doelAsset_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset',
+        # verwissel bron en doel uuid, want bevestiging is een bidirectionele relatie
+        bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset',
+                                          doelAsset_uuid=None,
                                           column_typeURI_relatie='Bevestigingsrelatie_Bevestigingsrelatie typeURI')
         voedingsrelatie = RelatieInfo(uri=RelatieType.VOEDT,
                                       bronAsset_uuid='Voedingsrelaties_UUID Voedingsrelatie bronAsset',
@@ -816,7 +818,7 @@ class BypassProcessor:
                                       column_typeURI_relatie='Voedingsrelaties_Voedingsrelatie typeURI')
         bypass.process_assets(df=bypass.df_assets_RSS_borden, asset_info=asset_info,
                               parent_asset_info=parent_asset_info,
-                              # eigenschap_infos=[eigenschap_info],
+                              eigenschap_infos=[eigenschap_info],
                               add_geometry=True, relatie_infos=[hoortbijrelatie, bevestigingsrelatie, voedingsrelatie],
                               sheetname_prefix='Seinbrug')
 
@@ -1473,6 +1475,33 @@ class BypassProcessor:
                                                           agent_uuid='b3dc8b00-2c34-448e-b178-04489164d778',
                                                           rol='toezichtsgroep')
 
+    def add_schadebeheerder_if_missing(self, asset: AssetDTO) -> None:
+        """
+        For both Legacy and OTL-assets.
+        Add schadebeheerder LANTIS
+        :param asset:
+        :return:
+        """
+        if asset.type.uri.startswith('https://lgc.data.wegenenverkeer.be'):
+            logging.info('Add schadebeheerder (LANTIS) for Legacy-asset.')
+            # todo implement
+            # self.eminfra_client.add_kenmerk_toezichter_by_asset_uuid()
+        else:
+            logging.info('Add betrokkenerelatie (rol: schadebeheerder) (LANTIS) for OTL-asset.')
+            query_dto = QueryDTO(size=5, from_=0, pagingMode=PagingModeEnum.OFFSET,
+                                 selection=SelectionDTO(expressions=[
+                                     ExpressionDTO(terms=[
+                                         TermDTO(property='bronAsset', operator=OperatorEnum.EQ,
+                                                 value=f'{asset.uuid}')])]))
+            betrokkenerelaties = list(self.eminfra_client.search_betrokkenerelaties(query_dto=query_dto))
+
+            if not [item for item in betrokkenerelaties if
+                    item.rol == 'schadebeheerder' and item.doel.get("naam") == 'LANTIS']:
+                logging.debug('Schadebeheerder LANTIS toevoegen')
+                self.eminfra_client.add_betrokkenerelatie(asset=asset,
+                                                          agent_uuid='b3dc8b00-2c34-448e-b178-04489164d778',
+                                                          rol='schadebeheerder')
+
 
 if __name__ == '__main__':
     bypass = BypassProcessor(
@@ -1487,19 +1516,19 @@ if __name__ == '__main__':
 
     logging.info('Aanmaken Boomstructuur voor installaties onder Wegkantkast')
     logging.info('Aanmaken installaties')
-    bypass.process_installatie(df=bypass.df_assets_wegkantkasten
-                               , column_name='Wegkantkast_Object assetId.identificator'
-                               , asset_type=AssetType.WEGKANTKAST)
-
-    bypass.process_wegkantkasten()
-    bypass.process_wegkantkasten_lsdeel()
-
-    bypass.process_mivlve()
-    bypass.process_mivmeetpunten()
-
-    bypass.process_seinbruggen()
-
-    bypass.process_RSS_groep()
+    # bypass.process_installatie(df=bypass.df_assets_wegkantkasten
+    #                            , column_name='Wegkantkast_Object assetId.identificator'
+    #                            , asset_type=AssetType.WEGKANTKAST)
+    #
+    # bypass.process_wegkantkasten()
+    # bypass.process_wegkantkasten_lsdeel()
+    #
+    # bypass.process_mivlve()
+    # bypass.process_mivmeetpunten()
+    #
+    # bypass.process_seinbruggen()
+    #
+    # bypass.process_RSS_groep()
     bypass.process_RSS_borden()
     # todo: enkel de sturingsrelatie toevoegen van de Poort.
     # Activeer pas nadat de poort is aangemaakt door derde partij.
