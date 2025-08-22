@@ -1,0 +1,32 @@
+{
+    "AFDELING WEGEN OOST-VLAANDEREN": {
+        "old_uuid": "d0e7813d-016c-4b94-b85d-dcead5c0ff1e",
+        "new_value": "V&W Oost-Vlaanderen",
+        "new_uuid": "206ba12e-dcc6-4ed1-887c-978e98aaad41"
+    },
+    "District Antwerpen - inactief": {
+        "old_uuid": "c2333368-8def-4eeb-b826-9394f5c3d5b7",
+        "new_value": "V&W Antwerpen",
+        "new_uuid": "5efe6764-007f-4099-83d9-29d0b2759211"
+    },
+    "District Geel - inactief": {
+        "old_uuid": "1c0c6380-141b-42ca-bed0-9103815b37cc",
+        "new_value": "District Geel 114",
+        "new_uuid": "445786bd-30a9-48d3-8401-c2d88b3db36a"
+    },
+    "District Puurs - inactief": {
+        "old_uuid": "c699d9ef-0782-445b-8798-365b5aee836b",
+        "new_value": "District Puurs 112",
+        "new_uuid": "4da75061-c08c-49f4-9808-fd7dc32038c8"
+    },
+    "District Vilvoorde-autosnelwegen - inactief": {
+        "old_uuid": "351bdd6f-719c-41e1-af33-e19d2009c7bc",
+        "new_value": "District Vilvoorde-gewestwegen 212",
+        "new_uuid": "54e3e789-a590-4f7a-bb31-daf4f48f822a"
+    },
+    "District Vosselaar - inactief": {
+        "old_uuid": "8d07ed95-5978-490a-b28a-03cb77c39841",
+        "new_value": "District Vosselaar 125",
+        "new_uuid": "c04fa312-55f9-4698-a463-0946d00daebf"
+    }
+}
