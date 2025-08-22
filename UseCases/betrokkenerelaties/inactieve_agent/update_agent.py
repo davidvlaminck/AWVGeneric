@@ -51,9 +51,15 @@ if __name__ == '__main__':
 
         for betrokkenerelatie in betrokkenerelaties:
             if betrokkenerelatie.doel.get("naam") == agent_current.naam:
-                logging.info('Deactiveer betrokkenerelaties')
-                eminfra_client.remove_betrokkenerelatie(betrokkenerelatie_uuid=betrokkenerelatie.uuid)
+                try:
+                    logging.info('Deactiveer betrokkenerelaties')
+                    eminfra_client.remove_betrokkenerelatie(betrokkenerelatie_uuid=betrokkenerelatie.uuid)
+                except Exception as e:
+                    logging.critical(f'Error occured: "{e}"')
 
-                rol = betrokkenerelatie.rol
-                logging.info('Add new betrokkenerelatie')
-                eminfra_client.add_betrokkenerelatie(asset=asset, agent_uuid=agent_new.uuid, rol=betrokkenerelatie.rol)
+                try:
+                    rol = betrokkenerelatie.rol
+                    logging.info(f'Add new betrokkenerelatie with role: "{rol}"')
+                    eminfra_client.add_betrokkenerelatie(asset=asset, agent_uuid=agent_new.uuid, rol=betrokkenerelatie.rol)
+                except Exception as e:
+                    logging.critical(f'Error occured: "{e}"')
