@@ -545,6 +545,8 @@ class BypassProcessor:
                 # Toezichter (LANTIS) toewijzen
                 # Toezichtsgroep (LANTIS) toewijzen
                 self.add_toezichter_if_missing(asset=asset)
+
+                # Schadebeheerder (LANTIS) toewijzen
                 self.add_schadebeheerder_if_missing(asset=asset)
 
         # Wegschrijven van het dataframe
@@ -575,8 +577,8 @@ class BypassProcessor:
                                           , doelAsset_uuid='Wegkantkast_UUID Object'
                                           , uri=RelatieType.BEVESTIGING
                                           , column_typeURI_relatie='Bevestigingsrelatie LSDeel_Bevestigingsrelatie typeURI')
-        voedingsrelatie = RelatieInfo(bronAsset_uuid='Laagspanningsdeel_UUID LSDeel'
-                                      , doelAsset_uuid='Voedingsrelatie (oorsprong)_UUID Voedingsrelatie bronAsset'
+        voedingsrelatie = RelatieInfo(bronAsset_uuid='Voedingsrelatie (oorsprong)_UUID Voedingsrelatie bronAsset'
+                                      , doelAsset_uuid='Laagspanningsdeel_UUID LSDeel'
                                       , uri=RelatieType.VOEDT
                                       , column_typeURI_relatie='Voedingsrelatie (oorsprong)_Voedingsrelatie typeURI')
         bypass.process_assets(df=bypass.df_assets_wegkantkasten, asset_info=asset_info,
@@ -1484,8 +1486,9 @@ class BypassProcessor:
         """
         if asset.type.uri.startswith('https://lgc.data.wegenenverkeer.be'):
             logging.info('Add schadebeheerder (LANTIS) for Legacy-asset.')
-            # todo implement
-            # self.eminfra_client.add_kenmerk_toezichter_by_asset_uuid()
+            schadebeheerder_bestaand = self.eminfra_client.get_kenmerk_schadebeheerder_by_asset_uuid(asset_uuid=asset.uuid)
+            if not schadebeheerder_bestaand:
+                self.eminfra_client.add_kenmerk_schadebeheerder(asset_uuid=asset.uuid, schadebeheerder='LANTIS')
         else:
             logging.info('Add betrokkenerelatie (rol: schadebeheerder) (LANTIS) for OTL-asset.')
             query_dto = QueryDTO(size=5, from_=0, pagingMode=PagingModeEnum.OFFSET,
@@ -1520,8 +1523,8 @@ if __name__ == '__main__':
     #                            , column_name='Wegkantkast_Object assetId.identificator'
     #                            , asset_type=AssetType.WEGKANTKAST)
     #
-    # bypass.process_wegkantkasten()
-    # bypass.process_wegkantkasten_lsdeel()
+    bypass.process_wegkantkasten()
+    bypass.process_wegkantkasten_lsdeel()
     #
     # bypass.process_mivlve()
     # bypass.process_mivmeetpunten()
