@@ -16,7 +16,8 @@ from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO
     AssetTypeKenmerkTypeAddDTO, ResourceRefDTO, Eigenschap, Event, EventType, ObjectType, EventContext, ExpansionsDTO, \
     RelatieTypeDTO, KenmerkType, EigenschapValueDTO, RelatieTypeDTOList, BeheerobjectDTO, ToezichtgroepTypeEnum, \
     ToezichtgroepDTO, BaseDataclass, BeheerobjectTypeDTO, BoomstructuurAssetTypeEnum, KenmerkTypeEnum, AssetDTOToestand, \
-    EigenschapValueUpdateDTO, GeometryNiveau, GeometryBron, GeometryNauwkeurigheid, GeometrieKenmerk
+    EigenschapValueUpdateDTO, GeometryNiveau, GeometryBron, GeometryNauwkeurigheid, GeometrieKenmerk, \
+    SchadebeheerderKenmerk
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 from utils.date_helpers import validate_dates, format_datetime
@@ -30,6 +31,7 @@ class Query(BaseDataclass):
     filters: dict
     orderByProperty: str
     fromCursor: str | None = None
+
 
 
 class EMInfraClient:
@@ -143,6 +145,60 @@ class EMInfraClient:
         }
         response = self.requester.put(
             url=f'core/api/assets/{asset_uuid}/kenmerken/f0166ba2-757c-4cf3-bf71-2e4fdff43fa3'
+            , json=payload
+        )
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+
+    def get_kenmerk_schadebeheerder_by_asset_uuid(self, asset_uuid: str) -> SchadebeheerderKenmerk | None:
+        response = self.requester.get(
+            url=f'core/api/assets/{asset_uuid}/kenmerken/d911dc02-f214-4f64-9c46-720dbdeb0d02')
+        if response.status_code != 200:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+
+        if schadebeheerder_dict := response.json().get("schadeBeheerder", None):
+            return SchadebeheerderKenmerk.from_dict(schadebeheerder_dict)
+        else:
+            return None
+
+    def get_kenmerk_schadebeheerder_by_name(self, name: str) -> SchadebeheerderKenmerk:
+        query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
+                             selection=SelectionDTO(
+                                 expressions=[
+                                     ExpressionDTO(
+                                         terms=[TermDTO(property='naam',
+                                                    operator=OperatorEnum.EQ,
+                                                    value=f'{name}')])
+                                 ]))
+        response = self.requester.post(
+            url='core/api/beheerders/search', data=query_dto.json())
+        if response.status_code != 200:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+
+        schadebeheerders = [SchadebeheerderKenmerk.from_dict(item) for item in response.json()['data']]
+        if len(schadebeheerders) != 1:
+            raise ValueError(f'Expected one single schadebeheerder for {name}. Got {len(schadebeheerders)} instead.')
+        return schadebeheerders[0]
+
+    def add_kenmerk_schadebeheerder(self, asset_uuid: str, schadebeheerder: str = None, schadebeheerder_uuid: str = None) -> None:
+        if schadebeheerder is None and schadebeheerder_uuid is None:
+            raise ValueError(
+                'Parameter schadebeheerder of schadebeheerder_uuid moet zijn ingevuld. 1 van beide is verplicht, '
+                'ze mogen beide niet nul zijn.'
+            )
+        if schadebeheerder:
+            schadebeheerder_kenmerk = self.get_kenmerk_schadebeheerder_by_name(name=schadebeheerder)
+            schadebeheerder_uuid = schadebeheerder_kenmerk.uuid
+        payload = {
+            "schadeBeheerder": {
+                "uuid": f"{schadebeheerder_uuid}",
+            }
+        }
+        response = self.requester.put(
+            url=f'core/api/assets/{asset_uuid}/kenmerken/d911dc02-f214-4f64-9c46-720dbdeb0d02'
             , json=payload
         )
         if response.status_code != 202:
