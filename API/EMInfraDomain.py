@@ -417,6 +417,8 @@ class SchadebeheerderKenmerk(BaseDataclass):
     referentie: str
     actiefInterval: dict
     contactFiche: dict
+    afdeling: dict | None = None
+    districtDiensten: dict | None = None
     code: str | None = None
     aanspreking: str | None = None
     links: list[Link] | None = None
