@@ -348,7 +348,7 @@ class BypassProcessor:
         self.df_assets_mivmeetpunten = self.import_data_as_dataframe(filepath=self.excel_file,
                                                                      sheet_name="MIVMeetpunten")
         self.df_assets_RSS_borden = self.import_data_as_dataframe(filepath=self.excel_file, sheet_name="RSS-borden")
-        self.df_assets_RVMS_borden = self.import_data_as_dataframe(filepath=self.excel_file, sheet_name="(R)VMS-borden")
+        # self.df_assets_RVMS_borden = self.import_data_as_dataframe(filepath=self.excel_file, sheet_name="(R)VMS-borden")
         self.df_assets_cameras = self.import_data_as_dataframe(filepath=self.excel_file, sheet_name="Cameras")
         self.df_assets_portieken_seinbruggen = self.import_data_as_dataframe(filepath=self.excel_file,
                                                                              sheet_name="Portieken-Seinbruggen")
@@ -811,8 +811,8 @@ class BypassProcessor:
                                       doelAsset_uuid='HoortBij Relatie voor RSS-groep_UUID HoortBij doelAsset',
                                       column_typeURI_relatie='HoortBij Relatie voor RSS-groep_HoortBij typeURI')
         # verwissel bron en doel uuid, want bevestiging is een bidirectionele relatie
-        bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset',
-                                          doelAsset_uuid=None,
+        bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid=None,
+                                          doelAsset_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset',
                                           column_typeURI_relatie='Bevestigingsrelatie_Bevestigingsrelatie typeURI')
         voedingsrelatie = RelatieInfo(uri=RelatieType.VOEDT,
                                       bronAsset_uuid='Voedingsrelaties_UUID Voedingsrelatie bronAsset',
@@ -1508,9 +1508,9 @@ class BypassProcessor:
 
 if __name__ == '__main__':
     bypass = BypassProcessor(
-        environment=Environment.TEI
+        environment=Environment.PRD
         , input_path_componentenlijst=Path(
-            __file__).resolve().parent / 'data' / 'input' / 'Componentenlijst_20250613_TEI.xlsx'
+            __file__).resolve().parent / 'data' / 'input' / 'Componentenlijst_20250613_PRD.xlsx'
         , output_excel_path=Path(
             __file__).resolve().parent / 'data' / 'output' / f'lantis_bypass_{datetime.now().strftime(format="%Y-%m-%d")}.xlsx'
     )
@@ -1519,33 +1519,38 @@ if __name__ == '__main__':
 
     logging.info('Aanmaken Boomstructuur voor installaties onder Wegkantkast')
     logging.info('Aanmaken installaties')
-    # bypass.process_installatie(df=bypass.df_assets_wegkantkasten
-    #                            , column_name='Wegkantkast_Object assetId.identificator'
-    #                            , asset_type=AssetType.WEGKANTKAST)
-    #
+    bypass.process_installatie(df=bypass.df_assets_wegkantkasten
+                               , column_name='Wegkantkast_Object assetId.identificator'
+                               , asset_type=AssetType.WEGKANTKAST)
+
     bypass.process_wegkantkasten()
     bypass.process_wegkantkasten_lsdeel()
-    #
-    # bypass.process_mivlve()
-    # bypass.process_mivmeetpunten()
-    #
-    # bypass.process_seinbruggen()
-    #
-    # bypass.process_RSS_groep()
+
+    bypass.process_mivlve()
+    bypass.process_mivmeetpunten()
+
+    bypass.process_installatie(df=bypass.df_assets_portieken_seinbruggen
+                               , column_name='Seinbrug_Object assetId.identificator'
+                               , asset_type=AssetType.SEINBRUG)
+    bypass.process_seinbruggen()
+
+    bypass.process_RSS_groep()
     bypass.process_RSS_borden()
     # todo: enkel de sturingsrelatie toevoegen van de Poort.
     # Activeer pas nadat de poort is aangemaakt door derde partij.
     ## bypass.process_RSS_poort()
 
-    bypass.process_RVMS_groep()
-    bypass.process_RVMS_borden()
+    # RVMS borden in een latere fase activeren
+    # bypass.process_RVMS_groep()
+    # bypass.process_RVMS_borden()
     # todo: enkel de sturingsrelatie toevoegen van de Poort.
     # Activeer pas nadat de poort is aangemaakt door derde partij.
-    ## bypass.process_RVMS_poort()
+    # bypass.process_RVMS_poort()
 
     bypass.process_galgpaal()
 
-    bypass.process_camera()
+    # Wacht op feedback van Ruben H. om de Camera's te genereren.
+    # bypass.process_camera()
     # todo: enkel de sturingsrelatie toevoegen van de Poort.
     # Activeer pas nadat de poort is aangemaakt door derde partij.
     # bypass.process_cameras_poort()
@@ -1569,5 +1574,6 @@ if __name__ == '__main__':
     bypass.process_voeding_cabinecontroller()
     bypass.process_voeding_segmentcontroller()
 
+    # wegverlichting in een latere fase activeren
     bypass.process_voeding_wegverlichtingsgroep()
-    bypass.process_openbare_verlichting()
+    # bypass.process_openbare_verlichting()
