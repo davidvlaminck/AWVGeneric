@@ -140,7 +140,6 @@ class EMInfraClient:
         # step 3: add new geometry
         self.add_kenmerk_geometrie(asset_uuid=asset_uuid, wkt_geometry=wkt_geometry)
 
-
     def get_kenmerk_toezichter_by_asset_uuid(self, asset_uuid: str) -> ToezichterKenmerk:
         response = self.requester.get(
             url=f'core/api/assets/{asset_uuid}/kenmerken/f0166ba2-757c-4cf3-bf71-2e4fdff43fa3')
