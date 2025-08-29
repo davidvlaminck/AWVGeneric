@@ -39,6 +39,22 @@ class EMInfraClient:
         self.requester = RequesterFactory.create_requester(auth_type=auth_type, env=env, settings_path=settings_path,
                                                            cookie=cookie)
         self.requester.first_part_url += 'eminfra/'
+        self.SCHADEBEHEERDER_UUID = 'd911dc02-f214-4f64-9c46-720dbdeb0d02'
+
+    def _asset_kenmerk_get(self, asset_uuid: str, kenmerk_uuid: str) -> dict:
+        url = f'core/api/assets/{asset_uuid}/kenmerken/{kenmerk_uuid}'
+        resp = self.requester.get(url=url)
+        if resp.status_code != 200:
+            logging.error(resp)
+            raise ProcessLookupError(resp.content.decode())
+        return resp.json()
+
+    def _asset_kenmerk_put(self, asset_uuid: str, kenmerk_uuid: str, payload: dict) -> None:
+        url = f'core/api/assets/{asset_uuid}/kenmerken/{kenmerk_uuid}'
+        resp = self.requester.put(url=url, json=payload)
+        if resp.status_code != 202:
+            logging.error(resp)
+            raise ProcessLookupError(resp.content.decode())
 
     def download_document(self, document: AssetDocumentDTO, directory: Path) -> Path:
         """ Downloads document into a directory.
@@ -152,16 +168,10 @@ class EMInfraClient:
             raise ProcessLookupError(response.content.decode("utf-8"))
 
     def get_kenmerk_schadebeheerder_by_asset_uuid(self, asset_uuid: str) -> SchadebeheerderKenmerk | None:
-        response = self.requester.get(
-            url=f'core/api/assets/{asset_uuid}/kenmerken/d911dc02-f214-4f64-9c46-720dbdeb0d02')
-        if response.status_code != 200:
-            logging.error(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
-
-        if schadebeheerder_dict := response.json().get("schadeBeheerder", None):
-            return SchadebeheerderKenmerk.from_dict(schadebeheerder_dict)
-        else:
-            return None
+        data = self._asset_kenmerk_get(asset_uuid, self.SCHADEBEHEERDER_UUID)
+        if sb := data.get("schadeBeheerder"):
+            return SchadebeheerderKenmerk.from_dict(sb)
+        return None
 
     def get_kenmerk_schadebeheerder_by_name(self, name: str) -> SchadebeheerderKenmerk:
         query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
@@ -183,27 +193,23 @@ class EMInfraClient:
             raise ValueError(f'Expected one single schadebeheerder for {name}. Got {len(schadebeheerders)} instead.')
         return schadebeheerders[0]
 
-    def add_kenmerk_schadebeheerder(self, asset_uuid: str, schadebeheerder: str = None, schadebeheerder_uuid: str = None) -> None:
-        if schadebeheerder is None and schadebeheerder_uuid is None:
-            raise ValueError(
-                'Parameter schadebeheerder of schadebeheerder_uuid moet zijn ingevuld. 1 van beide is verplicht, '
-                'ze mogen beide niet nul zijn.'
-            )
+    def add_kenmerk_schadebeheerder(
+        self, asset_uuid: str, schadebeheerder: str = None, schadebeheerder_uuid: str = None
+    ) -> None:
+        """
+        Toevoegen van een schadebeheerder aan een asset op basis van de naam of de uuid.
+        Zodra de parameter "schadebeheerder" beschikbaar is, wordt de parameter "schadebeheerder_uuid" niet meer gebruikt.
+        :param asset_uuid:
+        :param schadebeheerder: naam van de schadebeerder
+        :param schadebeheerder_uuid: uuid van de schadebeheerder
+        :return:
+        """
+        if not (schadebeheerder or schadebeheerder_uuid):
+            raise ValueError("één van beide (naam of UUID) is verplicht.")
         if schadebeheerder:
-            schadebeheerder_kenmerk = self.get_kenmerk_schadebeheerder_by_name(name=schadebeheerder)
-            schadebeheerder_uuid = schadebeheerder_kenmerk.uuid
-        payload = {
-            "schadeBeheerder": {
-                "uuid": f"{schadebeheerder_uuid}",
-            }
-        }
-        response = self.requester.put(
-            url=f'core/api/assets/{asset_uuid}/kenmerken/d911dc02-f214-4f64-9c46-720dbdeb0d02'
-            , json=payload
-        )
-        if response.status_code != 202:
-            logging.error(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
+            schadebeheerder_uuid = self.get_kenmerk_schadebeheerder_by_name(schadebeheerder).uuid
+        payload = {"schadeBeheerder": {"uuid": schadebeheerder_uuid}}
+        self._asset_kenmerk_put(asset_uuid, self.SCHADEBEHEERDER_UUID, payload)
 
     def get_identiteit(self, toezichter_uuid: str) -> IdentiteitKenmerk:
         response = self.requester.get(
