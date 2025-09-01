@@ -31,19 +31,10 @@ class CookieRequester(AbstractRequester):
 
     @staticmethod
     def modify_kwargs_for_bearer_token(kwargs: dict) -> dict:
-        if 'headers' not in kwargs:
-            kwargs['headers'] = {}
-
-        for arg, headers in kwargs.items():
-            if arg == 'headers':
-                if 'accept' not in headers:
-                    headers['accept'] = ''
-                if headers["accept"] is not None:
-                    headers["accept"] = (
-                        headers["accept"] + ", application/json"
-                        if headers["accept"] != ''
-                        else "application/json"
-                    )
-                headers['Content-Type'] = 'application/vnd.awv.eminfra.v1+json'
-                kwargs['headers'] = headers
+        headers = kwargs.setdefault('headers', {})
+        accept = headers.get('accept', '')
+        headers['accept'] = (
+            f"{accept}, application/json" if accept else "application/json"
+        )
+        headers['Content-Type'] = 'application/vnd.awv.eminfra.v1+json'
         return kwargs
