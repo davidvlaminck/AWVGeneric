@@ -407,6 +407,24 @@ class ToezichterKenmerk(BaseDataclass):
     def __post_init__(self):
          self._fix_nested_list_classes({('links', Link)})
 
+@dataclass
+class SchadebeheerderKenmerk(BaseDataclass):
+    _type: str
+    uuid: str
+    createdOn: str
+    modifiedOn: str
+    naam: str
+    referentie: str
+    actiefInterval: dict
+    contactFiche: dict
+    afdeling: dict | None = None
+    districtDiensten: dict | None = None
+    code: str | None = None
+    aanspreking: str | None = None
+    links: list[Link] | None = None
+
+    def __post_init__(self):
+         self._fix_nested_list_classes({('links', Link)})
 
 @dataclass
 class IdentiteitKenmerk(BaseDataclass):
