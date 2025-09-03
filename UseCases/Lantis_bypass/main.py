@@ -348,7 +348,7 @@ class BypassProcessor:
         self.df_assets_mivmeetpunten = self.import_data_as_dataframe(filepath=self.excel_file,
                                                                      sheet_name="MIVMeetpunten")
         self.df_assets_RSS_borden = self.import_data_as_dataframe(filepath=self.excel_file, sheet_name="RSS-borden")
-        # self.df_assets_RVMS_borden = self.import_data_as_dataframe(filepath=self.excel_file, sheet_name="(R)VMS-borden")
+        self.df_assets_RVMS_borden = self.import_data_as_dataframe(filepath=self.excel_file, sheet_name="(R)VMS-borden")
         self.df_assets_cameras = self.import_data_as_dataframe(filepath=self.excel_file, sheet_name="Cameras")
         self.df_assets_portieken_seinbruggen = self.import_data_as_dataframe(filepath=self.excel_file,
                                                                              sheet_name="Portieken-Seinbruggen")
@@ -822,7 +822,7 @@ class BypassProcessor:
                               parent_asset_info=parent_asset_info,
                               eigenschap_infos=[eigenschap_info],
                               add_geometry=True, relatie_infos=[hoortbijrelatie, bevestigingsrelatie, voedingsrelatie],
-                              sheetname_prefix='Seinbrug')
+                              sheetname_prefix='Seinbrug_RSS')
 
     def process_RVMS_borden(self):
         logging.info('Aanmaken RVMS-Bord')
@@ -830,13 +830,13 @@ class BypassProcessor:
                                column_typeURI='DVM-Bord_Object typeURI',
                                column_name='DVM-Bord_Object assetId.identificator', column_uuid='DVM-Bord_UUID Object')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
-                                            column_parent_name='HoortBij Relatie_HoortBij doelAssetId.identificator',
-                                            column_parent_uuid='HoortBij Relatie_UUID HoortBij doelAsset')
+                                            column_parent_name='HoortBij Relatie DynBordGroep_HoortBij doelAssetId.identificator',
+                                            column_parent_uuid='HoortBij Relatie DynBordGroep_UUID HoortBij doelAsset')
         # todo: Activeer de eigenschap na de verweving. De eigenschap "merk" is pas beschikbaar na verweving
         # eigenschap_info = EigenschapInfo(eminfra_eigenschap_name='merk', column_eigenschap_name='DVM-Bord_merk')
         hoortbijrelatie = RelatieInfo(uri=RelatieType.HOORTBIJ, bronAsset_uuid=None,
-                                      doelAsset_uuid='HoortBij Relatie_UUID HoortBij doelAsset',
-                                      column_typeURI_relatie='HoortBij Relatie_HoortBij typeURI')
+                                      doelAsset_uuid='HoortBij Relatie DynBordGroep_UUID HoortBij doelAsset',
+                                      column_typeURI_relatie='HoortBij Relatie DynBordGroep_HoortBij typeURI')
         bevestigingsrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING, bronAsset_uuid=None,
                                           doelAsset_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset',
                                           column_typeURI_relatie='Bevestigingsrelatie_Bevestigingsrelatie typeURI')
@@ -848,7 +848,7 @@ class BypassProcessor:
                               parent_asset_info=parent_asset_info,
                               # eigenschap_infos=[eigenschap_info],
                               add_geometry=True, relatie_infos=[hoortbijrelatie, bevestigingsrelatie, voedingsrelatie],
-                              sheetname_prefix='Seinbrug')
+                              sheetname_prefix='Seinbrug_RVMS')
 
     def process_seinbruggen(self):
         logging.info('Aanmaken Seinbrug DVM')
@@ -1394,14 +1394,14 @@ class BypassProcessor:
         logging.info('Aanmaken RVMS-Groep')
         asset_info = AssetInfo(asset_type=AssetType.DYNBORDGROEP,
                                column_typeURI='https://wegenenverkeer.data.vlaanderen.be/ns/installatie#DynBordGroep',
-                               column_name='HoortBij Relatie_HoortBij doelAssetId.identificator',
-                               column_uuid='HoortBij Relatie_UUID HoortBij doelAsset')
+                               column_name='HoortBij Relatie DynBordGroep_HoortBij doelAssetId.identificator',
+                               column_uuid='HoortBij Relatie DynBordGroep_UUID HoortBij doelAsset')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
                                             column_parent_name='Bevestigingsrelatie_Bevestigingsrelatie doelAssetId.identificator',
                                             column_parent_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
         bypass.process_assets(df=bypass.df_assets_RVMS_borden, asset_info=asset_info,
                               parent_asset_info=parent_asset_info,
-                              sheetname_prefix='Seinbrug_RVMS')  # geen eigenschappen, noch relaties voor de RSS-groep
+                              sheetname_prefix='Seinbrug_RVMS')  # geen eigenschappen, noch relaties voor de RVMS-groep
 
     def process_RVMS_poort(self):
         logging.info('Aanmaken Poort')
@@ -1510,7 +1510,7 @@ if __name__ == '__main__':
     bypass = BypassProcessor(
         environment=Environment.PRD
         , input_path_componentenlijst=Path(
-            __file__).resolve().parent / 'data' / 'input' / 'Componentenlijst_20250613_PRD.xlsx'
+            __file__).resolve().parent / 'data' / 'input' / 'Componentenlijst_20250903.xlsx'
         , output_excel_path=Path(
             __file__).resolve().parent / 'data' / 'output' / f'lantis_bypass_{datetime.now().strftime(format="%Y-%m-%d")}.xlsx'
     )
@@ -1534,25 +1534,23 @@ if __name__ == '__main__':
                                , asset_type=AssetType.SEINBRUG)
     bypass.process_seinbruggen()
 
-    bypass.process_RSS_groep()
-    bypass.process_RSS_borden()
-    # todo: enkel de sturingsrelatie toevoegen van de Poort.
-    # Activeer pas nadat de poort is aangemaakt door derde partij.
-    ## bypass.process_RSS_poort()
-
-    # RVMS borden in een latere fase activeren
-    # bypass.process_RVMS_groep()
-    # bypass.process_RVMS_borden()
-    # todo: enkel de sturingsrelatie toevoegen van de Poort.
-    # Activeer pas nadat de poort is aangemaakt door derde partij.
-    # bypass.process_RVMS_poort()
-
     bypass.process_galgpaal()
 
-    # Wacht op feedback van Ruben H. om de Camera's te genereren.
-    # bypass.process_camera()
-    # todo: enkel de sturingsrelatie toevoegen van de Poort.
-    # Activeer pas nadat de poort is aangemaakt door derde partij.
+    bypass.process_RSS_groep()
+    bypass.process_RSS_borden()
+    # Activeer pas nadat de poort is aangemaakt door Swarco
+    # De sturingsrelatie toevoegen van de EM-installatie naar de Poort.
+    ## bypass.process_RSS_poort()
+
+    bypass.process_RVMS_groep()
+    bypass.process_RVMS_borden()
+    # Activeer pas nadat de poort is aangemaakt door Swarco
+    # De sturingsrelatie toevoegen van de EM-installatie naar de Poort.
+    # bypass.process_RVMS_poort()
+
+    bypass.process_camera()
+    # Activeer pas nadat de poort is aangemaakt door Swarco
+    # De sturingsrelatie toevoegen van de EM-installatie naar de Poort.
     # bypass.process_cameras_poort()
 
     logging.info('Boomstructuur van de Hoogspanningscabine')
