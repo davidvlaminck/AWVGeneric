@@ -4,30 +4,24 @@ from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path
 
-def load_settings():
-    """Load API settings from JSON"""
-    return Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
+SETTINGS_PATH = Path.home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
+INPUT_FILE = Path.home() / 'Downloads/SegmentController_Afstandsbewaking/Bevestigingsrelaties.xlsx'
+SHEETS = ['kast_ab', 'kast_ls', 'kast_lsdeel', 'lsdeel_segc']
 
 def read_excel_as_dataframe(filepath: Path, sheet_name: str, usecols: list[str]):
     """Read RSA-report as input into a DataFrame."""
     return pd.read_excel(filepath, sheet_name=sheet_name, header=0, usecols=usecols).dropna(subset=usecols)
-
-def get_filepath():
-    return Path().home() / 'Downloads' / 'SegmentController_Afstandsbewaking' / 'Bevestigingsrelaties.xlsx'
 
 
 if __name__ == '__main__':
     logging.basicConfig(filename="../../Assetrelaties/logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s', filemode="w")
     logging.info('Updaten van de locatie-eigenschap van absoluut naar afgeleid.')
 
-    settings_path = load_settings()
-    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=SETTINGS_PATH)
 
-    sheets = ['kast_ab', 'kast_ls', 'kast_lsdeel', 'lsdeel_segc']
-
-    for sheet in sheets:
+    for sheet in SHEETS:
         df_assets = read_excel_as_dataframe(
-            filepath=get_filepath(), sheet_name=sheet, usecols=["bron_uuid", "bron_naam", "doel_uuid", "doel_naam"])
+            filepath=INPUT_FILE, sheet_name=sheet, usecols=["bron_uuid", "bron_naam", "doel_uuid", "doel_naam"])
 
         # Filter out assets with existing "afgeleide locaties"
         df_assets = df_assets[df_assets.apply(lambda asset: eminfra_client.get_kenmerk_locatie_by_asset_uuid(asset_uuid=asset["bron_uuid"]).locatie is None, axis=1)]
