@@ -27,6 +27,7 @@ if __name__ == '__main__':
     KENMERKTYPE_UUID, RELATIETYPE_UUID = eminfra_client.get_kenmerktype_and_relatietype_id(relatie_uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging')
 
     sheets = ['kast_ab', 'kast_ls', 'kast_lsdeel', 'lsdeel_segc']
+
     for sheet in sheets:
         df_assets = read_excel_as_dataframe(
             filepath=get_filepath(), sheet_name=sheet, usecols=["bron_uuid", "bron_naam", "doel_uuid", "doel_naam"])
