@@ -12,18 +12,8 @@ def read_excel_as_dataframe(filepath: Path, sheet_name: str, usecols: list[str])
     """Read RSA-report as input into a DataFrame."""
     return pd.read_excel(filepath, sheet_name=sheet_name, header=0, usecols=usecols).dropna(subset=usecols)
 
-
-import os
-
-def get_log_path():
-    """Get absolute log file path from environment or use default in home directory."""
-    log_dir = os.environ.get("LOG_DIR", str(Path().home() / "Assetrelaties"))
-    os.makedirs(log_dir, exist_ok=True)
-    return str(Path(log_dir) / "logs.log")
-
 if __name__ == '__main__':
-    log_path = get_log_path()
-    logging.basicConfig(filename=log_path, level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s', filemode="w")
+    logging.basicConfig(filename='logs.log', level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s', filemode="w")
     logging.info('Updaten van de locatie-eigenschap van absoluut naar afgeleid.')
 
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=SETTINGS_PATH)
