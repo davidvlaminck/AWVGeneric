@@ -110,6 +110,22 @@ class EMInfraClient:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
+    def update_kenmerk_locatie_via_relatie(self, bron_asset_uuid: str, doel_asset_uuid: str) -> None:
+        """Update het kenmerk locatie via een bestaande afgeleide relatie"""
+        json_body = {
+            "relatie": {
+                "asset": {
+                    "uuid": f'{doel_asset_uuid}',
+                    "_type": "installatie"}}}
+        response = self.requester.put(
+            url=f'core/api/assets/{bron_asset_uuid}/kenmerken/80052ed4-2f91-400c-8cba-57624653db11'
+            , data=json.dumps(json_body)
+        )
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+
+
     def get_kenmerk_geometrie(self, asset_uuid: str) -> GeometrieKenmerk:
         response = self.requester.get(url=f'core/api/assets/{asset_uuid}/kenmerken/aabe29e0-9303-45f1-839e-159d70ec2859')
         if response.status_code != 200:
