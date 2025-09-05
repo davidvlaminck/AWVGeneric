@@ -16,8 +16,17 @@ def get_filepath():
     return Path().home() / 'Downloads' / 'SegmentController_Afstandsbewaking' / 'Bevestigingsrelaties.xlsx'
 
 
+import os
+
+def get_log_path():
+    """Get absolute log file path from environment or use default in home directory."""
+    log_dir = os.environ.get("LOG_DIR", str(Path().home() / "Assetrelaties"))
+    os.makedirs(log_dir, exist_ok=True)
+    return str(Path(log_dir) / "logs.log")
+
 if __name__ == '__main__':
-    logging.basicConfig(filename="../../Assetrelaties/logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s', filemode="w")
+    log_path = get_log_path()
+    logging.basicConfig(filename=log_path, level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s', filemode="w")
     logging.info('Updaten van de locatie-eigenschap van absoluut naar afgeleid.')
 
     settings_path = load_settings()
