@@ -8,7 +8,7 @@ def load_settings(user: str = 'Dries'):
     else:
         raise NotImplementedError(f'user: {user} is not implemented in function call load_settings()')
 
-def read_rsa_report(filepath: Path, usecols: list(str) =["uuid"]) -> pd.DataFrame:
+def read_rsa_report(filepath: Path, usecols: [str] =["uuid"]) -> pd.DataFrame:
     """Read RSA-report as input into a DataFrame."""
     return pd.read_excel(filepath, sheet_name='Resultaat', header=2, usecols=usecols)
 

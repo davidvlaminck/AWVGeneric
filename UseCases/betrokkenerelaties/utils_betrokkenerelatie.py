@@ -1,5 +1,6 @@
+from collections.abc import Generator
 from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import AssetDTO, Generator
+from API.EMInfraDomain import AssetDTO
 from otlmow_model.OtlmowModel.Classes.ImplementatieElement.RelatieObject import RelatieObject
 from otlmow_model.OtlmowModel.Helpers.RelationCreator import create_betrokkenerelation
 
