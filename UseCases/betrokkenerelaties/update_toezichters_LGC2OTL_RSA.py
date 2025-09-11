@@ -31,6 +31,10 @@ DICT_TOEZICHTSGROEPEN = {
     'EMT_WHW': 'EMT_WHW',
     'PCO': 'PCO',
     'AWV_EW_WV': 'V&W West-Vlaanderen',
+    'AWV_EW_VB': 'V&W Vlaams-Brabant',
+    'AWV_EW_AN': 'V&W Antwerpen',
+    'AWV_EW_LB': 'V&W Limburg',
+    'AWV_EW_OV': 'V&W Oost-Vlaanderen',
     'LANTIS': 'LANTIS'
 }
 
