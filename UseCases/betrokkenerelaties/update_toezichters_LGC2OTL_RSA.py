@@ -190,9 +190,7 @@ def main():
     for assettype in ['Signaalkabel', 'Voedingskabel', 'Beschermbuis', 'WVLichtmast']:
         df = read_report(
             INPUT_DIR / f'[RSA] Bijhorende assets hebben een verschillende toezichtshouder (assettype = {assettype}).xlsx'
-            , usecols=["otl_uuid", "otl_uri", "lgc_uuid", "lgc_toezichthouder_gebruikersnaam",
-                         "lgc_toezichtsgroep_naam",
-                         "lgc_toezichthouder_voornaam", "lgc_toezichthouder_naam"]
+            , usecols=["otl_uuid", "otl_uri", "lgc_uuid", "lgc_toezichter_naam", "lgc_toezichtsgroep_naam"]
         )
         existing, created = process_assets(client, df)
         write_output(existing, created, OUTPUT_DIR)
