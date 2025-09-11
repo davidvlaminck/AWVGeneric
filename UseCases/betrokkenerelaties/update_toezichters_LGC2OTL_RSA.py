@@ -1,3 +1,5 @@
+import logging
+
 from API.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 import pandas as pd
@@ -27,7 +29,9 @@ DICT_TOEZICHTSGROEPEN = {
     'EMT_WHM': 'EMT_WHM',
     'EMT_WHO': 'EMT_WHO',
     'EMT_WHW': 'EMT_WHW',
-    'PCO': 'PCO'
+    'PCO': 'PCO',
+    'AWV_EW_WV': 'V&W West-Vlaanderen',
+    'LANTIS': 'LANTIS'
 }
 
 
@@ -39,31 +43,6 @@ def read_report(filepath: str, sheet_name: str = 'Resultaat', usecols: list = ["
     df_assets.drop_duplicates(inplace=True)
     return df_assets
 
-def construct_full_name(first_name: str, last_name: str) -> str | None:
-    return " ".join([first_name, last_name]) if first_name and last_name else None
-
-# def map_toezichtgroep(existing_toezichtgroep, json_file = 'mapping_toezichtsgroepen.json') -> str:
-#     """
-#     Maps the input value to a new value, based on a mapping file
-#     If the record is missing in the mapping-file, returns the input.
-#
-#     :param existing_toezichtgroep: the actual value that will be mapped
-#     :param json_file: external mapping file, in a json-structure
-#     :return: the mapped value, or the initial value if the mapping can not be effected
-#     """
-#     df_mapping = pd.read_json(json_file)
-#
-#     return next(
-#         iter(
-#             df_mapping.loc[
-#                 df_mapping['toezichtsgroep_existing'] == existing_toezichtgroep,
-#                 'toezichtsgroep_new',
-#             ].values
-#         ),
-#         existing_toezichtgroep,
-#     )
-
-
 def map_toezichtsgroep_lgc2otl(toezichtsgroep: str) -> str:
     """
     Map toezichtsgroep naam van LGC naar OTL
@@ -72,112 +51,46 @@ def map_toezichtsgroep_lgc2otl(toezichtsgroep: str) -> str:
     """
     return DICT_TOEZICHTSGROEPEN[toezichtsgroep]
 
-#
-# if __name__ == '__main__':
-#     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s', filemode="w")
-#     logging.info('''
-#         OTL Toezichters en toezichtsgroepen aanpassen.
-#         Op basis van de actuele LGC toezichter en LGC toezichtsgroep, de OTL Agent rol: toezichter en OTL Agent rol: toezichtsgroep updaten.
-#         We beschouwen de Legacy informatie als correct en passen de OTL-informatie daaraan aan.
-#         Input: RSA-rapporten 137 tot en met 140: bijhorende assets hebben een verschillende toezichthouder.
-#         Output: DAVIE-conforme aanlever bestanden om de huidige Agents (toezichter en toezichtsgroep) te deactiveren en een nieuwe te instantiëren.
-#         ''')
-#
-#     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
-#
-#     # assettype = 'Signaalkabel'
-#     # assettype = 'Voedingskabel'
-#     # assettype = 'Beschermbuis'
-#     assettype = 'WVLichtmast'
-#     df_assets = read_report(
-#         downloads_subpath= Path().home() / 'Downloads' / f'toezichter/input/[RSA] Bijhorende assets hebben een verschillende toezichtshouder (assettype = {assettype}).xlsx',
-#         usecols=["otl_uuid", "otl_uri", "lgc_uuid", "lgc_toezichthouder_gebruikersnaam", "lgc_toezichtsgroep_naam",
-#                  "lgc_toezichthouder_voornaam", "lgc_toezichthouder_naam"])
-#
-#     logging.info('Verwijder gedupliceerde records op basis van de kolommen: otl_uuid, lgc_toezichthouder_gebruikersnaam')
-#     logging.info('Dit zijn records waarbij er bijvoorbeeld 2 HoortBij-relaties bestaan tussen een OTL- en een Legacy-asset en waarbij dan de toezichter van de Legacy-asset ook identiek is.')
-#     logging.info(f'Aantal records VOOR opkuis: {len(df_assets)}')
-#     df_assets.drop_duplicates(subset=['otl_uuid', 'lgc_toezichthouder_gebruikersnaam'], inplace=True)
-#     logging.info(f'Aantal records NA opkuis: {len(df_assets)}')
-#
-#     existing_assets = []
-#     created_assets = []
-#     for index, asset in df_assets.iterrows():
-#         logging.info(f'Processing asset {index}: {asset.otl_uuid}')
-#         #################################################################################
-#         ####  Ophalen van de bestaande asset
-#         #################################################################################
-#         otl_asset = next(eminfra_client.search_asset_by_uuid(asset_uuid=asset.otl_uuid))
-#
-#         #################################################################################
-#         ####  Wis de bestaande betrokkenerelatie. Set isActief = False
-#         #################################################################################
-#         logging.info('\tListing existing relations toezichter and toezichtsgroep')
-#         bestaande_relatie_toezichter = list(get_bestaande_betrokkenerelaties(asset=otl_asset, rol='toezichter', isActief=False))
-#         bestaande_relatie_toezichtsgroep = list(get_bestaande_betrokkenerelaties(asset=otl_asset, rol='toezichtsgroep', isActief=False))
-#
-#         #################################################################################
-#         ####  Maak nieuwe BetrokkeneRelaties
-#         #################################################################################
-#         logging.info('\tCreating new relations toezichter and toezichtsgroep')
-#         # search toezichter and extract the uuid of the toezichter. This ensures that the toezichter exists.
-#         toezichter_naam = construct_full_name(first_name=asset.lgc_toezichthouder_voornaam,
-#                                               last_name=asset.lgc_toezichthouder_naam)
-#         toezichtgroep_naam = asset.lgc_toezichtsgroep_naam
-#
-#         if toezichter_naam:
-#             logging.info(f'\t\tToezichter: {toezichter_naam}')
-#             nieuwe_relatie_toezichter = build_betrokkenerelatie(source=otl_asset, agent_naam=toezichter_naam, rol='toezichter')
-#             if nieuwe_relatie_toezichter is None:
-#                 continue
-#             nieuwe_relatie_toezichter.assetId.identificator = f'HeeftBetrokkene_{index}_toezichter_{assettype}'
-#
-#
-#         if toezichtgroep_naam:
-#             # todo test dat dit volledig weg kan.
-#             # toezichtgroep_naam = map_toezichtgroep(toezichtgroep_naam)
-#
-#             logging.info(f'\t\tToezichtsgroep: {toezichtgroep_naam}')
-#             nieuwe_relatie_toezichtsgroep = build_betrokkenerelatie(
-#                 source=otl_asset
-#                 , agent_naam=map_toezichtsgroep_lgc2otl(toezichtgroep_naam)
-#                 , rol='toezichtsgroep')
-#             if nieuwe_relatie_toezichtsgroep is None:
-#                 continue
-#             nieuwe_relatie_toezichtsgroep.assetId.identificator = f'HeeftBetrokkene_{index}_toezichtsgroep_{assettype}'
-#
-#         existing_assets.extend(bestaande_relatie_toezichter)
-#         existing_assets.extend(bestaande_relatie_toezichtsgroep)
-#         created_assets.extend(
-#             (nieuwe_relatie_toezichter, nieuwe_relatie_toezichtsgroep)
-#         )
-#
-#         # break out the loop after 5000 iteration
-#         if index+1 % 5000 == 0:
-#             break
-#
-#     OtlmowConverter.from_objects_to_file(file_path=OUTPUT_DIR / f'{assettype}' / f'assets_delete_toezichter_toezichtsgroep_{assettype}.xlsx'),
-#                                          sequence_of_objects=existing_assets)
-#     OtlmowConverter.from_objects_to_file(file_path=OUTPUT_DIR / f'{assettype}' / f'assets_update_toezichter_toezichtsgroep_{assettype}.xlsx'),
-#                                          sequence_of_objects=created_assets)
 
 def process_assets(client: EMInfraClient, df: pd.DataFrame):
+    """
+    Process a pandas Dataframe of assets containing a Legacy toezichter and a Legacy toezichtsgroep.
+    Returns 2 lists: "existing" and "created" with the existing and to-be-created OTL-HeeftBetrokkene relaties respectively.
+
+    When the existing, or the new-to-be-created HeeftBetrokkene relaties is missing for an asset, none is appended to the list,
+    to ensure that an existing betrokkenerelatie is not deactivated without creating a new one.
+
+    This is checked for both "toezichter" and "toezichtsgroep".
+
+    :param client:
+    :param df:
+    :return:
+    """
     existing, created = [], []
     for idx, row in df.iterrows():
         asset = next(client.search_asset_by_uuid(asset_uuid=row["otl_uuid"]))
+        logging.info(f'Processing asset:\n\t{idx}\n\t{asset.uuid}')
         for role, name_col, mapper in [
-            ("toezichter", "lgc_toezichter_naam", construct_full_name(first_name=row.lgc_toezichthouder_voornaam, last_name=row.lgc_toezichthouder_naam)),
+            ("toezichter", "lgc_toezichter_naam", lambda naam: naam),
             ("toezichtsgroep", "lgc_toezichtsgroep_naam", map_toezichtsgroep_lgc2otl),
         ]:
             # deactivate
-            existing += list(get_bestaande_betrokkenerelaties(client, asset, role, False))
+            rel_existing = list(get_bestaande_betrokkenerelaties(client, asset, role, False))
             # create
             name = row[name_col]
-            if not name: continue
-            rel = build_betrokkenerelatie(client, asset, mapper(name), role)
-            if rel:
-                rel.assetId.identificator = f"HeeftBetrokkene_{idx}_{role}"
-                created.append(rel)
+            if not name:
+                continue
+            rel_new = build_betrokkenerelatie(client, asset, mapper(name), role)
+
+            # rel_existing can be None, but rel_new must exist.
+            # To ensure the existing is not deactivated, without adding a new toezichter or toezichtsgroep.
+            if rel_new:
+                existing += rel_existing
+                rel_new.assetId.identificator = f"HeeftBetrokkene_{idx}_{role}"
+                created.append(rel_new)
+            if rel_existing and not rel_new:
+                logging.critical(f'Asset {asset.uuid} has existing toezichter: {rel_existing}')
+                logging.critical(f'New toezichter not found: {rel_new}')
     return existing, created
 
 def write_output(existing, created, out_dir: Path):
@@ -186,6 +99,8 @@ def write_output(existing, created, out_dir: Path):
     OtlmowConverter.from_objects_to_file(out_dir / "assets_update.xlsx", created)
 
 def main():
+    logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s',
+                filemode="w")
     client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
     for assettype in ['Signaalkabel', 'Voedingskabel', 'Beschermbuis', 'WVLichtmast']:
         df = read_report(
@@ -193,6 +108,6 @@ def main():
             , usecols=["otl_uuid", "otl_uri", "lgc_uuid", "lgc_toezichter_naam", "lgc_toezichtsgroep_naam"]
         )
         existing, created = process_assets(client, df)
-        write_output(existing, created, OUTPUT_DIR)
-# todo: nieuwe versie van de bestanden downloaden
+        write_output(existing=existing, created=created, out_dir=Path(OUTPUT_DIR, f'{assettype}'))
+
 main()
