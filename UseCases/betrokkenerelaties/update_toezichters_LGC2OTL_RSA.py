@@ -87,7 +87,7 @@ def process_assets(client: EMInfraClient, df: pd.DataFrame):
             rel_new = build_betrokkenerelatie(client, asset, mapper(name), role)
 
             # rel_existing can be None, but rel_new must exist.
-            # To ensure the existing is not deactivated, without adding a new toezichter or toezichtsgroep.
+            # To ensure the existing toezichter/toezichtsgroep is not deactivated, without adding a new toezichter/toezichtsgroep.
             if rel_new:
                 existing += rel_existing
                 rel_new.assetId.identificator = f"HeeftBetrokkene_{idx}_{role}"
