@@ -72,7 +72,9 @@ def process_assets(client: EMInfraClient, df: pd.DataFrame):
     """
     existing, created = [], []
     for idx, row in df.iterrows():
-        asset = next(client.search_asset_by_uuid(asset_uuid=row["otl_uuid"]))
+        asset = next(client.search_asset_by_uuid(asset_uuid=row["otl_uuid"]), None)
+        if not asset:
+            raise ValueError(f'Asset was not found: {row["otl_uuid"]}.')
         logging.info(f'Processing asset:\n\t{idx}\n\t{asset.uuid}')
         for role, name_col, mapper in [
             ("toezichter", "lgc_toezichter_naam", lambda naam: naam),
