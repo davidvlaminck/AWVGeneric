@@ -53,7 +53,10 @@ def map_toezichtsgroep_lgc2otl(toezichtsgroep: str) -> str:
     :param toezichtsgroep: Legacy
     :return: naam toezichtsgroep OTL
     """
-    return DICT_TOEZICHTSGROEPEN[toezichtsgroep]
+    mapped = DICT_TOEZICHTSGROEPEN.get(toezichtsgroep)
+    if mapped is None:
+        raise ValueError(f"Toezichtsgroep '{toezichtsgroep}' not found in DICT_TOEZICHTSGROEPEN.")
+    return mapped
 
 
 def process_assets(client: EMInfraClient, df: pd.DataFrame):
