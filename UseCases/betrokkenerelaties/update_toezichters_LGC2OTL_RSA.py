@@ -102,8 +102,14 @@ def process_assets(client: EMInfraClient, df: pd.DataFrame):
 
 def write_output(existing, created, out_dir: Path):
     out_dir.mkdir(parents=True, exist_ok=True)
-    OtlmowConverter.from_objects_to_file(out_dir / "assets_delete.xlsx", existing)
-    OtlmowConverter.from_objects_to_file(out_dir / "assets_update.xlsx", created)
+    try:
+        OtlmowConverter.from_objects_to_file(out_dir / "assets_delete.xlsx", existing)
+    except Exception as e:
+        logging.error(f"Failed to write assets_delete.xlsx: {e}", exc_info=True)
+    try:
+        OtlmowConverter.from_objects_to_file(out_dir / "assets_update.xlsx", created)
+    except Exception as e:
+        logging.error(f"Failed to write assets_update.xlsx: {e}", exc_info=True)
 
 def main():
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s',
