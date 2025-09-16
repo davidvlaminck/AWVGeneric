@@ -39,8 +39,10 @@ DICT_TOEZICHTSGROEPEN = {
 }
 
 
-def read_report(filepath: str, sheet_name: str = 'Resultaat', usecols: list = ["uuid"]):
+def read_report(filepath: str, sheet_name: str = 'Resultaat', usecols: list = None):
     """Read RSA-report as input into a DataFrame."""
+    if usecols is None:
+        usecols = ["uuid"]
     df_assets = pd.read_excel(filepath, sheet_name=sheet_name, header=2, usecols=usecols)
     df_assets = df_assets.where(pd.notna(df_assets), None)
     df_assets.fillna(value='', inplace=True)
