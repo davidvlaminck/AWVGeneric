@@ -12,7 +12,7 @@ from UseCases.utils import load_settings
 from UseCases.betrokkenerelaties.utils_betrokkenerelatie import build_betrokkenerelatie, get_bestaande_betrokkenerelaties
 
 BASE_DIR = Path.home() / "OneDrive - Nordend/projects/AWV/OTL_Aanpassingen/Toezichter_update"
-INPUT_FILE = BASE_DIR / "input" / "toezichter_mapping_link_OTL-Legacy_20250909.xlsx"
+INPUT_FILE = BASE_DIR / "input" / "toezichter_mapping_link_OTL-Legacy_20250925.xlsx"
 OUTPUT_DIR = BASE_DIR / "output"
 
 DICT_TOEZICHTSGROEPEN = {
@@ -45,11 +45,10 @@ def map_toezichtsgroep(toezichtsgroep: str) -> str:
 
 
 def load_input(INPUT_FILE) -> pd.DataFrame:
-    df = pd.read_excel(Path().home() / "OneDrive - Nordend/projects/AWV/OTL_Aanpassingen/Toezichter_update" / "input" /
-                                        "toezichter_mapping_link_OTL-Legacy_20250909.xlsx"
-                              , sheet_name='Toezichters'
-                              , header=0
-                              , usecols=["uri_otl", "uuid_otl", "naam_otl", "agent_uuid", "agent_naam", "gemeente", "provincie", "hoortBij-relatie", "uri_lgc", "uuid_lgc", "naam_lgc", "toezichter_uuid", "toezichter_naam", "toezichtgroep_uuid", "toezichtgroep_naam", "otl_lgc_link"])
+    df = pd.read_excel(INPUT_FILE
+                      , sheet_name='Toezichters'
+                      , header=0
+                      , usecols=["uri_otl", "uuid_otl", "naam_otl", "agent_uuid", "agent_naam", "gemeente", "provincie", "hoortBij-relatie", "uri_lgc", "uuid_lgc", "naam_lgc", "toezichter_uuid", "toezichter_naam", "toezichtgroep_uuid", "toezichtgroep_naam", "otl_lgc_link"])
     return df[df["otl_lgc_link"] == 1]
 
 
