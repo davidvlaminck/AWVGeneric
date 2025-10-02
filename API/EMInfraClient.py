@@ -1097,7 +1097,10 @@ class EMInfraClient:
             },
             "doel": {
                 "uuid": f"{agent_uuid}"
-                , "_type": "agent"
+            },
+            "geldigheid": {
+                "van": None,
+                "tot": None
             },
             "rol": f"{rol}"
         }
