@@ -1536,7 +1536,7 @@ if __name__ == '__main__':
     bypass = BypassProcessor(
         environment=Environment.PRD
         , input_path_componentenlijst=Path(
-            __file__).resolve().parent / 'data' / 'input' / 'Componentenlijst_20251002.xlsx'
+            __file__).resolve().parent / 'data' / 'input' / 'Componentenlijst_20251008.xlsx'
         , output_excel_path=Path(
             __file__).resolve().parent / 'data' / 'output' / f'lantis_bypass_{datetime.now().strftime(format="%Y-%m-%d")}.xlsx'
     )
