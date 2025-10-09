@@ -6,19 +6,11 @@ from API.EMInfraDomain import AssetDTO, QueryDTO, PagingModeEnum, SelectionDTO, 
 from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path
+from UseCases.utils import load_settings
 
 print("""
         Update van de toezichters van OTL-assets, Kris Smet en Ruben Henrard, naar Lantis
       """)
-
-def load_settings():
-    """Load API settings from JSON"""
-    settings_path = Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
-    return settings_path
-
-def functie() -> None:
-    """"""
-    return None
 
 
 def build_query_search_assets(toezichter: AgentDTO):
@@ -50,8 +42,7 @@ def build_query_search_betrokkenerelaties(asset: AssetDTO):
 if __name__ == '__main__':
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s', filemode="w")
     logging.info('Update toezichter naar LANTIS:\t Toezichters Kristof Smet en Ruben Henrard')
-    settings_path = load_settings()
-    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
 
     toezichter_lantis = next(eminfra_client.search_agent(naam='LANTIS', actief=True), None)
     toezichter_namen = ['Ruben Henrard', 'Kristof Smet']

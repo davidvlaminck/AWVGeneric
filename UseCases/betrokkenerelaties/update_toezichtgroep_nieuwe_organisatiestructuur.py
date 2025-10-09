@@ -8,13 +8,10 @@ from pathlib import Path
 from otlmow_model.OtlmowModel.Classes.ImplementatieElement.RelatieObject import RelatieObject
 from otlmow_model.OtlmowModel.Helpers.RelationCreator import create_betrokkenerelation
 from otlmow_converter.OtlmowConverter import OtlmowConverter
+from UseCases.utils import load_settings
 
 from Generic.ExcelModifier import ExcelModifier
 
-
-def load_settings():
-    """Load API settings from JSON"""
-    return Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
 
 def build_betrokkenerelatie(source: AssetDTO, agent_naam :str, rol: str) -> RelatieObject | None:
     generator_agents = eminfra_client.get_objects_from_oslo_search_endpoint(
@@ -171,8 +168,7 @@ def _deactivate_status(item):
     return item
 
 if __name__ == '__main__':
-    settings_path = load_settings()
-    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
 
     # Initialize empty DataFrame for logging
     log_df = pd.DataFrame(columns=["uuid", "message"])

@@ -23,8 +23,8 @@ if __name__ == '__main__':
 
     settings = load_settings()
     ls2 = Locatieservices2Client(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings)
-    infile = Path.home() / 'Downloads' / 'Lichtmast' / 'lichtmast_zonder_afgeleide_locatie' / 'DA-2025-46771_export.xlsx'
-    outfile = Path.home() / 'Downloads' / 'Lichtmast' / 'lichtmast_zonder_afgeleide_locatie' / 'DA-2025-XXXXX_import_test.xlsx'
+    infile = Path.home() / 'Downloads' / 'Lichtmast' / 'input' / 'DA-2025-55772_export.xlsx'
+    outfile = Path.home() / 'Downloads' / 'Lichtmast' / 'output' / 'DA-2025-XXXXX_import_test.xlsx'
 
     usecols = ['typeURI', 'assetId.identificator', 'naam', 'naampad', 'toestand', 'geometry']
     df = pd.read_excel(infile, sheet_name='Lichtmast', usecols=usecols)

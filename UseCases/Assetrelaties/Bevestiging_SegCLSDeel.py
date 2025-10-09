@@ -3,16 +3,7 @@ from API.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path
-
-print(
-    """
-    Aanmaken van een Bevestiging-Relatie tussen de Legacy assets SegmentController en LSDeel
-    """)
-
-def load_settings():
-    """Load API settings from JSON"""
-    settings_path = Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
-    return settings_path
+from UseCases.utils import load_settings
 
 
 def read_excel_as_dataframe(filepath: Path, usecols: list[str]):
@@ -33,11 +24,12 @@ if __name__ == '__main__':
 
     # Read input report
     df_assets = read_excel_as_dataframe(
-        filepath=Path().home() / 'Downloads' / 'SegmentController' / 'SegmentControllers ontbrekende Bevestiging relatie.xlsx',
+        filepath=Path().home() / 'Downloads' / 'Segmentcontroller' / 'Segmentcontroller ontbrekende Bevestiging relatie.xlsx',
         usecols=["segc_uuid", "segc_naam", "lsdeel_uuid", "lsdeel_naam"])
 
     kenmerkType_uuid, relatieType_uuid = eminfra_client.get_kenmerktype_and_relatietype_id(relatie_uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging')
     for idx, asset in df_assets.iterrows():
+        # SegmentController
         # bestaande Bevestiging-relaties ophalen
         bestaande_relaties = eminfra_client.search_relaties(
             assetId=asset.get("segc_uuid")
@@ -48,7 +40,7 @@ if __name__ == '__main__':
         # Als de relatie al bestaat, continue, ga uit de for-loop
         if next(bestaande_relaties, None):
             print(
-                f'''Bevestiging-relatie reeds bestaande tussen SegmentController ({asset.get(
+                f'''Bevestiging-relatie reeds bestaande tussen Segmentcontroller ({asset.get(
                     "segc_uuid")}) en LSDeel ({asset.get("lsdeel_uuid")})''')
             continue
 
