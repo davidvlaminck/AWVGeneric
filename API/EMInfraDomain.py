@@ -372,6 +372,17 @@ class LocatieKenmerk(BaseDataclass):
     def __post_init__(self):
          self._fix_nested_list_classes({('links', Link)})
 
+@dataclass
+class ElektrischAansluitpuntKenmerk(BaseDataclass):
+    _type: str
+    type: dict
+    links= [Link]
+    eigenschapWaarden: dict
+
+    def __post_init__(self):
+         self._fix_nested_list_classes({('links', Link)})
+
+
 
 @dataclass
 class GeometryLog(BaseDataclass):
