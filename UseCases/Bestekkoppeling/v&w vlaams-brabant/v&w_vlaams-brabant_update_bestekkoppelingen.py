@@ -39,12 +39,9 @@ if __name__ == '__main__':
         # test: zijn er meerdere actieve bestekkoppelingen?
         aantal_actieve_bestekken = len([bk for bk in bestekkoppelingen if bk.status == BestekKoppelingStatusEnum.ACTIEF])
         if aantal_actieve_bestekken == 0:
-            logging.error('Er zijn geen actieve bestekkoppelingen.')
-            # raise ValueError('Er zijn geen actieve bestekkoppelingen.')
+            logging.debug('Er zijn geen actieve bestekkoppelingen.')
         if aantal_actieve_bestekken > 1:
-            logging.error('Er zijn meerdere actieve bestekkoppelingen.')
-            # raise ValueError('Er zijn meerdere actieve bestekkoppelingen.')
-
+            logging.debug('Er zijn meerdere actieve bestekkoppelingen.')
 
         # ophalen van de eigenlijke bestekkoppeling op basis van de naam.
         bestek_naam = 'AWV/VW/2024/1_P4'
@@ -59,7 +56,6 @@ if __name__ == '__main__':
                 None, )):
             logging.debug(f'Bestekkoppeling "{bestekRef_new.eDeltaBesteknummer}" bestaat nog niet, en wordt aangemaakt')
 
-            # todo: uitvoeren na bevestiging Luk Willekens
             logging.debug(f'Deactiveer alle bestekkoppelingen.')
             for bk in bestekkoppelingen:
                 if bk.eindDatum is None:
@@ -80,5 +76,4 @@ if __name__ == '__main__':
                           f'status: {matching_koppeling.status.value}')
 
         # Update all the bestekkoppelingen for this asset
-        # todo activeer dit
-        # eminfra_client.change_bestekkoppelingen_by_asset_uuid(asset.uuid, bestekkoppelingen)
+        eminfra_client.change_bestekkoppelingen_by_asset_uuid(asset.uuid, bestekkoppelingen)
