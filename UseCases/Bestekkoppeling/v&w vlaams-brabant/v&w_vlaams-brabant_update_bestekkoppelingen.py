@@ -28,6 +28,12 @@ if __name__ == '__main__':
     usecols = ['id', 'naampad', 'type', 'actief']
     df_assets = pd.read_excel(filepath_input, sheet_name='Blad1', header=0, usecols=usecols)
 
+    # ophalen van de eigenlijke bestekkoppeling op basis van de naam.
+    bestek_naam = 'AWV/VW/2024/1_P4'
+    bestekRef_new = eminfra_client.get_bestekref_by_eDelta_dossiernummer(eDelta_dossiernummer=bestek_naam)
+    bestek_datum = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    logging.info(f'Appending bestek: {bestek_naam} with start_date: {bestek_datum}')
+
     for idx, df_asset in df_assets.iterrows():
         # Ophalen asset:
         asset = eminfra_client.get_asset_by_id(assettype_id=df_asset.get("id"))
@@ -43,20 +49,13 @@ if __name__ == '__main__':
         if aantal_actieve_bestekken > 1:
             logging.debug('Er zijn meerdere actieve bestekkoppelingen.')
 
-        # ophalen van de eigenlijke bestekkoppeling op basis van de naam.
-        bestek_naam = 'AWV/VW/2024/1_P4'
-        bestekRef_new = eminfra_client.get_bestekref_by_eDelta_dossiernummer(eDelta_dossiernummer=bestek_naam)
-        bestek_datum = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
-        logging.info(f'Appending bestek: {bestek_naam} with start_date: {bestek_datum}')
-
-
         # Check if the new bestekkoppeling doesn't exist and append at the end of the list, else do nothing
         if not (matching_koppeling := next(
                 (k for k in bestekkoppelingen if k.bestekRef.uuid == bestekRef_new.uuid),
                 None, )):
             logging.debug(f'Bestekkoppeling "{bestekRef_new.eDeltaBesteknummer}" bestaat nog niet, en wordt aangemaakt')
 
-            logging.debug(f'Deactiveer alle bestekkoppelingen.')
+            logging.debug('Deactiveer alle bestekkoppelingen.')
             for bk in bestekkoppelingen:
                 if bk.eindDatum is None:
                     bk.eindDatum = format_datetime(bestek_datum)
