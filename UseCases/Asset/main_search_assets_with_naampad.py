@@ -62,7 +62,11 @@ if __name__ == '__main__':
     'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Fietstelsysteem',
     'https://wegenenverkeer.data.vlaanderen.be/ns/installatie#Zoutbijlaadplaats',
     'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Tank',
-    'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Silo']
+    'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Silo',
+    'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DynBordExternePU',
+    'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#StralendeKabel',
+    'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#NietSelectieveDetectielus',
+    'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Cabine']
 
     asset_types = list(eminfra_client.get_all_otl_assettypes())
     total_types = len(asset_types)
