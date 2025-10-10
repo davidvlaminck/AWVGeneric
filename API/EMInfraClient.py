@@ -1683,11 +1683,40 @@ class EMInfraClient:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-    def get_kenmerk_elektrisch_aansluitpunt(self, asset_uuid: str) -> ElektrischAansluitpuntKenmerk:
-        response = self.requester.get(
-            url=f'core/api/assets/{asset_uuid}/kenmerken/80052ed4-2f91-400c-8cba-57624653db11')
+    def search_kenmerk_elektrisch_aansluitpunt(self, asset_uuid: str, naam: KenmerkTypeEnum = KenmerkTypeEnum.ELEKTRISCH_AANSLUITPUNT) -> ElektrischAansluitpuntKenmerk:
+        if naam == KenmerkTypeEnum.ELEKTRISCH_AANSLUITPUNT:
+            type_id = '87dff279-4162-4031-ba30-fb7ffd9c014b'
+        else:
+            raise NotImplementedError(f'Parameter "naam" = {naam} not implemented')
+
+        query_dto = QueryDTO(
+            size=1,
+            from_=0,
+            expansions=ExpansionsDTO(fields=['kenmerk:87dff279-4162-4031-ba30-fb7ffd9c014b']),
+            pagingMode=PagingModeEnum.OFFSET,
+            selection=SelectionDTO(
+                expressions=[ExpressionDTO(
+                    terms=[
+                        TermDTO(property='type.id', operator=OperatorEnum.EQ, value=type_id)
+                    ])
+                ])
+        )
+        url = f"core/api/assets/{asset_uuid}/kenmerken/search"
+        response = self.requester.post(url=url, data=query_dto.json())
         if response.status_code != 200:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
-        return ElektrischAansluitpuntKenmerk.from_dict(response.json())
+
+        elektrisch_aansluitpunt = [ElektrischAansluitpuntKenmerk.from_dict(item) for item in response.json()['data']]
+        if len(elektrisch_aansluitpunt) != 1:
+            raise ValueError(f'Expected one single elektrisch aansluitpunt for {naam}. Got {len(elektrisch_aansluitpunt)} instead.')
+        return elektrisch_aansluitpunt[0]
+
+    def disconnect_kenmerk_elektrisch_aansluitpunt(self, asset_uuid: str) -> None:
+        url = f'core/api/assets/{asset_uuid}/kenmerken/87dff279-4162-4031-ba30-fb7ffd9c014b'
+        resp = self.requester.put(url=url, json={})
+        if resp.status_code != 202:
+            logging.error(resp)
+            raise ProcessLookupError(resp.content.decode())
+
 
