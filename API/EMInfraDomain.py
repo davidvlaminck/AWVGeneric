@@ -82,6 +82,7 @@ class KenmerkTypeEnum(Enum):
     GEEFT_VOEDING_AAN = 'Geeft voeding aan'
     AANGESTUURD_DOOR = 'Aangestuurd door'
     GEEFT_STURING_AAN = 'Geeft sturing aan'
+    ELEKTRISCH_AANSLUITPUNT = 'Elektrisch aansluitpunt'
 
 RESERVED_WORD_LIST = ('from_', '_next')
 
@@ -376,8 +377,8 @@ class LocatieKenmerk(BaseDataclass):
 class ElektrischAansluitpuntKenmerk(BaseDataclass):
     _type: str
     type: dict
-    links= [Link]
-    eigenschapWaarden: dict
+    elektriciteitsAansluitingRef: dict
+    links: [Link]
 
     def __post_init__(self):
          self._fix_nested_list_classes({('links', Link)})
@@ -513,6 +514,7 @@ class ObjectType(Enum):
     BEHEEROBJECT = 'BEHEEROBJECT'
     EIGENSCHAP = 'EIGENSCHAP'
     KENMERKTYPE = 'KENMERKTYPE'
+
 
 @dataclass
 class InfraObjectDTO(BaseDataclass):
