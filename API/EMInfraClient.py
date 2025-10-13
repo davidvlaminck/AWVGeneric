@@ -164,16 +164,18 @@ class EMInfraClient:
             raise ProcessLookupError(response.content.decode("utf-8"))
         return ToezichterKenmerk.from_dict(response.json())
 
-    def add_kenmerk_toezichter_by_asset_uuid(self, asset_uuid: str, toezichtgroep_uuid: str, toezichter_uuid: str) -> None:
-        payload = {
-            "toezichtGroep": {
-                "uuid": toezichtgroep_uuid
-            },
-            "toezichter": {
+    def add_kenmerk_toezichter_by_asset_uuid(self, asset_uuid: str, toezichtgroep_uuid: str = None, toezichter_uuid: str = None) -> None:
+        if toezichter_uuid is None and toezichtgroep_uuid is None:
+            raise ValueError("At least one parameter should be provided.")
+        payload = {}
+        if toezichter_uuid:
+            payload["toezichter"] = {
                 "uuid": toezichter_uuid
             }
-
-        }
+        if toezichtgroep_uuid:
+            payload["toezichtGroep"] = {
+                "uuid": toezichtgroep_uuid
+            }
         response = self.requester.put(
             url=f'core/api/assets/{asset_uuid}/kenmerken/f0166ba2-757c-4cf3-bf71-2e4fdff43fa3'
             , json=payload
@@ -724,6 +726,8 @@ class EMInfraClient:
     def search_events(self, asset_uuid: str = None, created_after: datetime = None, created_before: datetime = None, created_by: IdentiteitKenmerk = None, event_type: EventType = None, event_context: EventContext = None) -> Generator[Event]:
         """
         Search the history of em-infra, called events
+        Parameters created_before and created_after have type datetime, but the API only takes into account the datum, and not the hours.
+        Additional postprocessing filtering outside the function is required to narrow down the events to a more restricted time range.
 
         :param asset_uuid: asset identificator
         :param created_after: date after which the asset was edited
@@ -1608,10 +1612,20 @@ class EMInfraClient:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-    def update_asset(self, uuid:str, naam:str, toestand:str, commentaar:str = None, isActief:bool = None):
-        json_body = {
-            "actief": isActief, "naam": naam, "toestand": toestand, "commentaar": commentaar
-        }
+    def update_asset(self, uuid:str, naam:str = None, toestand:str = None, commentaar:str = None, isActief:bool = None):
+        # Check if all are None (or empty)
+        if all(param is None for param in [naam, toestand, commentaar, isActief]):
+            raise ValueError("At least one of 'naam', 'toestand', 'commentaar', or 'isActief' must be provided.")
+
+        json_body = {}
+        if naam:
+            json_body["naam"] = naam
+        if toestand:
+            json_body["toestand"] = toestand
+        if commentaar:
+            json_body["commentaar"] = commentaar
+        if isActief:
+            json_body["isActief"] = isActief
         response = self.requester.put(
             url=f'core/api/assets/{uuid}'
             , json=json_body
