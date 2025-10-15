@@ -17,7 +17,7 @@ from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO
     RelatieTypeDTO, KenmerkType, EigenschapValueDTO, RelatieTypeDTOList, BeheerobjectDTO, ToezichtgroepTypeEnum, \
     ToezichtgroepDTO, BaseDataclass, BeheerobjectTypeDTO, BoomstructuurAssetTypeEnum, KenmerkTypeEnum, AssetDTOToestand, \
     EigenschapValueUpdateDTO, GeometryNiveau, GeometryBron, GeometryNauwkeurigheid, GeometrieKenmerk, \
-    SchadebeheerderKenmerk
+    SchadebeheerderKenmerk, Graph
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 from utils.date_helpers import validate_dates, format_datetime
@@ -76,7 +76,7 @@ class EMInfraClient:
         json_str = self.requester.get(doc_link).content.decode("utf-8")
         json_response = json.loads(json_str)
         doc_download_link = \
-        next(l for l in json_response['links'] if l['rel'] == 'download')['href'].split('/eminfra/')[1]
+            next(l for l in json_response['links'] if l['rel'] == 'download')['href'].split('/eminfra/')[1]
         file = self.requester.get(doc_download_link)
 
         with open(f'{directory}/{file_name}', 'wb') as f:
@@ -1552,7 +1552,7 @@ class EMInfraClient:
         # ophalen kenmerk_uuid
         kenmerken = self.get_kenmerken(assetId=assetId)
         kenmerk_uuid = \
-        [kenmerk.type.get('uuid') for kenmerk in kenmerken if kenmerk.type.get('naam').startswith('Eigenschappen')][0]
+            [kenmerk.type.get('uuid') for kenmerk in kenmerken if kenmerk.type.get('naam').startswith('Eigenschappen')][0]
 
         # ophalen eigenschapwaarden
         url = f'core/api/assets/{assetId}/kenmerken/{kenmerk_uuid}/eigenschapwaarden'
@@ -1770,7 +1770,7 @@ class EMInfraClient:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-    def get_graph(self, asset_uuid: str, depth: int = 1, relatieTypes: list = None, actiefFilter: bool = True) -> dict:
+    def get_graph(self, asset_uuid: str, depth: int = 1, relatieTypes: list = None, actiefFilter: bool = True) -> Graph:
         """
         Generate the graph, starting from an asset, searching a certain depth and for some relatieTypes
 
@@ -1823,7 +1823,4 @@ class EMInfraClient:
         if response.status_code != 201:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
-        return response.json()
-
-
-
+        return Graph.from_dict(response.json())
