@@ -21,22 +21,52 @@ def build_query_search_betrokkenerelaties(bronAsset: AssetDTO = None, agent: Age
     if all(par is None for par in (bronAsset, agent, rol)):
         raise ValueError("At least one of the parameters 'bronAsset', 'agent', or 'rol' must be provided.")
 
-    expression_counter = 0
-    query = QueryDTO(size=5, from_=0, pagingMode=PagingModeEnum.OFFSET,
-                                 selection=SelectionDTO(expressions=[]))
+    query = QueryDTO(size=5, from_=0, pagingMode=PagingModeEnum.OFFSET, selection=SelectionDTO(expressions=[]))
+
+    counter_expressions = 0
     if bronAsset:
-        logicalOp = None if expression_counter == 0 else LogicalOpEnum.AND
-        expression_counter += 1
-        expression_bronAsset = ExpressionDTO(terms=[TermDTO(property='bronAsset', operator=OperatorEnum.EQ, value=f'{bronAsset.uuid}')], logicalOp=logicalOp)
+        logicalOp = None if counter_expressions == 0 else LogicalOpEnum.AND
+        expression_bronAsset = ExpressionDTO(
+            terms=[TermDTO(property='bronAsset', operator=OperatorEnum.EQ, value=f'{bronAsset.uuid}')],
+            logicalOp=logicalOp)
+        query.selection.expressions.append(expression_bronAsset)
+        counter_expressions += 1
+    if agent:
+        logicalOp = None if counter_expressions == 0 else LogicalOpEnum.AND
+        expression_agent = ExpressionDTO(
+            terms=[TermDTO(property='agent', operator=OperatorEnum.EQ, value=f'{agent.uuid}')], logicalOp=logicalOp)
+        query.selection.expressions.append(expression_agent)
+        counter_expressions += 1
+    if rol:
+        logicalOp = None if counter_expressions == 0 else LogicalOpEnum.AND
+        expression_rol = ExpressionDTO(terms=[TermDTO(property='rol', operator=OperatorEnum.EQ, value=rol)],
+                                         logicalOp=logicalOp)
+        query.selection.expressions.append(expression_rol)
+        counter_expressions += 1
+    return query
+
+
+def build_query_search_assets(bronAsset: AssetDTO = None, agent: AgentDTO = None, rol: str = None,
+                                          actief: bool = True) -> QueryDTO:
+    if all(par is None for par in (bronAsset, agent, rol)):
+        raise ValueError("At least one of the parameters 'bronAsset', 'agent', or 'rol' must be provided.")
+
+    query = QueryDTO(size=5, from_=0, pagingMode=PagingModeEnum.OFFSET,
+                     selection=SelectionDTO(expressions=[
+                         ExpressionDTO(
+            terms=[TermDTO(property='actief', operator=OperatorEnum.EQ, value=actief)],
+            logicalOp=None)]))
+    if bronAsset:
+        expression_bronAsset = ExpressionDTO(
+            terms=[TermDTO(property='bronAsset', operator=OperatorEnum.EQ, value=f'{bronAsset.uuid}')],
+            logicalOp=LogicalOpEnum.AND)
         query.selection.expressions.append(expression_bronAsset)
     if agent:
-        logicalOp = None if expression_counter == 0 else LogicalOpEnum.AND
-        expression_counter += 1
-        expression_agent = ExpressionDTO(terms=[TermDTO(property='agent', operator=OperatorEnum.EQ, value=f'{agent.uuid}')], logicalOp=logicalOp)
+        expression_agent = ExpressionDTO(
+            terms=[TermDTO(property='agent', operator=OperatorEnum.EQ, value=f'{agent.uuid}')], logicalOp=LogicalOpEnum.AND)
         query.selection.expressions.append(expression_agent)
     if rol:
-        logicalOp = None if expression_counter == 0 else LogicalOpEnum.AND
-        expression_counter += 1
-        expression_agent = ExpressionDTO(terms=[TermDTO(property='rol', operator=OperatorEnum.EQ, value=rol)], logicalOp=logicalOp)
-        query.selection.expressions.append(expression_agent)
+        expression_rol = ExpressionDTO(terms=[TermDTO(property='rol', operator=OperatorEnum.EQ, value=rol)],
+                                         logicalOp=LogicalOpEnum.AND)
+        query.selection.expressions.append(expression_rol)
     return query
