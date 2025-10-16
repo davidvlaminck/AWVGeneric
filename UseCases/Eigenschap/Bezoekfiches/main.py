@@ -11,9 +11,9 @@ from API.Enums import AuthType, Environment
 from UseCases.utils import load_settings, read_rsa_report
 
 
-def get_nodes_from_graph(graph: Graph, uri: str = None) -> [AssetDTO]:
+def get_nodes_from_graph(graph: Graph, uri: str = None) -> list[AssetDTO]:
     """
-    Returns a list of nodes, extracted from a graph.
+    Returns a list of nodes, extracted from a graph, where the node matches the URI.
     When no uri provided, return all nodes.
     If node is missing in the Graph, returns an empty list.
 
@@ -24,7 +24,7 @@ def get_nodes_from_graph(graph: Graph, uri: str = None) -> [AssetDTO]:
     return [
         node
         for node in graph.nodes
-        if uri is not None and (node.type.uri == uri) or uri is None
+        if uri is None or (node.type.uri == uri)
     ]
 
 
