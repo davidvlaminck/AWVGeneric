@@ -835,3 +835,18 @@ def construct_naampad(asset: AssetDTO) -> str:
             parent = parent.parent
     return naampad
 
+@dataclass
+class GraphLinks(BaseDataclass):
+    bronUuid: str
+    doelUuid: str
+    relatieTypeUuid: str
+    relatieUuid: str
+
+@dataclass
+class Graph(BaseDataclass):
+    nodes: [AssetDTO]
+    links: [GraphLinks]
+    limitExceeded: bool
+
+    def __post_init__(self):
+        self._fix_nested_list_classes({('nodes', AssetDTO), ('links', GraphLinks)})
