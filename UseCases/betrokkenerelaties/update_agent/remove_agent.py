@@ -12,6 +12,8 @@ if __name__ == '__main__':
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
 
     agent = next(eminfra_client.search_agent(naam="Arthur De Vos", actief=True), None)
+    if not agent:
+        raise ValueError('Agent not found')
 
     logging.info(f'Zoek alle assets met {agent.naam} als toezichter.')
     query_assets = build_query_search_assets(agent=agent)

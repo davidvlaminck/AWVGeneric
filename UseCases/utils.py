@@ -1,3 +1,5 @@
+from typing import Any
+
 import pandas as pd
 from pathlib import Path
 
@@ -17,56 +19,47 @@ def read_rsa_report(filepath: Path, usecols: [str] = None) -> pd.DataFrame:
         usecols = ["uuid"]
     return pd.read_excel(filepath, sheet_name='Resultaat', header=2, usecols=usecols)
 
+
+# new helper at top‐level
+def _append_eq_expr(expressions: list[ExpressionDTO],
+                    prop: str,
+                    value: Any) -> None:
+    expressions.append(
+        ExpressionDTO(
+            terms=[TermDTO(property=prop,
+                           operator=OperatorEnum.EQ,
+                           value=value)],
+            logicalOp=LogicalOpEnum.AND if expressions else None
+        )
+    )
 def build_query_search_betrokkenerelaties(bronAsset: AssetDTO = None, agent: AgentDTO = None, rol: str = None) -> QueryDTO:
     if all(par is None for par in (bronAsset, agent, rol)):
         raise ValueError("At least one of the parameters 'bronAsset', 'agent', or 'rol' must be provided.")
-
-    query = QueryDTO(size=5, from_=0, pagingMode=PagingModeEnum.OFFSET, selection=SelectionDTO(expressions=[]))
-
-    counter_expressions = 0
+    exprs: list[ExpressionDTO] = []
     if bronAsset:
-        logicalOp = None if counter_expressions == 0 else LogicalOpEnum.AND
-        expression_bronAsset = ExpressionDTO(
-            terms=[TermDTO(property='bronAsset', operator=OperatorEnum.EQ, value=f'{bronAsset.uuid}')],
-            logicalOp=logicalOp)
-        query.selection.expressions.append(expression_bronAsset)
-        counter_expressions += 1
+        _append_eq_expr(exprs, "bronAsset", bronAsset.uuid)
     if agent:
-        logicalOp = None if counter_expressions == 0 else LogicalOpEnum.AND
-        expression_agent = ExpressionDTO(
-            terms=[TermDTO(property='agent', operator=OperatorEnum.EQ, value=f'{agent.uuid}')], logicalOp=logicalOp)
-        query.selection.expressions.append(expression_agent)
-        counter_expressions += 1
+        _append_eq_expr(exprs, "agent", agent.uuid)
     if rol:
-        logicalOp = None if counter_expressions == 0 else LogicalOpEnum.AND
-        expression_rol = ExpressionDTO(terms=[TermDTO(property='rol', operator=OperatorEnum.EQ, value=rol)],
-                                         logicalOp=logicalOp)
-        query.selection.expressions.append(expression_rol)
-        counter_expressions += 1
-    return query
+        _append_eq_expr(exprs, "rol", rol)
+    return QueryDTO(
+        size=5, from_=0, pagingMode=PagingModeEnum.OFFSET,
+        selection=SelectionDTO(expressions=exprs)
+    )
 
 
-def build_query_search_assets(bronAsset: AssetDTO = None, agent: AgentDTO = None, rol: str = None,
+def build_query_search_assets(bronAsset: AssetDTO = None, agent: AgentDTO = None,
                                           actief: bool = True) -> QueryDTO:
-    if all(par is None for par in (bronAsset, agent, rol)):
-        raise ValueError("At least one of the parameters 'bronAsset', 'agent', or 'rol' must be provided.")
-
-    query = QueryDTO(size=5, from_=0, pagingMode=PagingModeEnum.OFFSET,
-                     selection=SelectionDTO(expressions=[
-                         ExpressionDTO(
-            terms=[TermDTO(property='actief', operator=OperatorEnum.EQ, value=actief)],
-            logicalOp=None)]))
+    if all(par is None for par in (bronAsset, agent)):
+        raise ValueError("At least one of the parameters 'bronAsset', 'agent' must be provided.")
+    exprs: list[ExpressionDTO] = []
+    # always start with actief
+    _append_eq_expr(exprs, "actief", actief)
     if bronAsset:
-        expression_bronAsset = ExpressionDTO(
-            terms=[TermDTO(property='bronAsset', operator=OperatorEnum.EQ, value=f'{bronAsset.uuid}')],
-            logicalOp=LogicalOpEnum.AND)
-        query.selection.expressions.append(expression_bronAsset)
+        _append_eq_expr(exprs, "bronAsset", bronAsset.uuid)
     if agent:
-        expression_agent = ExpressionDTO(
-            terms=[TermDTO(property='agent', operator=OperatorEnum.EQ, value=f'{agent.uuid}')], logicalOp=LogicalOpEnum.AND)
-        query.selection.expressions.append(expression_agent)
-    if rol:
-        expression_rol = ExpressionDTO(terms=[TermDTO(property='rol', operator=OperatorEnum.EQ, value=rol)],
-                                         logicalOp=LogicalOpEnum.AND)
-        query.selection.expressions.append(expression_rol)
-    return query
+        _append_eq_expr(exprs, "agent",    agent.uuid)
+    return QueryDTO(
+        size=5, from_=0, pagingMode=PagingModeEnum.OFFSET,
+        selection=SelectionDTO(expressions=exprs)
+    )
