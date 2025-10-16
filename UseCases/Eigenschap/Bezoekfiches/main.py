@@ -103,10 +103,10 @@ if __name__ == '__main__':
         for eigenschap in eigenschappen_InspectieMastConsole:
             row[f'InspectieMastConsole_{eigenschap.eigenschap.definitie}'] = eigenschap.typedValue.get("value")
 
-        row["InspectieInspectieToestel_uuid"] = asset_InspectieToestel.uuid
-        row["InspectieInspectieToestel_naam"] = asset_InspectieToestel.naam
+        row["InspectieToestel_uuid"] = asset_InspectieToestel.uuid
+        row["InspectieToestel_naam"] = asset_InspectieToestel.naam
         for eigenschap in eigenschappen_InspectieToestel:
-            row[f'InspectieInspectieToestel_{eigenschap.eigenschap.definitie}'] = eigenschap.typedValue.get("value")
+            row[f'InspectieToestel_{eigenschap.eigenschap.definitie}'] = eigenschap.typedValue.get("value")
 
         rows.append(row)
 
