@@ -1684,7 +1684,7 @@ class EMInfraClient:
         json_body = {
             "naam":beheerObject.naam
             ,"actief": status
-            ,"typeUuid": beheerObject.type.get("uuid") # todo test de eigenschap _type "baa8570b-15cf-4512-a309-efd63af32f39"
+            ,"typeUuid": beheerObject.type.get("uuid")
         }
         response = self.requester.put(
             url=f'core/api/beheerobjecten/{beheerObject.uuid}'
