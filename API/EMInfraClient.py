@@ -1104,7 +1104,7 @@ class EMInfraClient:
                 break
 
     def remove_parent_from_asset(self, parent_uuid: str, asset_uuid: str):
-        """Removes the parent from an asset.
+        """Removes an asset from its parent.
 
         :param parent_uuid: The UUID of the parent asset.
         :type parent_uuid: str
@@ -1673,6 +1673,21 @@ class EMInfraClient:
         }
         response = self.requester.put(
             url=f'core/api/assets/{asset.uuid}'
+            , json=json_body
+        )
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return response.json()
+
+    def update_beheerobject_status(self, beheerObject: BeheerobjectDTO, status: bool) -> dict:
+        json_body = {
+            "naam":beheerObject.naam
+            ,"actief": status
+            ,"typeUuid": beheerObject.type.get("uuid")
+        }
+        response = self.requester.put(
+            url=f'core/api/beheerobjecten/{beheerObject.uuid}'
             , json=json_body
         )
         if response.status_code != 202:
