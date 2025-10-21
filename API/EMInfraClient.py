@@ -687,6 +687,26 @@ class EMInfraClient:
     def search_all_assets(self, query_dto: QueryDTO) -> Generator[AssetDTO]:
         yield from self._search_assets_helper(query_dto)
 
+    def create_asset_and_relatie(self, assetId: str, naam: str, typeUuid: str, relatie_uri: str) -> dict:
+        """
+
+        :param assetId: asset uuid en tevens bron asset van de aan te maken relatie
+        :param naam: naam van de nieuw aan te maken asset
+        :param typeUuid: assettype van de nieuw aan te maken asset
+        :param relatie_uri: aan te maken relatie
+        :return:
+        """
+        kenmerkTypeId, relatieTypeId = self.get_kenmerktype_and_relatietype_id(relatie_uri=relatie_uri)
+        url = f'core/api/assets/{assetId}/kenmerken/{kenmerkTypeId}/assets-via/{relatieTypeId}/nieuw'
+        request_body = {"naam": naam, "typeUuid": typeUuid}
+        response = self.requester.post(url=url, json=request_body)
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return response.json()['data']
+
+
+
     def create_asset(self, parent_uuid: str, naam: str, typeUuid: str, parent_asset_type:BoomstructuurAssetTypeEnum = BoomstructuurAssetTypeEnum.ASSET) -> dict | None:
         """
         Create an asset in the arborescence
