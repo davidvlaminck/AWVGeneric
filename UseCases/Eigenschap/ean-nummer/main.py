@@ -1,5 +1,6 @@
 import logging
 import re
+from typing import Any
 
 import pandas as pd
 from pathlib import Path
@@ -21,8 +22,7 @@ def _get_installatienaam_from_kastnaam(kast_naam: str) -> str:
     :param kast_naam:
     :return:
     """
-    regex_match = re.match(string=kast_naam, pattern='^.*.K\d*$')
-    if regex_match:
+    if regex_match := re.match(string=kast_naam, pattern='^.*.K\d*$'):
         return kast_naam.rsplit(sep='.K', maxsplit=1)[0]
     else:
         return kast_naam
@@ -67,6 +67,55 @@ def create_relatie_if_missing(eminfra_client: EMInfraClient, bronAsset: AssetDTO
     return [rel.uuid for rel in relaties]
 
 
+def build_query_search_dnblaagspanning(eanNummer: str, assettype_uuid: str) -> QueryDTO:
+    return QueryDTO(
+        size=100, from_=0, pagingMode=PagingModeEnum.OFFSET,
+        selection=SelectionDTO(
+            expressions=[
+                ExpressionDTO(
+                    terms=[TermDTO(
+                        property='eig:b924b988-a3b4-4d0c-aa0e-c69ff503e784:a108fc8a-c522-4469-8410-62f5a0241698',
+                        operator=OperatorEnum.EQ,
+                        value=eanNummer)]),
+                ExpressionDTO(
+                    terms=[TermDTO(
+                        property='type',
+                        operator=OperatorEnum.EQ,
+                        value=assettype_uuid,
+                        logicalOp=LogicalOpEnum.AND)])
+            ]))
+
+
+def build_query_search_energiemeter(energiemeter_naam: str, assettype_uuid: str) -> QueryDTO:
+    return QueryDTO(
+        size=100, from_=0, pagingMode=PagingModeEnum.OFFSET,
+        selection=SelectionDTO(
+            expressions=[
+                ExpressionDTO(
+                    terms=[TermDTO(
+                        property='naam',
+                        operator=OperatorEnum.EQ,
+                        value=energiemeter_naam)]),
+                ExpressionDTO(
+                    terms=[TermDTO(
+                        property='type',
+                        operator=OperatorEnum.EQ,
+                        value=assettype_uuid,
+                        logicalOp=LogicalOpEnum.AND)])
+            ]))
+
+
+def get_first_list_element(lst: list) -> Any:
+    """
+    Check if the list contains multiple list elements and raise an error.
+    If one list element is available, returns the first and only list element.
+    :param lst:
+    :return:
+    """
+    if len(lst) > 1:
+        raise ValueError(f'{len(lst)} list elements found. Expected one.')
+    return lst[0]
+
 if __name__ == '__main__':
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s', filemode="w")
     logging.info('EAN-nummers verplaatsen:\t EAN-nummers overdragen van assets (Legacy) naar DNBLaagspanning (OTL)')
@@ -78,7 +127,7 @@ if __name__ == '__main__':
     df_kast = df_assets[df_assets['assettype_naam'] == 'Kast (Legacy)']
     df_lsdeel = df_assets[df_assets['assettype_naam'] == 'Laagspanningsgedeelte (Legacy)']
 
-    headers = ('assettype', 'asset_uuid', 'asset_naam',
+    headers = ('uuid', 'naam', 'assettype_naam',
                'kast_uuid', 'kast_naam',
                'ls_uuid', 'ls_naam',
                'lsdeel_uuid', 'lsdeel_naam',
@@ -87,49 +136,48 @@ if __name__ == '__main__':
                'hoortbij_dnblaagspanning_ls', 'hoortbij_energiemeter_ls', 'voedt_dnblaagspanning_energiemeterdnb')
     rows = []
 
-    # todo controleren dat de eanNummers niet nog elders gebruikt worden.
+    typeUuid_ls = '80fdf1b4-e311-4270-92ba-6367d2a42d47'
+    typeUuid_lsdeel = 'b4361a72-e1d5-41c5-bfcc-d48f459f4048'
+    typeUuid_dnblaagspanning = 'b4ee4ea9-edd1-4093-bce1-d58918aee281'
+    typeUuid_energiemeter = 'b4ee4ea9-edd1-4093-bce1-d58918aee281'
 
+    # todo.
+    # per assettype werken om de relatie naar de kast op te sporen.
+    # starten met Kast en LSDeel
     for idx, df_row in df_kast.iterrows():
-        # logging.info('Naamconventie Kast toepassen: XXXX.K')
-        kast = eminfra_client.get_asset_by_id(assettype_id=df_row["uuid"])
         row = {
-            "kast_uuid": kast.uuid,
-            "kast_naam": kast.naam}
+            "uuid": df_row["uuid"],
+            "naam": df_row["naam"],
+            "assettype_naam": df_row["assettype_naam"]
+        }
+        kast = eminfra_client.get_asset_by_id(assettype_id=df_row["uuid"])
+        row["kast_uuid"] = kast.uuid
+        row["kast_naam"] = kast.naam
 
-
-
-        logging.info('Child-asset Laagspanning toevoegen XXXX.K.LS')
+        installatie_naam = _get_installatienaam_from_kastnaam(kast_naam=kast.naam)
+        logging.info('Child-asset Laagspanning toevoegen')
         child_assets = list(eminfra_client.search_child_assets(asset_uuid=kast.uuid, recursive=False))
         ls_assets = [asset for asset in child_assets if asset.type.uri == 'https://lgc.data.wegenenverkeer.be/ns/installatie#LS']
-        if len(ls_assets) == 0:
-            ls_asset_naam = _get_installatienaam_from_kastnaam(kast_naam=kast.naam) + '.LS'
+        if not ls_assets:
+            ls_asset_naam = installatie_naam + '.LS'
             new_asset_dict = eminfra_client.create_asset(parent_uuid=kast.uuid,
-                                                         typeUuid='80fdf1b4-e311-4270-92ba-6367d2a42d47',
+                                                         typeUuid=typeUuid_ls,
                                                          naam=ls_asset_naam)
             ls = eminfra_client.get_asset_by_id(assettype_id=new_asset_dict.get("uuid"))
-        elif len(ls_assets) > 1:
-            logging.error("Multiple ls found, skip to the next asset")
-            continue
-        else:
-            ls = ls_assets[0]
+        ls = get_first_list_element(ls_assets)
         row["ls_uuid"] = ls.uuid
         row["ls_naam"] = ls.naam
 
-
-        logging.info('Child-asset LSDeel toevoegen XXXX.K.LSDeel')
+        logging.info('Child-asset LSDeel toevoegen')
         lsdeel_assets = [asset for asset in child_assets if
                      asset.type.uri == 'https://lgc.data.wegenenverkeer.be/ns/installatie#LSDeel']
-        if len(lsdeel_assets) == 0:
-            lsdeel_asset_naam = _get_installatienaam_from_kastnaam(kast_naam=kast.naam) + '.LSDeel'
+        if not lsdeel_assets:
+            lsdeel_asset_naam = installatie_naam + '.LSDeel'
             new_asset_dict = eminfra_client.create_asset(parent_uuid=kast.uuid,
-                                                         typeUuid='b4361a72-e1d5-41c5-bfcc-d48f459f4048',
+                                                         typeUuid=typeUuid_lsdeel,
                                                          naam=lsdeel_asset_naam)
             lsdeel = eminfra_client.get_asset_by_id(assettype_id=new_asset_dict.get("uuid"))
-        elif len(lsdeel_assets) > 1:
-            logging.error("Multiple lsdeel found, skip to the next asset")
-            continue
-        else:
-            lsdeel = lsdeel_assets[0]
+        lsdeel = get_first_list_element(lsdeel_assets)
         row["lsdeel_uuid"] = lsdeel.uuid
         row["lsdeel_naam"] = lsdeel.naam
 
@@ -149,9 +197,8 @@ if __name__ == '__main__':
             bronAsset=kast,
             doelAsset=lsdeel,
             relatie_uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging')
-        if len(relaties) != 1:
-            raise ValueError('Multiple relaties exist')
-        row["bevestiging_uuid_lsdeel_kast"] = relaties[0]
+        relatie = get_first_list_element(relaties)
+        row["bevestiging_uuid_lsdeel_kast"] = relatie
 
         logging.info('Voedings-relatie LS naar LSDeel toevoegen')
         relaties = create_relatie_if_missing(
@@ -159,33 +206,22 @@ if __name__ == '__main__':
             bronAsset=ls,
             doelAsset=lsdeel,
             relatie_uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt')
-        if len(relaties) != 1:
-            raise ValueError('Multiple relaties exist')
-        row["voeding_uuid_ls_lsdeel"] = relaties[0]
+        relatie = get_first_list_element(relaties)
+        row["voeding_uuid_ls_lsdeel"] = relatie
 
 
         logging.info('DNBLaagspanning toevoegen via een HoortBij-relatie naar LS')
         # eerst DNBLaagspanning toevoegen. Naam is de installatie naam en eigenschap eanNummer
-        dnblaagspanning_naam = _get_installatienaam_from_kastnaam(kast_naam=kast.naam)
+        dnblaagspanning_naam = installatie_naam
         eanNummer = df_row["ean"]
-        typeUuid_dnblaagspanning = 'b4ee4ea9-edd1-4093-bce1-d58918aee281'
-        query_dto = QueryDTO(
-            size=100, from_=0, pagingMode=PagingModeEnum.OFFSET,
-            selection=SelectionDTO(
-                expressions=[
-                    ExpressionDTO(
-                        terms=[TermDTO(
-                            property='eig:b924b988-a3b4-4d0c-aa0e-c69ff503e784:a108fc8a-c522-4469-8410-62f5a0241698',
-                            operator=OperatorEnum.EQ,
-                            value=eanNummer)]),
-                    ExpressionDTO(
-                        terms=[TermDTO(
-                            property='type',
-                            operator=OperatorEnum.EQ,
-                            value=typeUuid_dnblaagspanning,
-                            logicalOp=LogicalOpEnum.AND)])
-                ]))
-        dnblaagspanning = next(eminfra_client.search_assets(query_dto=query_dto, actief=True), None)
+        # todo plaats later meteen in de functie
+        query_dto = build_query_search_dnblaagspanning(eanNummer=eanNummer, assettype_uuid=typeUuid_dnblaagspanning)
+        dnblaagspanning = list(eminfra_client.search_assets(query_dto=query_dto, actief=True))
+        # todo controleren dat de eanNummers niet nog elders gebruikt worden.
+        #  De HoortBij-relatie wordt gelegd naar een bestaande DNBLaagspanning.
+        #  Op die manier worden er geen dubbels gecreëerd.
+        if len(dnblaagspanning) > 1:
+            raise ValueError(f'Multiple dnblaagspanningen teruggevonden voor ean-nummer: {eanNummer}.')
         if not dnblaagspanning:
             logging.info('Create new asset DNBLaagspanning (OTL)')
             dnblaagspanning_dict = eminfra_client.create_asset_and_relatie(
@@ -201,31 +237,14 @@ if __name__ == '__main__':
             bronAsset=dnblaagspanning,
             doelAsset=ls,
             relatie_uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HoortBij')
-        if len(relaties) != 1:
-            raise ValueError('Multiple relaties exist')
-        row["hoortbij_dnblaagspanning_ls"] = relaties[0]
+        relatie = get_first_list_element(relaties)
+        row["hoortbij_dnblaagspanning_ls"] = relatie
 
 
         logging.info('EnergiemeterDNB toevoegen via een HoortBij-relatie naar LS')
         # eerst Energiemeter toevoegen. Naam is de installatie naam + 'Energiemeter'
-        energiemeter_naam = _get_installatienaam_from_kastnaam(kast_naam=kast.naam) + 'Energiemeter'
-        typeUuid_energiemeter = 'b4ee4ea9-edd1-4093-bce1-d58918aee281'
-        query_dto = QueryDTO(
-            size=100, from_=0, pagingMode=PagingModeEnum.OFFSET,
-            selection=SelectionDTO(
-                expressions=[
-                    ExpressionDTO(
-                        terms=[TermDTO(
-                            property='naam',
-                            operator=OperatorEnum.EQ,
-                            value=energiemeter_naam)]),
-                    ExpressionDTO(
-                        terms=[TermDTO(
-                            property='type',
-                            operator=OperatorEnum.EQ,
-                            value=typeUuid_energiemeter,
-                            logicalOp=LogicalOpEnum.AND)])
-                ]))
+        energiemeter_naam = installatie_naam + 'Energiemeter'
+        query_dto = build_query_search_energiemeter(energiemeter_naam=energiemeter_naam, assettype_uuid=typeUuid_energiemeter)
         energiemeter = next(eminfra_client.search_assets(query_dto=query_dto, actief=True), None)
         if not energiemeter:
             logging.info('Create new asset Energiemeter (OTL)')
@@ -242,9 +261,8 @@ if __name__ == '__main__':
             bronAsset=energiemeter,
             doelAsset=ls,
             relatie_uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HoortBij')
-        if len(relaties) != 1:
-            raise ValueError('Multiple relaties exist')
-        row["hoortbij_energiemeter_ls"] = relaties[0]
+        relatie = get_first_list_element(relaties)
+        row["hoortbij_energiemeter_ls"] = relatie
 
 
         logging.info('Voedt-relatie toevoegen van DNBLaagspanning naar EnergiemeterDNB')
@@ -253,10 +271,8 @@ if __name__ == '__main__':
             bronAsset=dnblaagspanning,
             doelAsset=energiemeter,
             relatie_uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt')
-        if len(relaties) != 1:
-            raise ValueError('Multiple relaties exist')
-        row["voedt_dnblaagspanning_energiemeterdnb"] = relaties[0]
-
+        relatie = get_first_list_element(relaties)
+        row["voedt_dnblaagspanning_energiemeterdnb"] = relatie
 
         logging.info(
             'Elektrische aansluiting overplaatsen van de asset (Legacy) naar EnergiemeterDNB (OTL). '
@@ -265,32 +281,16 @@ if __name__ == '__main__':
         # todo: Kast vervangen door een meer generieke term, want een elektrische aansluiting kan ook bij andere assets (legacy) voorkomen.
         eminfra_client.disconnect_kenmerk_elektrisch_aansluitpunt(asset_uuid=kast.uuid)
 
-        logging.info('Locatie afleiden via de bestaande relaties')
+        logging.info('Locatie (LSDeel en LS) afleiden via de bestaande relaties')
+        eminfra_client.update_kenmerk_locatie_via_relatie(bron_asset_uuid=lsdeel.uuid, doel_asset_uuid=kast.uuid)
+        eminfra_client.update_kenmerk_locatie_via_relatie(bron_asset_uuid=ls.uuid, doel_asset_uuid=kast.uuid)
 
         rows.append(row)
-
-        logging.debug("Break out the loop after 1 iteration (TEI)")
-        break
 
     logging.info('Write pandas dataframe to an Excel')
     pd.DataFrame(data=rows).to_excel('elektrische aansluitingen voorbereiding Kasten.xlsx', index=False, freeze_panes=[1,1])
 
-    # # kenmerk ophalen
-    # # asset_uuid_dummy = '03d3fb2a-aaef-4988-b752-b0298c194063'
-    # asset_uuid_dummy = '000536f7-f46b-4cf4-913e-64ec03313083' # TEI
-    # elektrisch_aansluitpunt = eminfra_client.search_kenmerk_elektrisch_aansluitpunt(asset_uuid=asset_uuid_dummy)
-    #
-    # # asset_uuid_dummy = '04a23cea-e851-4d81-b4df-2a9a18b17414'
-    # # elektrisch_aansluitpunt = eminfra_client.search_kenmerk_elektrisch_aansluitpunt(asset_uuid=asset_uuid_dummy)
-    #
-    # # kenmerk wijzigen (json-body leeg maken)
-    # # PUT
-    # # '/api/assets/{assetId}/kenmerken/87dff279-4162-4031-ba30-fb7ffd9c014b'
-    #
-    # # Aansluiting loskoppelen
-    # eminfra_client.disconnect_kenmerk_elektrisch_aansluitpunt(asset_uuid=asset_uuid_dummy)
-    #
-    #
+    # todo: filter deze assets naar een apart dataframe en wis de eigenschap
     # logging.info('Filter assets met aansluiting = "A11.FICTIEF". Wis deze eigenschap')
     # df_assets_wissen = df_assets[df_assets['aansluiting'] == 'A11.FICTIEF']
     #
