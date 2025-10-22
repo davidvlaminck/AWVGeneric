@@ -848,3 +848,17 @@ def construct_naampad(asset: AssetDTO) -> str:
             parent = parent.parent
     return naampad
 
+
+@dataclass
+class AssetRelatieDTO(BaseDataclass):
+    # _type: str
+    links: [Link]
+    uuid: str
+    createdOn: str
+    modifiedOn: str
+    bronAsset: AssetDTO
+    doelAsset: AssetDTO
+    relatieType: RelatieTypeDTO
+
+    def __post_init__(self):
+        self._fix_nested_list_classes({('links', Link)})
