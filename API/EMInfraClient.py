@@ -1471,7 +1471,7 @@ class EMInfraClient:
                     ExpressionDTO(terms=[TermDTO(property='bronAsset', operator=OperatorEnum.EQ, value=bronAsset.uuid)], logicalOp=LogicalOpEnum.AND),
                     ExpressionDTO(terms=[TermDTO(property='doelAsset', operator=OperatorEnum.EQ, value=doelAsset.uuid)], logicalOp=LogicalOpEnum.AND)
                 ]))
-        url = 'core/api/otl/assetrelaties/search'
+        url = 'core/api/assetrelaties/search'
         response = self.requester.post(url=url, data=query_dto.json())
         if response.status_code != 200:
             logging.error(response)
