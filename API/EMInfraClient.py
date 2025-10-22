@@ -17,7 +17,7 @@ from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO
     RelatieTypeDTO, KenmerkType, EigenschapValueDTO, RelatieTypeDTOList, BeheerobjectDTO, ToezichtgroepTypeEnum, \
     ToezichtgroepDTO, BaseDataclass, BeheerobjectTypeDTO, BoomstructuurAssetTypeEnum, KenmerkTypeEnum, AssetDTOToestand, \
     EigenschapValueUpdateDTO, GeometryNiveau, GeometryBron, GeometryNauwkeurigheid, GeometrieKenmerk, \
-    SchadebeheerderKenmerk, ElektrischAansluitpuntKenmerk
+    SchadebeheerderKenmerk, ElektrischAansluitpuntKenmerk, AssetRelatieDTO
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 from utils.date_helpers import validate_dates, format_datetime
@@ -703,7 +703,7 @@ class EMInfraClient:
         if response.status_code != 202:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
-        return response.json()['data']
+        return response.json()
 
 
 
@@ -1348,6 +1348,10 @@ class EMInfraClient:
                 "8355857b-8892-45a5-a86b-6375b797c764",
                 "812dd4f3-c34e-43d1-88f1-3bcd0b1e89c2"
             ],
+            "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HeeftBijhorendeAssets": [
+                "5d58905c-412c-44f8-8872-21519041e391",
+                "812dd4f3-c34e-43d1-88f1-3bcd0b1e89c2"
+            ],
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#VoedtAangestuurd": [
                 "",
                 "a6747802-7679-473f-b2bd-db2cfd1b88d7"
@@ -1457,6 +1461,22 @@ class EMInfraClient:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
         return response.json().get("uuid")
+
+    def search_assetrelaties(self, type: str, bronAsset: AssetDTO, doelAsset: AssetDTO) -> [AssetRelatieDTO]:
+        query_dto = QueryDTO(
+            size=100, from_=0, pagingMode=PagingModeEnum.OFFSET,
+            selection=SelectionDTO(
+                expressions=[
+                    ExpressionDTO(terms=[TermDTO(property='type', operator=OperatorEnum.EQ, value=type)]),
+                    ExpressionDTO(terms=[TermDTO(property='bronAsset', operator=OperatorEnum.EQ, value=bronAsset.uuid)], logicalOp=LogicalOpEnum.AND),
+                    ExpressionDTO(terms=[TermDTO(property='doelAsset', operator=OperatorEnum.EQ, value=doelAsset.uuid)], logicalOp=LogicalOpEnum.AND)
+                ]))
+        url = 'core/api/otl/assetrelaties/search'
+        response = self.requester.post(url=url, data=query_dto.json())
+        if response.status_code != 200:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return [AssetRelatieDTO.from_dict(item) for item in response.json()['data']]
 
     def search_assetrelaties_OTL(self, bronAsset_uuid: str = None, doelAsset_uuid: str = None) -> dict:
         if bronAsset_uuid is None and doelAsset_uuid is None:
