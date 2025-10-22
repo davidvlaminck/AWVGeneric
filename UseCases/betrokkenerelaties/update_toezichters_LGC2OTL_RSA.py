@@ -6,7 +6,7 @@ import pandas as pd
 from pathlib import Path
 from otlmow_converter.OtlmowConverter import OtlmowConverter
 from UseCases.utils import load_settings
-from UseCases.betrokkenerelaties.utils_betrokkenerelatie import build_betrokkenerelatie, get_bestaande_betrokkenerelaties
+from UseCases.utils import build_betrokkenerelatie, get_bestaande_betrokkenerelaties
 
 BASE_DIR = Path.home() / "OneDrive - Nordend/projects/AWV/OTL_Aanpassingen/toezichter"
 INPUT_DIR = BASE_DIR / "input"
