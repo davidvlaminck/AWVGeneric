@@ -7,7 +7,7 @@ from pathlib import Path
 
 from API.EMInfraClient import EMInfraClient
 from API.EMInfraDomain import AssetDTO, QueryDTO, PagingModeEnum, SelectionDTO, TermDTO, ExpressionDTO, OperatorEnum, \
-    LogicalOpEnum
+    LogicalOpEnum, AssetRelatieDTO
 from API.Enums import AuthType, Environment
 
 from UseCases.utils import load_settings, read_rsa_report
@@ -22,46 +22,11 @@ def _get_installatienaam_from_kastnaam(kast_naam: str) -> str:
     :param kast_naam:
     :return:
     """
-    if regex_match := re.match(string=kast_naam, pattern='^.*.K\d*$'):
+    if re.match(string=kast_naam, pattern='^.*.K\d*$'):
         return kast_naam.rsplit(sep='.K', maxsplit=1)[0]
     else:
         return kast_naam
 
-def search_assetrelaties(eminfra_client: EMInfraClient, bronAsset: AssetDTO, doelAsset: AssetDTO, relatie_uri: str):
-    kenmerkTypeId, relatieTypeId = eminfra_client.get_kenmerktype_and_relatietype_id(
-        relatie_uri=relatie_uri)
-    return eminfra_client.search_assetrelaties(type=relatieTypeId, bronAsset=bronAsset, doelAsset=doelAsset)
-    
-def create_relatie_if_missing(eminfra_client: EMInfraClient, bronAsset: AssetDTO, doelAsset: AssetDTO, relatie_uri: str) -> [str]:
-    """
-    Create a list of relatie_uuid's between two assets, given a specific relatie_uri.
-
-    :param eminfra_client:
-    :param bronAsset:
-    :param doelAsset:
-    :param relatie_uri:
-    :return:
-    """
-    logging.info(f'Create relatie {relatie_uri} between {bronAsset.type} ({bronAsset.uuid}) and {doelAsset.type} ({doelAsset.uuid}).')
-    kenmerkTypeId, relatieTypeId = eminfra_client.get_kenmerktype_and_relatietype_id(
-        relatie_uri=relatie_uri)
-
-    if relaties := search_assetrelaties(
-        eminfra_client=eminfra_client,
-        bronAsset=bronAsset,
-        doelAsset=doelAsset,
-        relatie_uri=relatie_uri,
-    ):
-        return relaties
-    else:
-        # No relaties → create one
-        return [
-            eminfra_client.create_assetrelatie(
-                bronAsset_uuid=bronAsset.uuid,
-                doelAsset_uuid=doelAsset.uuid,
-                relatieType_uuid=relatieTypeId
-            )
-        ]
 
 def build_query_search_dnblaagspanning(eanNummer: str, assettype_uuid: str) -> QueryDTO:
     return QueryDTO(
@@ -122,6 +87,37 @@ def get_first_list_element(lst: list) -> Any:
         raise ValueError(f'{len(lst)} list elements found. Expected one.')
     return lst[0]
 
+def create_relatie_if_missing(eminfra_client: EMInfraClient, bronAsset: AssetDTO, doelAsset: AssetDTO, relatie_uri: str) -> AssetRelatieDTO:
+    """
+    Given a relatie type (relatie_uri), and two assets (bronAsset, doelAsset), search for the existing relation(s)
+    and create a new relation if missing.
+    Raise an error if multiple relations exist.
+    Returns the object AssetRelatieDTO.
+
+    :param eminfra_client:
+    :param bronAsset:
+    :param doelAsset:
+    :param relatie_uri:
+    :return:
+    """
+    logging.info(f'Create relatie {relatie_uri} between {bronAsset.type.korteUri} ({bronAsset.uuid}) and '
+                 f'{doelAsset.type.korteUri} ({doelAsset.uuid}).')
+    kenmerkTypeId, relatieTypeId = eminfra_client.get_kenmerktype_and_relatietype_id(
+        relatie_uri=relatie_uri)
+    relaties = eminfra_client.search_assetrelaties(type=relatieTypeId, bronAsset=bronAsset, doelAsset=doelAsset)
+    if len(relaties) > 1:
+        raise ValueError(f'Found {len(relaties)}, expected 1')
+    elif len(relaties) == 0:
+        relatie = eminfra_client.create_assetrelatie(
+            bronAsset=bronAsset,
+            doelAsset=doelAsset,
+            relatieType_uuid=relatieTypeId)
+    elif len(relaties) == 1:
+        relatie = relaties[0]
+    else:
+        raise NotImplementedError
+    return relatie
+
 def process_fictieve_aansluiting(eminfra_client: EMInfraClient, df: pd.DataFrame):
     logging.info("Schrap de elektrische aansluitingen A11.FICTIEF")
     for _, df_row in df.iterrows():
@@ -134,9 +130,10 @@ def process_fictieve_aansluiting(eminfra_client: EMInfraClient, df: pd.DataFrame
 if __name__ == '__main__':
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s', filemode="w")
     logging.info('EAN-nummers verplaatsen:\t EAN-nummers overdragen van assets (Legacy) naar DNBLaagspanning (OTL)')
-    eminfra_client = EMInfraClient(env=Environment.TEI, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
 
-    filepath = Path().home() / 'Nordend/AWV - Documents/ReportingServiceAssets/Report0144/input' / '[RSA] Assets (legacy) met ingevuld kenmerk_ _elektrische aansluiting_ TEI.xlsx'
+    # filepath = Path().home() / 'Nordend/AWV - Documents/ReportingServiceAssets/Report0144/input' / '[RSA] Assets (legacy) met ingevuld kenmerk_ _elektrische aansluiting_ TEI.xlsx'
+    filepath = Path().home() / 'Nordend/AWV - Documents/ReportingServiceAssets/Report0144/input' / '[RSA] Assets (legacy) met ingevuld kenmerk_ _elektrische aansluiting_.xlsx'
     usecols = ['uuid', 'naam', 'naampad', 'isTunnel', 'toestand', 'assettype_naam', 'ean', 'aansluiting']
     df_assets = read_rsa_report(filepath, usecols=usecols)
     df_assets_fictieve_aansluiting = df_assets[df_assets['aansluiting'] == 'A11.FICTIEF']
@@ -204,29 +201,25 @@ if __name__ == '__main__':
         row["lsdeel_naam"] = lsdeel.naam
 
         logging.info('Bevestiging-relatie LS aan Kast toevoegen')
-        relaties = create_relatie_if_missing(
+        row["bevestiging_uuid_ls_kast"] = create_relatie_if_missing(
             eminfra_client=eminfra_client,
             bronAsset=ls,
             doelAsset=kast,
-            relatie_uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging')
-        row["bevestiging_uuid_ls_kast"] = get_first_list_element(relaties)
+            relatie_uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging').uuid
 
         logging.info('Bevestiging-relatie LSDeel aan Kast toevoegen')
-        relaties = create_relatie_if_missing(
+        row["bevestiging_uuid_lsdeel_kast"] = create_relatie_if_missing(
             eminfra_client=eminfra_client,
             bronAsset=lsdeel,
             doelAsset=kast,
-            relatie_uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging')
-        row["bevestiging_uuid_lsdeel_kast"] = get_first_list_element(relaties)
+            relatie_uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging').uuid
 
         logging.info('Voedings-relatie LS naar LSDeel toevoegen')
-        relaties = create_relatie_if_missing(
+        row["voeding_uuid_ls_lsdeel"] = create_relatie_if_missing(
             eminfra_client=eminfra_client,
             bronAsset=ls,
             doelAsset=lsdeel,
-            relatie_uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt')
-        row["voeding_uuid_ls_lsdeel"] = get_first_list_element(relaties)
-
+            relatie_uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt').uuid
 
         logging.info('DNBLaagspanning toevoegen via een HoortBij-relatie naar LS')
         eanNummer = df_row["ean"]
@@ -244,12 +237,11 @@ if __name__ == '__main__':
             dnblaagspanning = get_first_list_element(dnblaagspanningen)
         row["dnblaagspanning_uuid"] = dnblaagspanning.uuid
         row["dnblaagspanning_naam"] = dnblaagspanning.naam
-        relaties = create_relatie_if_missing(
+        row["heeftBijhorendeAssets_ls_dnblaagspanning"] = create_relatie_if_missing(
             eminfra_client=eminfra_client,
-            bronAsset=ls,
-            doelAsset=dnblaagspanning,
-            relatie_uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HeeftBijhorendeAssets')
-        row["heeftBijhorendeAssets_ls_dnblaagspanning"] = get_first_list_element(relaties)
+            bronAsset=dnblaagspanning,
+            doelAsset=ls,
+            relatie_uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HoortBij').uuid
 
 
         logging.info('EnergiemeterDNB toevoegen via een HoortBij-relatie naar LS')
@@ -268,21 +260,19 @@ if __name__ == '__main__':
             energiemeter = get_first_list_element(energiemeters)
         row["energiemeter_uuid"] = energiemeter.uuid
         row["energiemeter_naam"] = energiemeter.naam
-        relaties = create_relatie_if_missing(
+        row["heeftBijhorendeAssets_ls_energiemeter"] = create_relatie_if_missing(
             eminfra_client=eminfra_client,
-            bronAsset=ls,
-            doelAsset=energiemeter,
-            relatie_uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HeeftBijhorendeAssets')
-        row["heeftBijhorendeAssets_ls_energiemeter"] = get_first_list_element(relaties)
+            bronAsset=energiemeter,
+            doelAsset=ls,
+            relatie_uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HoortBij').uuid
 
 
         logging.info('Voedt-relatie toevoegen van DNBLaagspanning naar EnergiemeterDNB')
-        relaties = create_relatie_if_missing(
+        row["voedt_dnblaagspanning_energiemeterdnb"] = create_relatie_if_missing(
             eminfra_client=eminfra_client,
             bronAsset=dnblaagspanning,
             doelAsset=energiemeter,
-            relatie_uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt')
-        row["voedt_dnblaagspanning_energiemeterdnb"] = get_first_list_element(relaties)
+            relatie_uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt').uuid
 
 
         logging.info('Locatie (LSDeel en LS) afleiden via de bestaande relaties')
