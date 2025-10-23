@@ -1438,18 +1438,15 @@ class EMInfraClient:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-    def create_assetrelatie(self, bronAsset_uuid: str, doelAsset_uuid: str, relatieType_uuid: str) -> str:
-        bron_asset = next(self.search_asset_by_uuid(asset_uuid=bronAsset_uuid), None)
-        doel_asset = next(self.search_asset_by_uuid(asset_uuid=doelAsset_uuid), None)
-
+    def create_assetrelatie(self, bronAsset: AssetDTO, doelAsset: AssetDTO, relatieType_uuid: str) -> AssetRelatieDTO:
         json_body = {
             "bronAsset": {
-                "uuid": f"{bronAsset_uuid}",
-                "_type": f"{bron_asset._type}"
+                "uuid": f"{bronAsset.uuid}",
+                "_type": f"{bronAsset._type}"
             },
             "doelAsset": {
-                "uuid": f"{doelAsset_uuid}",
-                "_type": f"{doel_asset._type}"
+                "uuid": f"{doelAsset.uuid}",
+                "_type": f"{doelAsset._type}"
             },
             "relatieType": {
                 "uuid": f"{relatieType_uuid}"
@@ -1460,7 +1457,7 @@ class EMInfraClient:
         if response.status_code != 202:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
-        return response.json().get("uuid")
+        return self.get_assetrelaties(response.json().get("uuid"))
 
     def search_assetrelaties(self, type: str, bronAsset: AssetDTO, doelAsset: AssetDTO) -> [AssetRelatieDTO]:
         query_dto = QueryDTO(
@@ -1477,6 +1474,19 @@ class EMInfraClient:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
         return [AssetRelatieDTO.from_dict(item) for item in response.json()['data']]
+
+    def get_assetrelaties(self, id: str) -> AssetRelatieDTO:
+        """
+        Get AssetRelatieDTO object from assetrelatie_uuid (id)
+        :param id: asssetrelatie_uuid
+        :return: AssetRelatieDTO
+        """
+        url = f'core/api/assetrelaties/{id}'
+        response = self.requester.get(url=url)
+        if response.status_code != 200:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return AssetRelatieDTO.from_dict(response.json())
 
     def search_assetrelaties_OTL(self, bronAsset_uuid: str = None, doelAsset_uuid: str = None) -> dict:
         if bronAsset_uuid is None and doelAsset_uuid is None:
