@@ -26,25 +26,31 @@ if __name__ == '__main__':
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s\t', filemode="w")
     logging.info('Bestekkoppelingen toevoegen voor assets van de Tijsmanstunnel')
 
-    environment = Environment.TEI
+    environment = Environment.PRD
     logging.info(f'Omgeving: {environment.name}')
     eminfra_client = EMInfraClient(auth_type=AuthType.JWT, env=environment, settings_path=load_settings())
 
-    logging.critical('JWT-authenticatie in de AIM-omgeving lukt niet. Werk voorlopig met workaround via de TEI-omgeving.')
-    # naampad_prefixen = ['A2584', 'TYS.TUNNEL']
-    naampad_prefixen = ['TEI']
+    # logging.critical('JWT-authenticatie in de AIM-omgeving lukt niet. Werk voorlopig met workaround via de TEI-omgeving.')
+    naampad_prefixen = ['A2584', 'TYS.TUNNEL']
+    # naampad_prefixen = ['PRD']
 
     for naampad_prefix in naampad_prefixen:
         # Read Excel as pandas dataframe
         filepath_input = Path.home() / 'Downloads' / 'Bestekken_tunnels' / f'{naampad_prefix}_met bestekken v Prod.xlsx'
         filepath_output = Path.home() / 'Downloads' / 'Bestekken_tunnels' / f'{naampad_prefix}_overzicht_nieuwe_bestekkoppelingen.xlsx'
-        usecols = ['id', 'naampad', '1e bestek', 'Startdatum 1e bestek', '2e bestek', 'Startdatum 2e bestek', '3e bestek',
-                   'Startdatum 3e bestek']
+        usecols = [
+            # 'id_aim',
+            'id_prod',
+            'naampad', '1e bestek', 'Startdatum 1e bestek', '2e bestek', 'Startdatum 2e bestek', '3e bestek',
+            'Startdatum 3e bestek']
 
         df_assets = pd.read_excel(filepath_input, sheet_name='Sheet0', header=0, usecols=usecols)
-        df_assets.rename(columns={'id': 'uuid', '1e bestek': 'bestek1_naam', 'Startdatum 1e bestek': 'bestek1_datum',
-                                  '2e bestek': 'bestek2_naam', 'Startdatum 2e bestek': 'bestek2_datum',
-                                  '3e bestek': 'bestek3_naam', 'Startdatum 3e bestek': 'bestek3_datum'}, inplace=True)
+        df_assets.rename(columns={
+            # 'id_aim': 'uuid',  # deactivate environment aim or prod
+            'id_prod': 'uuid',
+            '1e bestek': 'bestek1_naam', 'Startdatum 1e bestek': 'bestek1_datum', '2e bestek': 'bestek2_naam',
+            'Startdatum 2e bestek': 'bestek2_datum', '3e bestek': 'bestek3_naam',
+            'Startdatum 3e bestek': 'bestek3_datum'}, inplace=True)
 
         rows = []
         for idx, df_asset in df_assets.iterrows():
@@ -53,9 +59,12 @@ if __name__ == '__main__':
             asset is het AssetDTO object
             """
             logging.debug(f'Processing asset ({idx+1}/{len(df_assets)}):\nnaampad: {df_asset["naampad"]}')
-            query_dto = build_query_search_by_naampad(naampad=df_asset["naampad"])
-            asset = next(eminfra_client.search_assets(query_dto=query_dto, actief=True), None)
-
+            # todo: ofwel asset ophalen via het naampad, ofwel via de uuid
+            # logging.debug(f'Search by naampad: {df_asset["naampad"]}')
+            # query_dto = build_query_search_by_naampad(naampad=df_asset["naampad"])
+            # asset = next(eminfra_client.search_assets(query_dto=query_dto, actief=True), None)
+            logging.debug(f'Search by asset_id: {df_asset["uuid"]}')
+            asset = eminfra_client.get_asset_by_id(asset_id=df_asset["uuid"])
             if not asset:
                 df_asset.loc["uuid"] = None
                 row = json.loads(df_asset.to_json())
@@ -109,4 +118,4 @@ if __name__ == '__main__':
         logging.info(f"Write to output file: {filepath_output}")
         with pd.ExcelWriter(filepath_output, mode='w', engine='openpyxl') as writer:
             df_output = pd.DataFrame(data=rows)
-            df_output.to_excel(writer,  freeze_panes=[1,1], sheet_name='overzicht', index=False)
+            df_output.to_excel(writer,  freeze_panes=[1, 1], sheet_name='overzicht', index=False)
