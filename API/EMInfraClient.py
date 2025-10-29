@@ -566,8 +566,8 @@ class EMInfraClient:
         yield from [assettype_dto for assettype_dto in self.get_all_assettypes(size)
                     if ':' not in assettype_dto.korteUri]
 
-    def get_asset_by_id(self, assettype_id: str) -> AssetDTO:
-        url = f"core/api/assets/{assettype_id}"
+    def get_asset_by_id(self, asset_id: str) -> AssetDTO:
+        url = f"core/api/assets/{asset_id}"
         json_dict = self.requester.get(url).json()
         return AssetDTO.from_dict(json_dict)
 
