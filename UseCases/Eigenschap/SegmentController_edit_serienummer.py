@@ -50,7 +50,7 @@ if __name__ == '__main__':
         ###  Get eigenschap
         ################################################################################
         # Eigenschap ophalen via API-call (eminfra)
-        segment_controller = eminfra_client.get_asset_by_id(assettype_id=asset_uuid)
+        segment_controller = eminfra_client.get_asset_by_id(asset_id=asset_uuid)
 
         eigenschappen = eminfra_client.get_eigenschappen(assetId=asset_uuid)
         if asset.otl_vs_lgc == 'OTL':

@@ -35,7 +35,7 @@ if __name__ == '__main__':
     df_assets = pd.read_excel(filepath, sheet_name='Resultaat', header=2, usecols=["uuid", "naam_agent", "rol"])
 
     for idx, asset_row in df_assets.iterrows():
-        asset = eminfra_client.get_asset_by_id(assettype_id=asset_row.get("uuid"))
+        asset = eminfra_client.get_asset_by_id(asset_id=asset_row.get("uuid"))
 
         agent_name_current = asset_row.get("naam_agent")
         agent_current = next(eminfra_client.search_agent(naam=agent_name_current, actief=False), None)
