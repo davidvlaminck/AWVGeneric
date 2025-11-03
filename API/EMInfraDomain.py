@@ -66,6 +66,7 @@ class KenmerkTypeEnum(Enum):
     HEEFTBIJLAGEBRON = 'HeeftBijlageBron'
     HEEFTTOEGANGSPROCEDUREBRON = 'HeeftToegangsprocedureBron'
     HEEFTAANVULLENDEGEOMETRIEBRON = 'HeeftAanvullendeGeometrieBron'
+    HEEFTBIJHORENDEASSETS = 'HeeftBijhorendeAssets'
     GEOMETRIE = 'Geometrie'
     AGENTS = 'Agents'
     SLUITAANOPDOEL = 'SluitAanOpDoel'
