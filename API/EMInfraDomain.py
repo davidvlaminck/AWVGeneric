@@ -283,6 +283,8 @@ class QueryDTO(BaseDataclass):
     pagingMode: PagingModeEnum | None = None
 
     def __post_init__(self):
+        if self.settings is None:
+            self.settings = {}
         self._fix_enums({('pagingMode', PagingModeEnum)})
         self._fix_nested_classes({('selection', SelectionDTO), ('expansions', ExpansionsDTO)})
 
