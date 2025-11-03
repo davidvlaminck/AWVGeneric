@@ -523,8 +523,8 @@ class EMInfraClient:
         yield from [assettype_dto for assettype_dto in self.get_all_assettypes(size)
                     if ':' not in assettype_dto.korteUri]
 
-    def get_asset_by_id(self, assettype_id: str) -> AssetDTO:
-        url = f"core/api/assets/{assettype_id}"
+    def get_asset_by_id(self, asset_id: str) -> AssetDTO:
+        url = f"core/api/assets/{asset_id}"
         json_dict = self.requester.get(url).json()
         return AssetDTO.from_dict(json_dict)
 
@@ -1314,6 +1314,27 @@ class EMInfraClient:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
+    def update_commentaar(self, asset: AssetDTO, commentaar: str) -> None:
+        """
+        Update commentaar of an asset.
+        Keep the asset's naam, status, toestand.
+
+        :param asset:
+        :param commentaar:
+        :return:
+        """
+        request_body = {
+            "naam": asset.naam,
+            "actief": asset.actief,
+            "toestand": asset.toestand,
+            "commentaar": commentaar
+        }
+        response = self.requester.put(url=f'core/api/assets/{asset.uuid}', json=request_body)
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+
+
     def get_kenmerktype_and_relatietype_id(self, relatie_uri: str) -> (str, str):
         relaties_dict = {
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Sturing": [
@@ -1424,7 +1445,7 @@ class EMInfraClient:
         :param relatieTypeId: f2c5c4a1-0899-4053-b3b3-2d662c717b44
         :return:
         """
-        _target_asset = self.get_asset_by_id(assettype_id=doel_assetId)
+        _target_asset = self.get_asset_by_id(asset_id=doel_assetId)
         _type = _target_asset._type
         if _type == 'installatie':
             relatie_type = 'installaties-via'
@@ -1732,6 +1753,32 @@ class EMInfraClient:
         if response.status_code != 202:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
+
+    def search_kenmerk_hoortbij(self, asset_uuid: str, naam: KenmerkTypeEnum = KenmerkTypeEnum.HEEFTBIJHORENDEASSETS) -> [KenmerkType]:
+        if naam == KenmerkTypeEnum.HEEFTBIJHORENDEASSETS:
+            type_id = '5d58905c-412c-44f8-8872-21519041e391'
+        else:
+            raise NotImplementedError(f'Parameter "naam" = {naam} not implemented')
+
+        query_dto = QueryDTO(
+            size=10,
+            from_=0,
+            expansions=ExpansionsDTO(fields=[f'kenmerk:{type_id}']),
+            pagingMode=PagingModeEnum.OFFSET,
+            selection=SelectionDTO(
+                expressions=[ExpressionDTO(
+                    terms=[
+                        TermDTO(property='type.id', operator=OperatorEnum.EQ, value=type_id)
+                    ])
+                ])
+        )
+        url = f"core/api/assets/{asset_uuid}/kenmerken/search"
+        response = self.requester.post(url=url, data=query_dto.json())
+        if response.status_code != 200:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+
+        return [KenmerkType.from_dict(item) for item in response.json()['data']]
 
     def search_kenmerk_elektrisch_aansluitpunt(self, asset_uuid: str, naam: KenmerkTypeEnum = KenmerkTypeEnum.ELEKTRISCH_AANSLUITPUNT) -> ElektrischAansluitpuntKenmerk:
         if naam == KenmerkTypeEnum.ELEKTRISCH_AANSLUITPUNT:
