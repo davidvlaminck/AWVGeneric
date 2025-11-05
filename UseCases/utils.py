@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 
 import pandas as pd
@@ -12,6 +13,13 @@ def load_settings(user: str = 'Dries'):
         return Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
     else:
         raise NotImplementedError(f'user: {user} is not implemented in function call load_settings()')
+
+def configure_logger(log_path: str = "logs.log"):
+    logging.basicConfig(
+        filename=log_path, level=logging.DEBUG,
+        format="%(levelname)s:\t%(asctime)s:\t%(message)s",
+        filemode="w",
+    )
 
 def read_rsa_report(filepath: Path, usecols: [str] = None) -> pd.DataFrame:
     """Read RSA-report as input into a DataFrame."""
