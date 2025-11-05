@@ -6,8 +6,19 @@ import pandas as pd
 from API.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 
-from UseCases.utils import load_settings
+from UseCases.utils import load_settings, configure_logger
 
+INPUT_DIR = Path.home() / 'Downloads/Tunnels/input_preprocessing'
+INPUT_FILES = [
+    'Import AIM_RUP_met bestekken v Prod_20251105.xlsx'
+    , 'Import AIM_ZEL_met bestekken v Prod_20251105.xlsx'
+    , 'Import AIM_CRA_met bestekken v Prod_20251105.xlsx'
+    , 'Import DEB_ZEL_met bestekken v Prod_20251105.xlsx'
+]
+INVALID_ASSETTYPES = [
+            'lgc:installatie#AID', 'lgc:installatie#ANPR', 'lgc:installatie#CCTV', 'lgc:installatie#PTZ',
+            'lgc:installatie#CamGroep', 'lgc:installatie#Decoder', 'lgc:installatie#Encoder',
+            'lgc:installatie#OmvormerLegacy']
 
 def read_input_file(filepath: Path, sheet_name: str = 'Sheet0', header: int = 0, usecols: list = None) -> pd.DataFrame():
     if usecols is None:
@@ -35,26 +46,22 @@ def validate_assettypes(df: pd.DataFrame, column_assettype:str = 'type', invalid
     else:
         return None
 
+
+def get_input_files() -> list[Path]:
+    paths = [INPUT_DIR / f for f in INPUT_FILES]
+    for p in paths:
+        if not p.exists():
+            raise FileNotFoundError(f"{p} not found")
+    return paths
+
 if __name__ == '__main__':
-    logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s', filemode="w")
+    configure_logger()
     logging.info('Tunnels: ')
     logging.info('Controleren of een ID van een bestaand asset uit de tunnelboom uit AIM, eveneens op de Productieomgeving bestaat.')
     logging.info('Kopiëren van dit ID of leeglaten indien het asset nog niet bestaat')
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
 
-    root_folder = Path.home() / 'Downloads/Tunnels/input_preprocessing'
-    bestandsnamen = [
-        'Import AIM_RUP_met bestekken v Prod_20251105.xlsx'
-        , 'Import AIM_ZEL_met bestekken v Prod_20251105.xlsx'
-        , 'Import AIM_CRA_met bestekken v Prod_20251105.xlsx'
-        , 'Import DEB_ZEL_met bestekken v Prod_20251105.xlsx'
-    ]
-
-    for bestand in bestandsnamen:
-        input_file = Path(root_folder) / bestand
-        if not Path.exists(input_file):
-            raise FileExistsError(f'Input file: {input_file} does not exist.')
-
+    for input_file in get_input_files():
         df_tunnel_assets = read_input_file(input_file)
         validate_assettypes(df=df_tunnel_assets)
 
