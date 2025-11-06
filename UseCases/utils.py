@@ -5,8 +5,12 @@ import pandas as pd
 from pathlib import Path
 
 from API.EMInfraDomain import AssetDTO, QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum, \
-    AgentDTO, LogicalOpEnum
-
+    AgentDTO, LogicalOpEnum, ExpansionsDTO
+from collections.abc import Generator
+from API.EMInfraClient import EMInfraClient
+from API.EMInfraDomain import AssetDTO
+from otlmow_model.OtlmowModel.Classes.ImplementatieElement.RelatieObject import RelatieObject
+from otlmow_model.OtlmowModel.Helpers.RelationCreator import create_betrokkenerelation
 
 def load_settings(user: str = 'Dries'):
     if user == 'Dries':
@@ -72,11 +76,14 @@ def build_query_search_assets(bronAsset: AssetDTO = None, agent: AgentDTO = None
         selection=SelectionDTO(expressions=exprs)
     )
 
-from collections.abc import Generator
-from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import AssetDTO
-from otlmow_model.OtlmowModel.Classes.ImplementatieElement.RelatieObject import RelatieObject
-from otlmow_model.OtlmowModel.Helpers.RelationCreator import create_betrokkenerelation
+def build_query_search_by_naampad(naampad: str) -> QueryDTO:
+    query_dto = QueryDTO(size=5, from_=0, pagingMode=PagingModeEnum.OFFSET, selection=SelectionDTO(expressions=[])
+                         , expansions=ExpansionsDTO(fields=['parent']))
+    expression = ExpressionDTO(terms=[
+        TermDTO(property='naamPad', operator=OperatorEnum.STARTS_WITH, value=f'{naampad}')])
+    query_dto.selection.expressions.append(expression)
+    return query_dto
+
 
 def get_bestaande_betrokkenerelaties(client: EMInfraClient, asset: AssetDTO, rol: str, isActief: bool) -> Generator[RelatieObject]:
     generator = client.get_objects_from_oslo_search_endpoint(
