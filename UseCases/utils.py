@@ -24,7 +24,7 @@ def configure_logger(log_path: str = "logs.log"):
 def read_rsa_report(filepath: Path, usecols: [str] = None) -> pd.DataFrame:
     """Read RSA-report as input into a DataFrame."""
     if not Path.exists(filepath):
-        raise FileExistsError(f'Filepath does not exists {filepath}.')
+        raise FileNotFoundError(f'Filepath does not exists {filepath}.')
     if not usecols:
         usecols = ["uuid"]
     return pd.read_excel(filepath, sheet_name='Resultaat', header=2, usecols=usecols)

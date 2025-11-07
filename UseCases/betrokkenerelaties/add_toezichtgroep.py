@@ -42,7 +42,7 @@ if __name__ == '__main__':
             toezichter = next(eminfra_client.search_identiteit(naam=df_row["toezichter_gebruikersnaam"]), None)
             toezichtsgroep = next(eminfra_client.search_toezichtgroep_lgc(naam=df_row["toezichtsgroep_nieuw"]), None)
         except Exception as e:
-            raise Exception('Problem occured: "{e}"') from e
+            raise Exception(f'Problem occured: "{e}"') from e
         logging.info(f'Nieuwe toezichter: {toezichter.naam}')
         logging.info(f'Nieuwe toezichtsgroep: {toezichtsgroep.naam}')
         eminfra_client.add_kenmerk_toezichter_by_asset_uuid(asset_uuid=asset.uuid, toezichter_uuid=toezichter.uuid, toezichtgroep_uuid=toezichtsgroep.uuid)
