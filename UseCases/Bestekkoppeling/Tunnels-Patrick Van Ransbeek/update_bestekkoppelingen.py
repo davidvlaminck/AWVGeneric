@@ -11,7 +11,8 @@ from API.EMInfraDomain import BestekKoppelingStatusEnum, BestekCategorieEnum, Be
 from API.Enums import AuthType, Environment
 
 BESTANDSNAMEN = [
-    'Import AIM_CRA_met bestekken v Prod.xlsx'
+    'Import AIM_MAR klaar v Prod.xlsx'
+    # 'Import AIM_CRA_met bestekken v Prod.xlsx'
     # 'Import AIM_RUP_met bestekken v Prod.xlsx'
     # 'Import AIM_ZEL_met bestekken v Prod.xlsx'
     # 'Import DEB_ZEL_met bestekken v Prod.xlsx'
@@ -109,7 +110,7 @@ if __name__ == '__main__':
 
     for bestandsnaam in BESTANDSNAMEN:
         # Read Excel as pandas dataframe
-        filepath_input = Path.home() / 'Downloads' / 'Tunnels' / 'input_orig_bestanden_Patrick' / bestandsnaam
+        filepath_input = Path.home() / 'Downloads' / 'Tunnels' / 'input_orig_bestanden_Patrick' / 'Margaretha Tunnel' / bestandsnaam
         df_assets = read_excel_as_df(filepath=filepath_input)
 
         process_assets(df=df_assets)
