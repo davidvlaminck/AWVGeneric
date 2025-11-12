@@ -13,4 +13,3 @@ def read_rsa_report(filepath: Path, usecols: [str] = None) -> pd.DataFrame:
     if not usecols:
         usecols = ["uuid"]
     return pd.read_excel(filepath, sheet_name='Resultaat', header=2, usecols=usecols)
-
