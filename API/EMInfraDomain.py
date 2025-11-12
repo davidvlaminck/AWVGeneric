@@ -87,6 +87,16 @@ class KenmerkTypeEnum(Enum):
 
 RESERVED_WORD_LIST = ('from_', '_next')
 
+class RelatieEnum(Enum):
+    """
+    An enumeration of relatie types with their corresponding values.
+    """
+    BEVESTIGING = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging'
+    VOEDT = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt'
+    STURING = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Sturing'
+    HOORTBIJ = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HoortBij'
+    HEEFTBIJHORENDEASSETS = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HeeftBijhorendeAssets'
+
 @dataclass
 class BaseDataclass:
     def __dict_factory_override__(self):
@@ -378,8 +388,8 @@ class LocatieKenmerk(BaseDataclass):
 class ElektrischAansluitpuntKenmerk(BaseDataclass):
     _type: str
     type: dict
-    elektriciteitsAansluitingRef: dict
     links: [Link]
+    elektriciteitsAansluitingRef: dict | None = None
 
     def __post_init__(self):
          self._fix_nested_list_classes({('links', Link)})
