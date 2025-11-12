@@ -17,7 +17,7 @@ from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO
     RelatieTypeDTO, KenmerkType, EigenschapValueDTO, RelatieTypeDTOList, BeheerobjectDTO, ToezichtgroepTypeEnum, \
     ToezichtgroepDTO, BaseDataclass, BeheerobjectTypeDTO, BoomstructuurAssetTypeEnum, KenmerkTypeEnum, AssetDTOToestand, \
     EigenschapValueUpdateDTO, GeometryNiveau, GeometryBron, GeometryNauwkeurigheid, GeometrieKenmerk, \
-    SchadebeheerderKenmerk, ElektrischAansluitpuntKenmerk, AssetRelatieDTO
+    SchadebeheerderKenmerk, ElektrischAansluitpuntKenmerk, AssetRelatieDTO, RelatieEnum
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 from utils.date_helpers import validate_dates, format_datetime
@@ -1551,15 +1551,20 @@ class EMInfraClient:
             all_kenmerken = [item for item in all_kenmerken if item.type.get("naam").startswith(naam.value)][0]
         return all_kenmerken
 
-    def get_eigenschappen(self, assetId: str) -> list[EigenschapValueDTO]:
+    def get_eigenschappen(self, assetId: str, eigenschap_naam: str = None) -> list[EigenschapValueDTO]:
         # ophalen kenmerk_uuid
         kenmerken = self.get_kenmerken(assetId=assetId)
         kenmerk_uuid = [kenmerk.type.get('uuid') for kenmerk in kenmerken if kenmerk.type.get('naam').startswith('Eigenschappen')][0]
 
-        # ophalen eigenschapwaarden
+        # ophalen alle eigenschapwaarden
         url = f'core/api/assets/{assetId}/kenmerken/{kenmerk_uuid}/eigenschapwaarden'
         json_dict = self.requester.get(url).json()
-        return [EigenschapValueDTO.from_dict(item) for item in json_dict['data']]
+        eigenschappen = [EigenschapValueDTO.from_dict(item) for item in json_dict['data']]
+
+        # optioneel eigenschap waarden filteren
+        if eigenschap_naam:
+            eigenschappen = [eig for eig in eigenschappen if eig.eigenschap.naam == eigenschap_naam]
+        return eigenschappen
 
     def get_eigenschapwaarden(self, assetId: str, eigenschap_naam: str = None) -> list[EigenschapValueDTO]:
         url = f'core/api/assets/{assetId}/kenmerken/753c1268-68c2-4e67-a6cc-62c0622b576b/eigenschapwaarden'
@@ -1780,7 +1785,13 @@ class EMInfraClient:
 
         return [KenmerkType.from_dict(item) for item in response.json()['data']]
 
-    def search_kenmerk_elektrisch_aansluitpunt(self, asset_uuid: str, naam: KenmerkTypeEnum = KenmerkTypeEnum.ELEKTRISCH_AANSLUITPUNT) -> ElektrischAansluitpuntKenmerk:
+    def search_kenmerk_elektrisch_aansluitpunt(self, asset_uuid: str, naam: KenmerkTypeEnum = KenmerkTypeEnum.ELEKTRISCH_AANSLUITPUNT) -> ElektrischAansluitpuntKenmerk | None:
+        """
+
+        :param asset_uuid:
+        :param naam:
+        :return: Returns object ElektrischAansluitpuntKenmerk, or None if missing.
+        """
         if naam == KenmerkTypeEnum.ELEKTRISCH_AANSLUITPUNT:
             type_id = '87dff279-4162-4031-ba30-fb7ffd9c014b'
         else:
@@ -1804,10 +1815,11 @@ class EMInfraClient:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-        elektrisch_aansluitpunt = [ElektrischAansluitpuntKenmerk.from_dict(item) for item in response.json()['data']]
-        if len(elektrisch_aansluitpunt) != 1:
-            raise ValueError(f'Expected one single elektrisch aansluitpunt for {naam}. Got {len(elektrisch_aansluitpunt)} instead.')
-        return elektrisch_aansluitpunt[0]
+        elektrisch_aansluitpunt = [ElektrischAansluitpuntKenmerk.from_dict(item) for item in response.json()['data']][0]
+        if hasattr(elektrisch_aansluitpunt, 'elektriciteitsAansluitingRef'):
+            return elektrisch_aansluitpunt
+        else:
+            return None
 
     def disconnect_kenmerk_elektrisch_aansluitpunt(self, asset_uuid: str) -> None:
         url = f'core/api/assets/{asset_uuid}/kenmerken/87dff279-4162-4031-ba30-fb7ffd9c014b'
@@ -1816,4 +1828,19 @@ class EMInfraClient:
             logging.error(resp)
             raise ProcessLookupError(resp.content.decode())
 
+    def search_assets_via_relatie(self, asset_uuid: str, relatie: RelatieEnum) -> [AssetDTO]:
+        """
+        Returns a list of assets via the relatie.
 
+        :param asset_uuid: bron asset
+        :param relatie: relatieTypeEnum
+        :return:
+        """
+        kenmerkType_uuid, relatieType_uuid = self.get_kenmerktype_and_relatietype_id(relatie_uri=relatie.value)
+        url = f'core/api/assets/{asset_uuid}/kenmerken/{kenmerkType_uuid}/assets-via/{relatieType_uuid}'
+        resp = self.requester.get(url=url)
+        if resp.status_code != 200:
+            logging.error(resp)
+            raise ProcessLookupError(resp.content.decode())
+
+        return [AssetDTO.from_dict(item) for item in resp.json()['data']]
