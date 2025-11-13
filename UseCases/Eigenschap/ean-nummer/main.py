@@ -234,22 +234,6 @@ def process_biflash(eminfra_client: EMInfraClient, df: pd.DataFrame):
             relatie_uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt')
 
 
-def _set_eigenschap_value(eigenschap, new_value):
-    """
-    Set eigenschap value. Raise error on conflict.
-    :param eigenschap:
-    :param new_value:
-    :return:
-    """
-    existing_value = eigenschap.typedValue["value"]
-    if existing_value != new_value:
-        error_message = f'Conflicting values for existing "{existing_value}" and new value "{new_value}".'
-        logging.critical(error_message)
-    else:
-        eigenschap.typedValue["value"] = new_value
-    return eigenschap
-
-
 def process_laagspanning(eminfra_client: EMInfraClient, df: pd.DataFrame):
     """
     Toevoegen van twee assets via de HoortBij-relatie: DNBLaagspanning en Energiemeter.
