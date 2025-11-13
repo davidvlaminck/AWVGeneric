@@ -66,6 +66,7 @@ class KenmerkTypeEnum(Enum):
     HEEFTBIJLAGEBRON = 'HeeftBijlageBron'
     HEEFTTOEGANGSPROCEDUREBRON = 'HeeftToegangsprocedureBron'
     HEEFTAANVULLENDEGEOMETRIEBRON = 'HeeftAanvullendeGeometrieBron'
+    HEEFTBIJHORENDEASSETS = 'HeeftBijhorendeAssets'
     GEOMETRIE = 'Geometrie'
     AGENTS = 'Agents'
     SLUITAANOPDOEL = 'SluitAanOpDoel'
@@ -82,8 +83,19 @@ class KenmerkTypeEnum(Enum):
     GEEFT_VOEDING_AAN = 'Geeft voeding aan'
     AANGESTUURD_DOOR = 'Aangestuurd door'
     GEEFT_STURING_AAN = 'Geeft sturing aan'
+    ELEKTRISCH_AANSLUITPUNT = 'Elektrisch aansluitpunt'
 
 RESERVED_WORD_LIST = ('from_', '_next')
+
+class RelatieEnum(Enum):
+    """
+    An enumeration of relatie types with their corresponding values.
+    """
+    BEVESTIGING = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging'
+    VOEDT = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt'
+    STURING = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Sturing'
+    HOORTBIJ = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HoortBij'
+    HEEFTBIJHORENDEASSETS = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HeeftBijhorendeAssets'
 
 @dataclass
 class BaseDataclass:
@@ -374,6 +386,17 @@ class LocatieKenmerk(BaseDataclass):
     def __post_init__(self):
          self._fix_nested_list_classes({('links', Link)})
 
+@dataclass
+class ElektrischAansluitpuntKenmerk(BaseDataclass):
+    _type: str
+    type: dict
+    links: [Link]
+    elektriciteitsAansluitingRef: dict | None = None
+
+    def __post_init__(self):
+         self._fix_nested_list_classes({('links', Link)})
+
+
 
 @dataclass
 class GeometryLog(BaseDataclass):
@@ -504,6 +527,7 @@ class ObjectType(Enum):
     BEHEEROBJECT = 'BEHEEROBJECT'
     EIGENSCHAP = 'EIGENSCHAP'
     KENMERKTYPE = 'KENMERKTYPE'
+
 
 @dataclass
 class InfraObjectDTO(BaseDataclass):
@@ -837,6 +861,20 @@ def construct_naampad(asset: AssetDTO) -> str:
             parent = parent.parent
     return naampad
 
+
+@dataclass
+class AssetRelatieDTO(BaseDataclass):
+    # _type: str
+    links: [Link]
+    uuid: str
+    createdOn: str
+    modifiedOn: str
+    bronAsset: AssetDTO
+    doelAsset: AssetDTO
+    relatieType: RelatieTypeDTO
+
+    def __post_init__(self):
+        self._fix_nested_list_classes({('links', Link)})
 @dataclass
 class GraphLinks(BaseDataclass):
     bronUuid: str

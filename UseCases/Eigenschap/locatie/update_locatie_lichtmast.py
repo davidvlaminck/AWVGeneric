@@ -61,7 +61,7 @@ if __name__ == '__main__':
         asset_uuid = row_asset.get("uuid")
         logging.info(f'Processing {idx} asset: {asset_uuid}')
 
-        asset = eminfra_client.get_asset_by_id(assettype_id=asset_uuid)
+        asset = eminfra_client.get_asset_by_id(asset_id=asset_uuid)
 
         ################################################################################
         ###  Get eigenschap locatie
