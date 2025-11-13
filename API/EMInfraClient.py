@@ -1326,7 +1326,7 @@ class EMInfraClient:
         request_body = {
             "naam": asset.naam,
             "actief": asset.actief,
-            "toestand": asset.toestand,
+            "toestand": asset.toestand.value,
             "commentaar": commentaar
         }
         response = self.requester.put(url=f'core/api/assets/{asset.uuid}', json=request_body)
