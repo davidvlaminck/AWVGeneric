@@ -59,3 +59,22 @@ def build_query_search_energiemeter(energiemeter_naam: str, assettype_uuid: str)
                         value=True)]
                     , logicalOp=LogicalOpEnum.AND)
             ]))
+
+def build_query_search_assettype(assettype_uuid: str) -> QueryDTO:
+    return QueryDTO(
+        size=100, from_=0, pagingMode=PagingModeEnum.OFFSET,
+        selection=SelectionDTO(
+            expressions=[
+                ExpressionDTO(
+                    terms=[TermDTO(
+                        property='type',
+                        operator=OperatorEnum.EQ,
+                        value=f"{assettype_uuid}")]
+                ),
+                ExpressionDTO(
+                    terms=[TermDTO(
+                        property='actief',
+                        operator=OperatorEnum.EQ,
+                        value=True)]
+                    , logicalOp=LogicalOpEnum.AND)
+            ]))
