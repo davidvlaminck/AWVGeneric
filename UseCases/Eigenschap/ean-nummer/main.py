@@ -1,13 +1,12 @@
 import logging
-import re
 from typing import Any
 
 import pandas as pd
 from pathlib import Path
 
 from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import AssetDTO, QueryDTO, PagingModeEnum, SelectionDTO, TermDTO, ExpressionDTO, OperatorEnum, \
-    LogicalOpEnum, AssetRelatieDTO, construct_naampad, RelatieEnum, EigenschapValueUpdateDTO, AssetDTOToestand
+from API.EMInfraDomain import (AssetDTO, AssetRelatieDTO, construct_naampad, RelatieEnum, EigenschapValueUpdateDTO,
+                               AssetDTOToestand)
 from API.Enums import AuthType, Environment
 
 from UseCases.utils import load_settings, read_rsa_report
@@ -22,21 +21,6 @@ TYPEUUID_ENERGIEMETER = 'ca3ae27f-c611-4761-97d1-d9766dd30e0a'
 TYPEUUID_FORFAITAIRE_AANSLUITING = 'ffb9a236-fb9e-406f-a602-271b68e62afc'
 
 
-def _get_installatienaam_from_kastnaam(kast_naam: str) -> str:
-    """
-    Get the rootname or installatienaam from a kast_naam.
-    If the kast naam follows the regex pattern, return the rootname.
-    Else, return the kast naam itself.
-
-    :param kast_naam:
-    :return:
-    """
-    if re.match(string=kast_naam, pattern='^.*.K\d*$'):
-        return kast_naam.rsplit(sep='.K', maxsplit=1)[0]
-    else:
-        return kast_naam
-
-
 def _get_installatienaam_from_asset(asset: AssetDTO) -> str:
     """
     Get the rootname or installatienaam from an asset.
@@ -45,59 +29,7 @@ def _get_installatienaam_from_asset(asset: AssetDTO) -> str:
     :return:
     """
     naampad = construct_naampad(asset=asset)
-    installatie_naam = naampad.split(sep='/')[0]
-    return installatie_naam
-
-
-def build_query_search_dnblaagspanning(eanNummer: str, assettype_uuid: str) -> QueryDTO:
-    return QueryDTO(
-        size=100, from_=0, pagingMode=PagingModeEnum.OFFSET,
-        selection=SelectionDTO(
-            expressions=[
-                ExpressionDTO(
-                    terms=[TermDTO(
-                        property='eig:b924b988-a3b4-4d0c-aa0e-c69ff503e784:a108fc8a-c522-4469-8410-62f5a0241698',
-                        operator=OperatorEnum.EQ,
-                        value=f"{eanNummer}")]),
-                ExpressionDTO(
-                    terms=[TermDTO(
-                        property='type',
-                        operator=OperatorEnum.EQ,
-                        value=f"{assettype_uuid}")]
-                    , logicalOp=LogicalOpEnum.AND),
-                ExpressionDTO(
-                    terms=[TermDTO(
-                        property='actief',
-                        operator=OperatorEnum.EQ,
-                        value=True)]
-                    , logicalOp=LogicalOpEnum.AND)
-            ]))
-
-
-def build_query_search_energiemeter(energiemeter_naam: str, assettype_uuid: str) -> QueryDTO:
-    return QueryDTO(
-        size=100, from_=0, pagingMode=PagingModeEnum.OFFSET,
-        selection=SelectionDTO(
-            expressions=[
-                ExpressionDTO(
-                    terms=[TermDTO(
-                        property='naam',
-                        operator=OperatorEnum.EQ,
-                        value=f"{energiemeter_naam}")]),
-                ExpressionDTO(
-                    terms=[TermDTO(
-                        property='type',
-                        operator=OperatorEnum.EQ,
-                        value=f"{assettype_uuid}")]
-                    , logicalOp=LogicalOpEnum.AND),
-                ExpressionDTO(
-                    terms=[TermDTO(
-                        property='actief',
-                        operator=OperatorEnum.EQ,
-                        value=True)]
-                    , logicalOp=LogicalOpEnum.AND)
-            ]))
-
+    return naampad.split(sep='/')[0]
 
 def get_first_list_element(lst: list) -> Any:
     """
@@ -146,6 +78,51 @@ def create_relatie_if_missing(eminfra_client: EMInfraClient, bronAsset: AssetDTO
     return relatie
 
 
+def transfer_ean_number(eminfra_client, bronAsset, doelAsset, ean_bronAsset):
+    """
+    Transfers the ean-number from bronAsset to doelAsset.
+    Typically, the ean-number is documented as "elektrisch aansluitpunt" for a bronAsset (Laagspanning)
+    and transferred to property "ean nummer" at doelAsset (DNBLaagspanning).
+
+    :param eminfra_client:
+    :param bronAsset:
+    :param doelAsset:
+    :param ean_bronAsset: 18 digit EAN-number
+    :return:
+    """
+    logging.info('Toevoegen EAN-nummer als eigenschap')
+    eigenschap_eanNummer_list = eminfra_client.get_eigenschappen(assetId=doelAsset.uuid,
+                                                                 eigenschap_naam='eanNummer')
+    if eigenschap_eanNummer_list:
+        eigenschap_eanNummer = get_first_list_element(eigenschap_eanNummer_list)
+        ean_doelAsset = eigenschap_eanNummer.typedValue["value"]
+        if ean_bronAsset == ean_doelAsset:
+            logging.info('Identiek ean-nummer. Geen updates')
+            action = "Loskoppelen eigenschap elektrisch aansluitpunt."
+        else:
+            log_message = (f'\n{bronAsset.uuid}'
+                           f'\nLaagspanning eigenschap "elektrische aansluiting": {ean_bronAsset}.'
+                           f'\nDNBLaagspanning eigenschap "ean nummer": {eigenschap_eanNummer.typedValue["value"]}'
+                           f'\nConflicterende waarden!')
+            logging.critical(log_message)
+            # raise ValueError(log_message)
+            action = None
+    else:
+        logging.info('Eigenschap eanNummer bij DNBLaagspanning is nog onbestaande. Ken waarde toe.')
+        action = "Loskoppelen eigenschap elektrisch aansluitpunt."
+        eigenschapValueUpdate_eanNummer = EigenschapValueUpdateDTO(
+            eigenschap=get_first_list_element(
+                eminfra_client.search_eigenschappen(
+                    eigenschap_naam='eanNummer'
+                    , uri='https://wegenenverkeer.data.vlaanderen.be/ns/abstracten#DNB.eanNummer'))
+            , typedValue={'_type': 'text', 'value': f'{ean_bronAsset}'}
+        )
+        eminfra_client.update_eigenschap(assetId=doelAsset.uuid, eigenschap=eigenschapValueUpdate_eanNummer)
+
+    if action:
+        logging.info(action)
+        eminfra_client.disconnect_kenmerk_elektrisch_aansluitpunt(asset_uuid=bronAsset.uuid)
+
 def process_fictieve_aansluiting(eminfra_client: EMInfraClient, df: pd.DataFrame):
     """
     Loskoppelen fictieve aansluitingen
@@ -168,18 +145,21 @@ def process_seinbrug(eminfra_client: EMInfraClient, df: pd.DataFrame):
     :param df:
     :return:
     """
-    for _, df_row in df.iterrows():
+    df.reset_index(drop="index", inplace=True)
+    for idx, df_row in df.iterrows():
         asset = list(eminfra_client.search_asset_by_uuid(asset_uuid=df_row["uuid"]))[0]
-        elektrisch_aansluitpunt_kenmerk = eminfra_client.search_kenmerk_elektrisch_aansluitpunt(asset_uuid=asset.uuid)
-
-        if not elektrisch_aansluitpunt_kenmerk:
-            raise ValueError('Het kenmerk Elektrisch aansluitpunt ontbreekt.')
-        eanNummer = elektrisch_aansluitpunt_kenmerk.elektriciteitsAansluitingRef.get('ean')
+        logging.info(f'Processing asset ({idx + 1}/{len(df)}): {asset.uuid}')
+        elektrischAansluitpuntKenmerk = eminfra_client.search_kenmerk_elektrisch_aansluitpunt(asset_uuid=asset.uuid)
+        if elektrischAansluitpuntKenmerk.elektriciteitsAansluitingRef is None:
+            logging.info('Asset bevat geen kenmerk elektrische aansluiting meer. Op naar de volgende.')
+            continue
+        else:
+            eanNummer = elektrischAansluitpuntKenmerk.elektriciteitsAansluitingRef.get('ean')
 
         if commentaar := asset.commentaar:
-            newCommentaar += f'; EAN: {eanNummer}'
+            commentaar += f'; EAN: {eanNummer}'
         else:
-            newCommentaar = f'EAN: {eanNummer}'
+            commentaar = f'EAN: {eanNummer}'
 
         eminfra_client.update_commentaar(asset=asset, commentaar=commentaar)
         eminfra_client.disconnect_kenmerk_elektrisch_aansluitpunt(asset_uuid=asset.uuid)
@@ -195,22 +175,26 @@ def process_biflash(eminfra_client: EMInfraClient, df: pd.DataFrame):
     :param df:
     :return:
     """
-    for _, df_row in df.iterrows():
+    df.reset_index(drop="index", inplace=True)
+    for idx, df_row in df.iterrows():
         asset = list(eminfra_client.search_asset_by_uuid(asset_uuid=df_row["uuid"]))[0]
+        logging.info(f'Processing asset ({idx+1}/{len(df)}): {asset.uuid}')
         installatie_naam = _get_installatienaam_from_asset(asset=asset)
+        elektrischAansluitpuntKenmerk = eminfra_client.search_kenmerk_elektrisch_aansluitpunt(asset_uuid=asset.uuid)
+        if elektrischAansluitpuntKenmerk.elektriciteitsAansluitingRef is None:
+            logging.info('Asset bevat geen kenmerk elektrische aansluiting meer. Op naar de volgende.')
+            continue
+        else:
+            ean_bronAsset = elektrischAansluitpuntKenmerk.elektriciteitsAansluitingRef.get('ean')
 
         logging.info('Assets ophalen via het kenmerk "HeeftBijhorendeAssets"')
-        bijhorende_assets_kenmerk = eminfra_client.search_kenmerk_hoortbij(asset_uuid=asset.uuid)
-        bijhorende_assets = [eminfra_client.get_asset_by_id(kenmerk.uuid) for kenmerk in bijhorende_assets_kenmerk]
+        assets_hoortBij = eminfra_client.search_assets_via_relatie(asset_uuid=asset.uuid,
+                                                                   relatie=RelatieEnum.HEEFTBIJHORENDEASSETS)
 
-        dnblaagspanning_assets = [asset for asset in bijhorende_assets if
+        dnblaagspanning_assets = [asset for asset in assets_hoortBij if
                                   asset.type.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBLaagspanning']
-        dnbhoogspanning_assets = [asset for asset in bijhorende_assets if
-                                  asset.type.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBHoogspanning']
-        energiemeter_assets = [asset for asset in bijhorende_assets if
-                               asset.type.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#EnergiemeterDNB']
-        forfaitaire_aansluiting_assets = [asset for asset in bijhorende_assets if
-                                          asset.type.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#ForfaitaireAansluiting']
+        forfaitaire_aansluiting_assets = [asset for asset in assets_hoortBij if
+                               asset.type.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#ForfaitaireAansluiting']
 
         logging.info('DNBLaagspanning toevoegen via een HoortBij-relatie')
         if not dnblaagspanning_assets:
@@ -223,18 +207,24 @@ def process_biflash(eminfra_client: EMInfraClient, df: pd.DataFrame):
             dnblaagspanning = eminfra_client.get_asset_by_id(dnblaagspanning_dict.get("uuid"))
         else:
             dnblaagspanning = get_first_list_element(dnblaagspanning_assets)
+        eminfra_client.update_toestand(asset=dnblaagspanning, toestand=AssetDTOToestand.IN_GEBRUIK)
+
+        logging.info('Enkel de elektrische aansluiting ontkoppelend, '
+                     'maar het forfaitaire ean-nummer niet overdragen naar DNBLaagspanning')
+        eminfra_client.disconnect_kenmerk_elektrisch_aansluitpunt(asset_uuid=asset.uuid)
 
         logging.info('Forfaitaire aansluiting toevoegen via een HoortBij-relatie')
         if not forfaitaire_aansluiting_assets:
-            logging.info('Create new asset Forfaitaire aansluiting (OTL)')
+            logging.info('Create new asset Forfaitaire Aansluiting (OTL)')
             forfaitaire_aansluiting_dict = eminfra_client.create_asset_and_relatie(
                 assetId=asset.uuid,
-                naam=f'{installatie_naam}.FORFAITAIRE_AANSLUITING',
+                naam=f'{installatie_naam}.FORFAIT',
                 typeUuid=TYPEUUID_FORFAITAIRE_AANSLUITING,
                 relatie_uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HeeftBijhorendeAssets')
             forfaitaire_aansluiting = eminfra_client.get_asset_by_id(forfaitaire_aansluiting_dict.get("uuid"))
         else:
             forfaitaire_aansluiting = get_first_list_element(forfaitaire_aansluiting_assets)
+        eminfra_client.update_toestand(asset=forfaitaire_aansluiting, toestand=AssetDTOToestand.IN_GEBRUIK)
 
         logging.info('Voedt-relatie toevoegen tussen dnblaagspanning en forfaitaire aansluiting')
         create_relatie_if_missing(
@@ -242,8 +232,6 @@ def process_biflash(eminfra_client: EMInfraClient, df: pd.DataFrame):
             bronAsset=dnblaagspanning,
             doelAsset=forfaitaire_aansluiting,
             relatie_uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt')
-
-        eminfra_client.disconnect_kenmerk_elektrisch_aansluitpunt(asset_uuid=asset.uuid)
 
 
 def _set_eigenschap_value(eigenschap, new_value):
@@ -306,36 +294,7 @@ def process_laagspanning(eminfra_client: EMInfraClient, df: pd.DataFrame):
             dnblaagspanning = get_first_list_element(dnblaagspanning_assets)
         eminfra_client.update_toestand(asset=dnblaagspanning, toestand=AssetDTOToestand.IN_GEBRUIK)
 
-        logging.info('Toevoegen EAN-nummer als eigenschap')
-        eigenschap_eanNummer_list = eminfra_client.get_eigenschappen(assetId=dnblaagspanning.uuid, eigenschap_naam='eanNummer')
-        if eigenschap_eanNummer_list:
-            eigenschap_eanNummer = get_first_list_element(eigenschap_eanNummer_list)
-            if eigenschap_eanNummer.typedValue["value"] == ean_bronAsset:
-                logging.info('Identiek ean-nummer. Geen updates')
-                action = "Loskoppelen eigenschap elektrisch aansluitpunt."
-            else:
-                log_message = (f'\n{asset.uuid}'
-                               f'\nLaagspanning eigenschap "elektrische aansluiting": {ean_bronAsset}.'
-                               f'\nDNBLaagspanning eigenschap "ean nummer": {eigenschap_eanNummer.typedValue["value"]}'
-                               f'\nConflicterende waarden!')
-                logging.critical(log_message)
-                # raise ValueError(log_message)
-                action = None
-        else:
-            logging.info('Eigenschap eanNummer bij DNBLaagspanning is nog onbestaande. Ken waarde toe.')
-            action = "Loskoppelen eigenschap elektrisch aansluitpunt."
-            eigenschapValueUpdate_eanNummer = EigenschapValueUpdateDTO(
-                eigenschap=get_first_list_element(
-                    eminfra_client.search_eigenschappen(
-                        eigenschap_naam='eanNummer'
-                        , uri='https://wegenenverkeer.data.vlaanderen.be/ns/abstracten#DNB.eanNummer'))
-                , typedValue={'_type': 'text', 'value': f'{ean_bronAsset}'}
-            )
-            eminfra_client.update_eigenschap(assetId=dnblaagspanning.uuid, eigenschap=eigenschapValueUpdate_eanNummer)
-
-        if action:
-            logging.info(action)
-            eminfra_client.disconnect_kenmerk_elektrisch_aansluitpunt(asset_uuid=asset.uuid)
+        transfer_ean_number(eminfra_client, asset, dnblaagspanning, ean_bronAsset)
 
         logging.info('Energiemeter toevoegen via een HoortBij-relatie')
         if not energiemeter_assets:
@@ -360,30 +319,33 @@ def process_laagspanning(eminfra_client: EMInfraClient, df: pd.DataFrame):
 
 def process_hoogspanning(eminfra_client: EMInfraClient, df: pd.DataFrame):
     """
-    Toevoegen van twee assets via de HoortBij-relatie: DNBHoogspanning en Energiemeter.
-    Toevoegen Voedt-relatie van DNBHoogspanning naar Energiemeter
-    Loskoppelen van de Elektrische aansluiting
+    Toevoegen van 1 assets via de HoortBij-relatie: DNBHoogspanning.
+    Overzetten van de Elektrische aansluiting van Hoogspanning (Legacy) naar DNBHoogspanning (OTL)
 
     :param eminfra_client:
     :param df:
     :return:
     """
-    for _, df_row in df.iterrows():
+    df.reset_index(drop="index", inplace=True)
+    for idx, df_row in df.iterrows():
         asset = list(eminfra_client.search_asset_by_uuid(asset_uuid=df_row["uuid"]))[0]
+        logging.info(f'Processing asset ({idx+1}/{len(df)}): {asset.uuid}')
         installatie_naam = _get_installatienaam_from_asset(asset=asset)
+        elektrischAansluitpuntKenmerk = eminfra_client.search_kenmerk_elektrisch_aansluitpunt(asset_uuid=asset.uuid)
+        if elektrischAansluitpuntKenmerk.elektriciteitsAansluitingRef is None:
+            logging.info('Asset bevat geen kenmerk elektrische aansluiting meer. Op naar de volgende.')
+            continue
+        else:
+            ean_bronAsset = elektrischAansluitpuntKenmerk.elektriciteitsAansluitingRef.get('ean')
 
         logging.info('Assets ophalen via het kenmerk "HeeftBijhorendeAssets"')
-        bijhorende_assets_kenmerk = eminfra_client.search_kenmerk_hoortbij(asset_uuid=asset.uuid)
-        bijhorende_assets = [eminfra_client.get_asset_by_id(kenmerk.uuid) for kenmerk in bijhorende_assets_kenmerk]
+        assets_hoortBij = eminfra_client.search_assets_via_relatie(asset_uuid=asset.uuid,
+                                                                   relatie=RelatieEnum.HEEFTBIJHORENDEASSETS)
 
-        dnblaagspanning_assets = [asset for asset in bijhorende_assets if
-                                  asset.type.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBLaagspanning']
-        dnbhoogspanning_assets = [asset for asset in bijhorende_assets if
+        dnbhoogspanning_assets = [asset for asset in assets_hoortBij if
                                   asset.type.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBHoogspanning']
-        energiemeter_assets = [asset for asset in bijhorende_assets if
+        energiemeter_assets = [asset for asset in assets_hoortBij if
                                asset.type.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#EnergiemeterDNB']
-        forfaitaire_aansluiting_assets = [asset for asset in bijhorende_assets if
-                                          asset.type.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#ForfaitaireAansluiting']
 
         logging.info('DNBHoogspanning toevoegen via een HoortBij-relatie')
         if not dnbhoogspanning_assets:
@@ -396,13 +358,9 @@ def process_hoogspanning(eminfra_client: EMInfraClient, df: pd.DataFrame):
             dnbhoogspanning = eminfra_client.get_asset_by_id(dnbhoogspanning_dict.get("uuid"))
         else:
             dnbhoogspanning = get_first_list_element(dnbhoogspanning_assets)
+        eminfra_client.update_toestand(asset=dnbhoogspanning, toestand=AssetDTOToestand.IN_GEBRUIK)
 
-        logging.info('Toevoegen EAN-nummer als eigenschap')
-        ean = eminfra_client.search_kenmerk_elektrisch_aansluitpunt(asset_uuid=asset).elektriciteitsAansluitingRef.get(
-            'ean')
-        eigenschap_eanNummer = eminfra_client.get_eigenschappen(assetId=asset.uuid, eigenschap_naam='eanNummer')
-        eigenschap_eanNummer.typedVa
-        eminfra_client.update_eigenschap(assetId=asset.uuid, eigenschap=eigenschap_eanNummer)
+        transfer_ean_number(eminfra_client, asset, dnbhoogspanning, ean_bronAsset)
 
         logging.info('Energiemeter toevoegen via een HoortBij-relatie')
         if not energiemeter_assets:
@@ -415,14 +373,21 @@ def process_hoogspanning(eminfra_client: EMInfraClient, df: pd.DataFrame):
             energiemeter = eminfra_client.get_asset_by_id(energiemeter_dict.get("uuid"))
         else:
             energiemeter = get_first_list_element(energiemeter_assets)
+        eminfra_client.update_toestand(asset=energiemeter, toestand=AssetDTOToestand.IN_GEBRUIK)
 
-        logging.info('Voedt-relatie toevoegen tussen dnblaagspanning en energiemeter')
-        create_relatie_if_missing(
-            eminfra_client=eminfra_client,
-            bronAsset=dnbhoogspanning,
-            doelAsset=energiemeter,
-            relatie_uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt')
 
+def process_tunnel(eminfra_client: EMInfraClient, df: pd.DataFrame):
+    """
+    Loskoppelen van alle elektrische aansluitingen
+
+    :param eminfra_client:
+    :param df:
+    :return:
+    """
+    df.reset_index(drop="index", inplace=True)
+    for idx, df_row in df.iterrows():
+        asset = list(eminfra_client.search_asset_by_uuid(asset_uuid=df_row["uuid"]))[0]
+        logging.info(f'Processing asset ({idx + 1}/{len(df)}): {asset.uuid}')
         eminfra_client.disconnect_kenmerk_elektrisch_aansluitpunt(asset_uuid=asset.uuid)
 
 
@@ -432,8 +397,7 @@ if __name__ == '__main__':
     logging.info('EAN-nummers verplaatsen:\t EAN-nummers overdragen van assets (Legacy) naar DNBLaagspanning (OTL)')
     eminfra_client = EMInfraClient(env=Environment.DEV, auth_type=AuthType.JWT, settings_path=load_settings())
 
-    filepath = Path().home() / 'Nordend/AWV - Documents/ReportingServiceAssets/Report0144/input' / '[RSA] Assets (legacy) met ingevuld kenmerk_ _elektrische aansluiting_DEV.xlsx'
-    # filepath = Path().home() / 'Nordend/AWV - Documents/ReportingServiceAssets/Report0144/input' / '[RSA] Assets (legacy) met ingevuld kenmerk_ _elektrische aansluiting_.xlsx'
+    filepath = Path().home() / 'Nordend/AWV - Documents/ReportingServiceAssets/Report0144/input' / '[RSA] Assets (legacy) met ingevuld kenmerk_ _elektrische aansluiting_.xlsx'
     usecols = ['uuid', 'naam', 'naampad', 'isTunnel', 'toestand', 'assettype_naam', 'ean', 'aansluiting',
                'opmerkingen (blijvend)']
     df_assets = read_rsa_report(filepath, usecols=usecols)
@@ -442,6 +406,14 @@ if __name__ == '__main__':
     df_biflash = df_assets[df_assets['opmerkingen (blijvend)'] == 'Operatie Bi-flash forfait']
     df_laagspanning = df_assets[df_assets['opmerkingen (blijvend)'] == 'Operatie Laagspanning']
     df_hoogspanning = df_assets[df_assets['opmerkingen (blijvend)'] == 'Operatie Hoogspanning']
+    df_beverentunnel = df_assets[(df_assets['opmerkingen (blijvend)'] == 'Beverentunnel') & (df_assets['assettype_naam'] != 'Hoogspanning (Legacy)')]
+    df_craeybeckxtunnel = df_assets[(df_assets['opmerkingen (blijvend)'] == 'Craeybeckxtunnel') & (df_assets['assettype_naam'] != 'Hoogspanning (Legacy)')]
+    df_jandevostunnel = df_assets[(df_assets['opmerkingen (blijvend)'] == 'Jan de Vos tunnel') & (df_assets['assettype_naam'] != 'Hoogspanning (Legacy)')]
+    df_kennedytunnel = df_assets[(df_assets['opmerkingen (blijvend)'] == 'Kennedytunnel') & (df_assets['assettype_naam'] != 'Hoogspanning (Legacy)')]
+    df_krijgsbaantunnel = df_assets[(df_assets['opmerkingen (blijvend)'] == 'Krijgsbaantunnel') & (df_assets['assettype_naam'] != 'Hoogspanning (Legacy)')]
+    df_leonardtunnel = df_assets[(df_assets['opmerkingen (blijvend)'] == 'Leonardtunnel') & (df_assets['assettype_naam'] != 'Hoogspanning (Legacy)')]
+    df_noordzuidtunnel = df_assets[(df_assets['opmerkingen (blijvend)'] == 'Noord-Zuid tunnel') & (df_assets['assettype_naam'] != 'Hoogspanning (Legacy)')]
+    df_tijsmanstunnel = df_assets[(df_assets['opmerkingen (blijvend)'] == 'Tijsmanstunnel') & (df_assets['assettype_naam'] != 'Hoogspanning (Legacy)')]
 
     headers = ('uuid', 'naam', 'assettype_naam',
                'kast_uuid', 'kast_naam',
@@ -451,24 +423,41 @@ if __name__ == '__main__':
                'dnblaagspanning_uuid', 'dnblaagspanning_naam', 'energiemeter_uuid', 'energiemeter_naam',
                'heeftBijhorendeAssets_ls_dnblaagspanning', 'heeftBijhorendeAssets_ls_energiemeter',
                'voedt_dnblaagspanning_energiemeterdnb')
-    rows = []
 
-    # logging.info("Loskoppelen fictieve aansluitingen")
-    # if not df_assets_fictieve_aansluiting.empty:
-    #     process_fictieve_aansluiting(eminfra_client=eminfra_client, df=df_assets_fictieve_aansluiting)
+    logging.info("Loskoppelen fictieve aansluitingen")
+    if not df_assets_fictieve_aansluiting.empty:
+        process_fictieve_aansluiting(eminfra_client=eminfra_client, df=df_assets_fictieve_aansluiting)
 
-    # logging.info("Seinbrug: Loskoppelen elektrische aansluiting en toevoegen van EAN-nummer als commentaar.")
-    # if not df_seinbrug.empty:
-    #     process_seinbrug(eminfra_client, df_seinbrug)
+    logging.info("Seinbrug: Loskoppelen elektrische aansluiting en toevoegen van EAN-nummer als commentaar.")
+    if not df_seinbrug.empty:
+        process_seinbrug(eminfra_client, df_seinbrug)
 
-    # logging.info("Bi-flash: toevoegen van een bijhorende DNBLaagspanning (OTL) en forfaitaire aansluiting (OTL).")
-    # if not df_biflash.empty:
-    #     process_biflash(eminfra_client, df_biflash)
+    logging.info("Bi-flash: toevoegen van een bijhorende DNBLaagspanning (OTL) en forfaitaire aansluiting (OTL).")
+    if not df_biflash.empty:
+        process_biflash(eminfra_client, df_biflash)
 
     logging.info("Laagspanning: toevoegen van een bijhorende DNBLaagspanning (OTL) en Energiemeter (OTL).")
     if not df_laagspanning.empty:
         process_laagspanning(eminfra_client, df_laagspanning)
 
-    # logging.info("Hoogspanning: toevoegen van een bijhorende DNBHoogspanning (OTL) en Energiemeter (OTL).")
-    # if not df_hoogspanning.empty:
-    #     process_hoogspanning(eminfra_client, df_hoogspanning)
+    logging.info("Hoogspanning: toevoegen van een bijhorende DNBHoogspanning (OTL) en Energiemeter (OTL).")
+    if not df_hoogspanning.empty:
+        process_hoogspanning(eminfra_client, df_hoogspanning)
+
+    logging.info("Elektrische aansluitingen loskoppelen voor alle tunnel elementen")
+    if not df_beverentunnel.empty:
+        process_tunnel(eminfra_client=eminfra_client, df=df_beverentunnel)
+    if not df_craeybeckxtunnel.empty:
+        process_tunnel(eminfra_client=eminfra_client, df=df_craeybeckxtunnel)
+    if not df_jandevostunnel.empty:
+        process_tunnel(eminfra_client=eminfra_client, df=df_jandevostunnel)
+    if not df_kennedytunnel.empty:
+        process_tunnel(eminfra_client=eminfra_client, df=df_kennedytunnel)
+    if not df_krijgsbaantunnel.empty:
+        process_tunnel(eminfra_client=eminfra_client, df=df_krijgsbaantunnel)
+    if not df_leonardtunnel.empty:
+        process_tunnel(eminfra_client=eminfra_client,df=df_leonardtunnel)
+    if not df_noordzuidtunnel.empty:
+        process_tunnel(eminfra_client=eminfra_client,df=df_noordzuidtunnel)
+    if not df_tijsmanstunnel.empty:
+        process_tunnel(eminfra_client=eminfra_client, df=df_tijsmanstunnel)
