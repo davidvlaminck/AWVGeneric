@@ -9,7 +9,7 @@ from otlmow_model.OtlmowModel.Classes.ImplementatieElement.RelatieObject import 
 from otlmow_model.OtlmowModel.Helpers.RelationCreator import create_betrokkenerelation
 from otlmow_converter.OtlmowConverter import OtlmowConverter
 from UseCases.utils import load_settings
-from UseCases.betrokkenerelaties.utils_betrokkenerelatie import build_betrokkenerelatie, get_bestaande_betrokkenerelaties
+from UseCases.utils import build_betrokkenerelatie, get_bestaande_betrokkenerelaties
 
 BASE_DIR = Path.home() / "OneDrive - Nordend/projects/AWV/OTL_Aanpassingen/Toezichter_update"
 INPUT_FILE = BASE_DIR / "input" / "toezichter_mapping_link_OTL-Legacy_20250925.xlsx"

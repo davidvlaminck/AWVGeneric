@@ -30,7 +30,10 @@ class EMSONClient:
     def get_assets(self) -> Generator[dict]:
         paging_cursor = None
         while True:
-            response = self.requester.get( url='api/otl/assets', headers={'em-paging-cursor': paging_cursor})
+            if paging_cursor:
+                response = self.requester.get(url=f'api/otl/assets?pagingMode=CURSOR&fromCursor={paging_cursor}')
+            else:
+                response = self.requester.get(url=f'api/otl/assets?pagingMode=CURSOR')
             if response.status_code != 200:
                 print(response)
                 raise ProcessLookupError(response.content.decode("utf-8"))

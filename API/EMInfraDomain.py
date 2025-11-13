@@ -295,6 +295,8 @@ class QueryDTO(BaseDataclass):
     pagingMode: PagingModeEnum | None = None
 
     def __post_init__(self):
+        if self.settings is None:
+            self.settings = {}
         self._fix_enums({('pagingMode', PagingModeEnum)})
         self._fix_nested_classes({('selection', SelectionDTO), ('expansions', ExpansionsDTO)})
 
@@ -873,3 +875,18 @@ class AssetRelatieDTO(BaseDataclass):
 
     def __post_init__(self):
         self._fix_nested_list_classes({('links', Link)})
+@dataclass
+class GraphLinks(BaseDataclass):
+    bronUuid: str
+    doelUuid: str
+    relatieTypeUuid: str
+    relatieUuid: str
+
+@dataclass
+class Graph(BaseDataclass):
+    nodes: [AssetDTO]
+    links: [GraphLinks]
+    limitExceeded: bool
+
+    def __post_init__(self):
+        self._fix_nested_list_classes({('nodes', AssetDTO), ('links', GraphLinks)})

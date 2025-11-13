@@ -62,4 +62,4 @@ if __name__ == '__main__':
                 naam = 'VLUCHTK.M.POS'
             commentaar = asset['AIMObject.notitie']
             isActief = asset['AIMDBStatus.isActief']
-            eminfra_client.update_asset(uuid=uuid, naam=naam, toestand=toestand, commentaar=commentaar, isActief=isActief)
+            eminfra_client.update_asset(uuid=uuid, naam=naam, toestand=toestand, commentaar=commentaar, actief=isActief)
