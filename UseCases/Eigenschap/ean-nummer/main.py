@@ -165,7 +165,7 @@ def process_seinbrug(eminfra_client: EMInfraClient, df: pd.DataFrame):
         eminfra_client.disconnect_kenmerk_elektrisch_aansluitpunt(asset_uuid=asset.uuid)
 
 
-def process_biflash(eminfra_client: EMInfraClient, df: pd.DataFrame):
+def process_forfait(eminfra_client: EMInfraClient, df: pd.DataFrame):
     """
     Toevoegen van twee assets via de HoortBij-relatie: DNBLaagspanning en Forfaitaire aansluiting.
     Toevoegen Voedt-relatie van DNBLaagspanning naar Forfaitaire aansluiting
@@ -418,7 +418,7 @@ if __name__ == '__main__':
 
     logging.info("Bi-flash: toevoegen van een bijhorende DNBLaagspanning (OTL) en forfaitaire aansluiting (OTL).")
     if not df_biflash.empty:
-        process_biflash(eminfra_client, df_biflash)
+        process_forfait(eminfra_client, df_biflash)
 
     logging.info("Laagspanning: toevoegen van een bijhorende DNBLaagspanning (OTL) en Energiemeter (OTL).")
     if not df_laagspanning.empty:
