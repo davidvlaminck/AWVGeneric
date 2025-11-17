@@ -379,7 +379,7 @@ if __name__ == '__main__':
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s',
                         filemode="w")
     logging.info('EAN-nummers verplaatsen:\t EAN-nummers overdragen van assets (Legacy) naar DNBLaagspanning (OTL)')
-    eminfra_client = EMInfraClient(env=Environment.DEV, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
 
     filepath = Path().home() / 'Nordend/AWV - Documents/ReportingServiceAssets/Report0144/input' / '[RSA] Assets (legacy) met ingevuld kenmerk_ _elektrische aansluiting_.xlsx'
     usecols = ['uuid', 'naam', 'naampad', 'isTunnel', 'toestand', 'assettype_naam', 'ean', 'aansluiting',
@@ -388,6 +388,7 @@ if __name__ == '__main__':
     df_assets_fictieve_aansluiting = df_assets[df_assets['aansluiting'] == 'A11.FICTIEF']
     df_seinbrug = df_assets[df_assets['opmerkingen (blijvend)'] == 'Operatie toevoegen als commentaar']
     df_biflash = df_assets[df_assets['opmerkingen (blijvend)'] == 'Operatie Bi-flash forfait']
+    df_forfait = df_assets[df_assets['opmerkingen (blijvend)'] == 'FORFAIT']
     df_laagspanning = df_assets[df_assets['opmerkingen (blijvend)'] == 'Operatie Laagspanning']
     df_hoogspanning = df_assets[df_assets['opmerkingen (blijvend)'] == 'Operatie Hoogspanning']
     df_beverentunnel = df_assets[(df_assets['opmerkingen (blijvend)'] == 'Beverentunnel') & (df_assets['assettype_naam'] != 'Hoogspanning (Legacy)')]
@@ -419,6 +420,10 @@ if __name__ == '__main__':
     logging.info("Bi-flash: toevoegen van een bijhorende DNBLaagspanning (OTL) en forfaitaire aansluiting (OTL).")
     if not df_biflash.empty:
         process_forfait(eminfra_client, df_biflash)
+
+    logging.info("forfait: toevoegen van bijhorende assets conform forfaitaire aansluitingen (DNBLaagspanning (OTL) en forfaitaire aansluiting (OTL)).")
+    if not df_forfait.empty:
+        process_forfait(eminfra_client, df_forfait)
 
     logging.info("Laagspanning: toevoegen van een bijhorende DNBLaagspanning (OTL) en Energiemeter (OTL).")
     if not df_laagspanning.empty:
