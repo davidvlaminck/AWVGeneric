@@ -12,7 +12,7 @@ ASSETTYPE_UUID_KAST = '10377658-776f-4c21-a294-6c740b9f655e'
 def add_relaties_kast(client: EMInfraClient):
     """
     Opzoeken van alle kasten.
-    Opzoeken van de child assets per Kast en opdelen in LS en LSDeel.
+    Opzoeken van de child assets LS en LSDeel.
     Toevoegen van een Bevestiging-relatie van de Kast naar LS en LSDeel.
 
     :param client:
@@ -29,16 +29,17 @@ def add_relaties_kast(client: EMInfraClient):
         ls_deel_assets = [item for item in child_assets if
                           item.type.uri == 'https://lgc.data.wegenenverkeer.be/ns/installatie#LSDeel']
 
-        if len(ls_assets) == 1:
+        if ls_assets:
             ls = ls_assets[0]
-            client.create_assetrelatie(bronAsset=asset, doelAsset=ls, relatie=RelatieEnum.BEVESTIGING)
-            # todo plaats bovenstaande in de generieke functie
-            create_relatie_if_missing()
-        if len(ls_deel_assets) == 1:
+            create_relatie_if_missing(client=client, bron_asset=asset, doel_asset=ls, relatie=RelatieEnum.BEVESTIGING)
+        else:
+            logging.info('No LS found.')
+
+        if ls_deel_assets:
             lsdeel = ls_assets[0]
-            client.create_assetrelatie(bronAsset=asset, doelAsset=lsdeel, relatie=RelatieEnum.BEVESTIGING)
-            # todo plaats bovenstaande in de generieke functie
-            create_relatie_if_missing()
+            create_relatie_if_missing(client=client, bron_asset=asset, doel_asset=lsdeel, relatie=RelatieEnum.BEVESTIGING)
+        else:
+            logging.info('No LSDeel found.')
 
 if __name__ == '__main__':
     configure_logger()
