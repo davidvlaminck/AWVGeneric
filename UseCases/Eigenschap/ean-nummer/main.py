@@ -393,12 +393,14 @@ if __name__ == '__main__':
     df_hoogspanning = df_assets[df_assets['opmerkingen (blijvend)'] == 'Operatie Hoogspanning']
     df_beverentunnel = df_assets[(df_assets['opmerkingen (blijvend)'] == 'Beverentunnel') & (df_assets['assettype_naam'] != 'Hoogspanning (Legacy)')]
     df_craeybeckxtunnel = df_assets[(df_assets['opmerkingen (blijvend)'] == 'Craeybeckxtunnel') & (df_assets['assettype_naam'] != 'Hoogspanning (Legacy)')]
+    df_craeybeckxtunnel_hs = df_assets[(df_assets['opmerkingen (blijvend)'] == 'Craeybeckxtunnel') & (df_assets['assettype_naam'] == 'Hoogspanning (Legacy)')]
     df_jandevostunnel = df_assets[(df_assets['opmerkingen (blijvend)'] == 'Jan de Vos tunnel') & (df_assets['assettype_naam'] != 'Hoogspanning (Legacy)')]
     df_kennedytunnel = df_assets[(df_assets['opmerkingen (blijvend)'] == 'Kennedytunnel') & (df_assets['assettype_naam'] != 'Hoogspanning (Legacy)')]
     df_krijgsbaantunnel = df_assets[(df_assets['opmerkingen (blijvend)'] == 'Krijgsbaantunnel') & (df_assets['assettype_naam'] != 'Hoogspanning (Legacy)')]
     df_leonardtunnel = df_assets[(df_assets['opmerkingen (blijvend)'] == 'Leonardtunnel') & (df_assets['assettype_naam'] != 'Hoogspanning (Legacy)')]
     df_noordzuidtunnel = df_assets[(df_assets['opmerkingen (blijvend)'] == 'Noord-Zuid tunnel') & (df_assets['assettype_naam'] != 'Hoogspanning (Legacy)')]
     df_tijsmanstunnel = df_assets[(df_assets['opmerkingen (blijvend)'] == 'Tijsmanstunnel') & (df_assets['assettype_naam'] != 'Hoogspanning (Legacy)')]
+
 
     headers = ('uuid', 'naam', 'assettype_naam',
                'kast_uuid', 'kast_naam',
@@ -432,6 +434,9 @@ if __name__ == '__main__':
     logging.info("Hoogspanning: toevoegen van een bijhorende DNBHoogspanning (OTL) en Energiemeter (OTL).")
     if not df_hoogspanning.empty:
         process_hoogspanning(eminfra_client, df_hoogspanning)
+
+    if not df_craeybeckxtunnel_hs.empty:
+        process_hoogspanning(eminfra_client, df_craeybeckxtunnel_hs)
 
     logging.info("Elektrische aansluitingen loskoppelen voor alle tunnel elementen")
     if not df_beverentunnel.empty:
