@@ -29,7 +29,16 @@ if __name__ == '__main__':
                 aanmaakdatum = event.createdOn
                 gebruiker_uuid = event.data.get("createdBy")
                 identiteit = eminfra_client.get_identiteit(toezichter_uuid=gebruiker_uuid)
-                gebruiker = f'{identiteit.voornaam} {identiteit.naam}'
+                if (
+                    identiteit is not None
+                    and hasattr(identiteit, "voornaam")
+                    and hasattr(identiteit, "naam")
+                    and identiteit.voornaam is not None
+                    and identiteit.naam is not None
+                ):
+                    gebruiker = f'{identiteit.voornaam} {identiteit.naam}'
+                else:
+                    gebruiker = "Onbekend"
         row = {
             "id": asset_uuid
             , "type": df_row["type"]
