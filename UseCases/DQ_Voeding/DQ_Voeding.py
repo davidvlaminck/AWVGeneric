@@ -8,6 +8,8 @@ from UseCases.utils import load_settings, configure_logger, create_relatie_if_mi
 from utils.query_dto_helpers import build_query_search_assettype
 from utils.wkt_geometry_helpers import format_locatie_kenmerk_lgc_2_wkt
 
+from otlmow_model.OtlmowModel.BaseClasses.OTLObject import dynamic_create_instance_from_uri
+
 ASSETTYPE_UUID_KAST = '10377658-776f-4c21-a294-6c740b9f655e'
 ASSETTYPE_UUID_LS = '80fdf1b4-e311-4270-92ba-6367d2a42d47'
 ASSETTYPE_UUID_LSDEEL = 'b4361a72-e1d5-41c5-bfcc-d48f459f4048'
@@ -131,7 +133,7 @@ def add_relaties_vanuit_kast(client: EMInfraClient) -> [list]:
             create_relatie_if_missing(client=client, bron_asset=asset_dnblaagspanning,
                                       doel_asset=asset_forfaitaireaansluiting, relatie=RelatieEnum.VOEDT)
 
-        if counter % 5 == 0:
+        if counter % 1 == 0:
             break
 
     return [kast_meerdere_ls, kast_meerdere_lsdeel,
@@ -244,7 +246,7 @@ def add_relaties_vanuit_hscabine(client: EMInfraClient) -> [list]:
         elif len(assets_energiemeterdnb) > 1:
             hs_meerdere_energiemeter.append(asset_hs)
 
-        if counter % 5 == 0:
+        if counter % 1 == 0:
             break
 
     return [hscab_meerdere_hs, hscab_meerdere_hsdeel, hscab_meerdere_lsdeel, hs_meerdere_dnbhoogspanning,
@@ -265,3 +267,7 @@ if __name__ == '__main__':
     # todo: bestaande en nieuwe geometrie vergelijken.
     # Pas niets aan indien de locatie reeds is afgeleid
     # Geef een warning als de afstand te groot is.
+
+    # todo: logging toepassen voor de lijsten die worden teruggegeven uit de functies.
+    logging.info("inspect data")
+
