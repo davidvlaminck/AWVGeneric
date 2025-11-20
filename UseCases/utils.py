@@ -120,6 +120,7 @@ def create_relatie_if_missing(client: EMInfraClient, bron_asset: AssetDTO, doel_
     """
     Given a relatie type (relatie_uri), and two assets (bronAsset, doelAsset), search for the existing relation(s)
     and create a new relation if missing.
+    For non-directional assets (e.g. Bevestiging), retry with inversed bron_asset and doel_asset.
     Raise an error if multiple relations exist.
     Returns the object AssetRelatieDTO.
 
@@ -133,7 +134,11 @@ def create_relatie_if_missing(client: EMInfraClient, bron_asset: AssetDTO, doel_
                  f'{doel_asset.type.korteUri} ({doel_asset.uuid}).')
     kenmerk_type_uuid, relatie_type_uuid = client.get_kenmerktype_and_relatietype_id(
         relatie_uri=relatie.value)
-    relaties = client.search_assetrelaties(type=relatie_type_uuid, bronAsset=bron_asset, doelAsset=doel_asset)
+    if relatie == RelatieEnum.BEVESTIGING: # bidirectionele relaties
+        relaties = client.search_assetrelaties(type=relatie_type_uuid, bronAsset=bron_asset, doelAsset=doel_asset)
+        relaties += client.search_assetrelaties(type=relatie_type_uuid, bronAsset=doel_asset, doelAsset=bron_asset)
+    else:
+        relaties = client.search_assetrelaties(type=relatie_type_uuid, bronAsset=bron_asset, doelAsset=doel_asset)
     if len(relaties) > 1:
         raise ValueError(f'Found {len(relaties)}, expected 1')
     elif len(relaties) == 0:
