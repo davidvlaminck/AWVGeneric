@@ -38,7 +38,7 @@ def build_query_search_assettype(assettype_uuid: str) -> QueryDTO:
 if __name__ == '__main__':
     configure_logger()
     logging.info('Beëindigen van bestekkoppeling "VWT/NET/2020/017" bij alle Netwerkelementen.')
-    eminfra_client = EMInfraClient(env=Environment.TEI, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
 
     logging.info("Get all assets of assettype Netwerkelement.")
     search_query = build_query_search_assettype(assettype_uuid=ASSETTYPE_UUID_NETWERKELEMENT)
@@ -47,8 +47,6 @@ if __name__ == '__main__':
     assets_updated = []
     for counter, asset in enumerate(generator, start=1):
         logging.debug(f'Processing ({counter}) asset: {asset.uuid}; naam: {asset.naam}; assettype: {asset.type.uri}')
-        if counter % 5 == 0:
-            break
 
         bestekkoppelingen = eminfra_client.get_bestekkoppelingen_by_asset_uuid(asset_uuid=asset.uuid)
         werkbestekken = [k for k in bestekkoppelingen if k.categorie == BestekCategorieEnum.WERKBESTEK and k.status == BestekKoppelingStatusEnum.ACTIEF] # test dit.
