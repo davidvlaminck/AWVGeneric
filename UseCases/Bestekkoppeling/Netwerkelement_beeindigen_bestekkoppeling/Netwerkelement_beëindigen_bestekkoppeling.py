@@ -14,7 +14,7 @@ ASSETTYPE_UUID_NETWERKELEMENT = 'b6f86b8d-543d-4525-8458-36b498333416'
 EINDDATUM = datetime(year=2025, month=11, day=21, hour=14)
 OUTPUT_EXCEL_PATH = 'Netwerkelementen_Swarco_VWT-NET-2020-017.xlsx'
 
-# todo: reuse this function from the utils.
+# reuse this function from the utils.
 def build_query_search_assettype(assettype_uuid: str) -> QueryDTO:
     return QueryDTO(
         size=100, from_=0, pagingMode=PagingModeEnum.OFFSET,
@@ -43,8 +43,6 @@ if __name__ == '__main__':
     logging.info("Get all assets of assettype Netwerkelement.")
     search_query = build_query_search_assettype(assettype_uuid=ASSETTYPE_UUID_NETWERKELEMENT)
     generator = eminfra_client.search_assets(query_dto=search_query, actief=True)
-    # # debug andere generator.
-    # generator = eminfra_client.search_asset_by_uuid(asset_uuid='027dd5ca-3344-415f-9079-6f2e6c1c9c40')
 
     assets_updated = []
     for counter, asset in enumerate(generator, start=1):
@@ -66,8 +64,7 @@ if __name__ == '__main__':
                 "uuid": asset.uuid
                 , "eminfra_link": f'https://apps.mow.vlaanderen.be/eminfra/assets/{asset.uuid}'
             })
-            # todo activate onderstaande lijn code.
-            # eminfra_client.change_bestekkoppelingen_by_asset_uuid(asset.uuid, bestekkoppelingen)
+            eminfra_client.change_bestekkoppelingen_by_asset_uuid(asset.uuid, bestekkoppelingen)
         else:
             logging.debug('Ga verder met het volgende Netwerkelement,'
                           'geen overeenkomstige bestekkoppeling of minstens 2 actieve werkbestekken.')
