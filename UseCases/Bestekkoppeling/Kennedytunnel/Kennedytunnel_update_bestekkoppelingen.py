@@ -34,7 +34,7 @@ if __name__ == '__main__':
         asset is het AssetDTO object
         """
         # Ophalen asset:
-        asset = eminfra_client.get_asset_by_id(assettype_id=df_asset.get("uuid"))
+        asset = eminfra_client.get_asset_by_id(asset_id=df_asset.get("uuid"))
         logging.debug(f'Processing asset: {asset.uuid}; naam: {asset.naam}; assettype: {asset.type.uri}')
 
         # search all bestekkoppelingen

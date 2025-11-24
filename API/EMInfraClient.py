@@ -16,7 +16,7 @@ from API.EMInfraDomain import OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO
     RelatieTypeDTO, KenmerkType, EigenschapValueDTO, RelatieTypeDTOList, BeheerobjectDTO, ToezichtgroepTypeEnum, \
     ToezichtgroepDTO, BaseDataclass, BeheerobjectTypeDTO, BoomstructuurAssetTypeEnum, KenmerkTypeEnum, AssetDTOToestand, \
     EigenschapValueUpdateDTO, GeometryNiveau, GeometryBron, GeometryNauwkeurigheid, GeometrieKenmerk, \
-    SchadebeheerderKenmerk, Graph
+    SchadebeheerderKenmerk, ElektrischAansluitpuntKenmerk, AssetRelatieDTO, RelatieEnum, Graph
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 from utils.date_helpers import validate_dates, format_datetime
@@ -730,6 +730,25 @@ class EMInfraClient:
     def search_all_assets(self, query_dto: QueryDTO) -> Generator[AssetDTO]:
         yield from self._search_assets_helper(query_dto)
 
+    def create_asset_and_relatie(self, assetId: str, naam: str, typeUuid: str, relatie_uri: str) -> dict:
+        """
+
+        :param assetId: asset uuid en tevens bron asset van de aan te maken relatie
+        :param naam: naam van de nieuw aan te maken asset
+        :param typeUuid: assettype van de nieuw aan te maken asset
+        :param relatie_uri: aan te maken relatie
+        :return:
+        """
+        kenmerkTypeId, relatieTypeId = self.get_kenmerktype_and_relatietype_id(relatie_uri=relatie_uri)
+        url = f'core/api/assets/{assetId}/kenmerken/{kenmerkTypeId}/assets-via/{relatieTypeId}/nieuw'
+        request_body = {"naam": naam, "typeUuid": typeUuid}
+        response = self.requester.post(url=url, json=request_body)
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return response.json()
+
+
     def create_asset(self, parent_uuid: str, naam: str, typeUuid: str,
                      parent_asset_type: BoomstructuurAssetTypeEnum = BoomstructuurAssetTypeEnum.ASSET) -> dict | None:
         """
@@ -1387,6 +1406,27 @@ class EMInfraClient:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
+    def update_commentaar(self, asset: AssetDTO, commentaar: str) -> None:
+        """
+        Update commentaar of an asset.
+        Keep the asset's naam, status, toestand.
+
+        :param asset:
+        :param commentaar:
+        :return:
+        """
+        request_body = {
+            "naam": asset.naam,
+            "actief": asset.actief,
+            "toestand": asset.toestand.value,
+            "commentaar": commentaar
+        }
+        response = self.requester.put(url=f'core/api/assets/{asset.uuid}', json=request_body)
+        if response.status_code != 202:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+
+
     def get_kenmerktype_and_relatietype_id(self, relatie_uri: str) -> (str, str):
         relaties_dict = {
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Sturing": [
@@ -1419,6 +1459,10 @@ class EMInfraClient:
             ],
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HoortBij": [
                 "8355857b-8892-45a5-a86b-6375b797c764",
+                "812dd4f3-c34e-43d1-88f1-3bcd0b1e89c2"
+            ],
+            "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HeeftBijhorendeAssets": [
+                "5d58905c-412c-44f8-8872-21519041e391",
                 "812dd4f3-c34e-43d1-88f1-3bcd0b1e89c2"
             ],
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#VoedtAangestuurd": [
@@ -1493,7 +1537,7 @@ class EMInfraClient:
         :param relatieTypeId: f2c5c4a1-0899-4053-b3b3-2d662c717b44
         :return:
         """
-        _target_asset = self.get_asset_by_id(assettype_id=doel_assetId)
+        _target_asset = self.get_asset_by_id(asset_id=doel_assetId)
         _type = _target_asset._type
         if _type == 'installatie':
             relatie_type = 'installaties-via'
@@ -1507,18 +1551,15 @@ class EMInfraClient:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-    def create_assetrelatie(self, bronAsset_uuid: str, doelAsset_uuid: str, relatieType_uuid: str) -> str:
-        bron_asset = next(self.search_asset_by_uuid(asset_uuid=bronAsset_uuid), None)
-        doel_asset = next(self.search_asset_by_uuid(asset_uuid=doelAsset_uuid), None)
-
+    def create_assetrelatie(self, bronAsset: AssetDTO, doelAsset: AssetDTO, relatieType_uuid: str) -> AssetRelatieDTO:
         json_body = {
             "bronAsset": {
-                "uuid": f"{bronAsset_uuid}",
-                "_type": f"{bron_asset._type}"
+                "uuid": f"{bronAsset.uuid}",
+                "_type": f"{bronAsset._type}"
             },
             "doelAsset": {
-                "uuid": f"{doelAsset_uuid}",
-                "_type": f"{doel_asset._type}"
+                "uuid": f"{doelAsset.uuid}",
+                "_type": f"{doelAsset._type}"
             },
             "relatieType": {
                 "uuid": f"{relatieType_uuid}"
@@ -1529,7 +1570,36 @@ class EMInfraClient:
         if response.status_code != 202:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
-        return response.json().get("uuid")
+        return self.get_assetrelaties(response.json().get("uuid"))
+
+    def search_assetrelaties(self, type: str, bronAsset: AssetDTO, doelAsset: AssetDTO) -> [AssetRelatieDTO]:
+        query_dto = QueryDTO(
+            size=100, from_=0, pagingMode=PagingModeEnum.OFFSET,
+            selection=SelectionDTO(
+                expressions=[
+                    ExpressionDTO(terms=[TermDTO(property='type', operator=OperatorEnum.EQ, value=type)]),
+                    ExpressionDTO(terms=[TermDTO(property='bronAsset', operator=OperatorEnum.EQ, value=bronAsset.uuid)], logicalOp=LogicalOpEnum.AND),
+                    ExpressionDTO(terms=[TermDTO(property='doelAsset', operator=OperatorEnum.EQ, value=doelAsset.uuid)], logicalOp=LogicalOpEnum.AND)
+                ]))
+        url = 'core/api/assetrelaties/search'
+        response = self.requester.post(url=url, data=query_dto.json())
+        if response.status_code != 200:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return [AssetRelatieDTO.from_dict(item) for item in response.json()['data']]
+
+    def get_assetrelaties(self, id: str) -> AssetRelatieDTO:
+        """
+        Get AssetRelatieDTO object from assetrelatie_uuid (id)
+        :param id: asssetrelatie_uuid
+        :return: AssetRelatieDTO
+        """
+        url = f'core/api/assetrelaties/{id}'
+        response = self.requester.get(url=url)
+        if response.status_code != 200:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return AssetRelatieDTO.from_dict(response.json())
 
     def search_assetrelaties_OTL(self, bronAsset_uuid: str = None, doelAsset_uuid: str = None) -> dict:
         if bronAsset_uuid is None and doelAsset_uuid is None:
@@ -1573,16 +1643,21 @@ class EMInfraClient:
             all_kenmerken = [item for item in all_kenmerken if item.type.get("naam").startswith(naam.value)][0]
         return all_kenmerken
 
-    def get_eigenschappen(self, assetId: str) -> list[EigenschapValueDTO]:
+    def get_eigenschappen(self, assetId: str, eigenschap_naam: str = None) -> list[EigenschapValueDTO]:
         # ophalen kenmerk_uuid
         kenmerken = self.get_kenmerken(assetId=assetId)
         kenmerk_uuid = \
             [kenmerk.type.get('uuid') for kenmerk in kenmerken if kenmerk.type.get('naam').startswith('Eigenschappen')][0]
 
-        # ophalen eigenschapwaarden
+        # ophalen alle eigenschapwaarden
         url = f'core/api/assets/{assetId}/kenmerken/{kenmerk_uuid}/eigenschapwaarden'
         json_dict = self.requester.get(url).json()
-        return [EigenschapValueDTO.from_dict(item) for item in json_dict['data']]
+        eigenschappen = [EigenschapValueDTO.from_dict(item) for item in json_dict['data']]
+
+        # optioneel eigenschap waarden filteren
+        if eigenschap_naam:
+            eigenschappen = [eig for eig in eigenschappen if eig.eigenschap.naam == eigenschap_naam]
+        return eigenschappen
 
     def get_eigenschapwaarden(self, assetId: str, eigenschap_naam: str = None) -> list[EigenschapValueDTO]:
         url = f'core/api/assets/{assetId}/kenmerken/753c1268-68c2-4e67-a6cc-62c0622b576b/eigenschapwaarden'
@@ -1810,6 +1885,91 @@ class EMInfraClient:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
+    def search_kenmerk_hoortbij(self, asset_uuid: str, naam: KenmerkTypeEnum = KenmerkTypeEnum.HEEFTBIJHORENDEASSETS) -> [KenmerkType]:
+        if naam == KenmerkTypeEnum.HEEFTBIJHORENDEASSETS:
+            type_id = '5d58905c-412c-44f8-8872-21519041e391'
+        else:
+            raise NotImplementedError(f'Parameter "naam" = {naam} not implemented')
+
+        query_dto = QueryDTO(
+            size=10,
+            from_=0,
+            expansions=ExpansionsDTO(fields=[f'kenmerk:{type_id}']),
+            pagingMode=PagingModeEnum.OFFSET,
+            selection=SelectionDTO(
+                expressions=[ExpressionDTO(
+                    terms=[
+                        TermDTO(property='type.id', operator=OperatorEnum.EQ, value=type_id)
+                    ])
+                ])
+        )
+        url = f"core/api/assets/{asset_uuid}/kenmerken/search"
+        response = self.requester.post(url=url, data=query_dto.json())
+        if response.status_code != 200:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+
+        return [KenmerkType.from_dict(item) for item in response.json()['data']]
+
+    def search_kenmerk_elektrisch_aansluitpunt(self, asset_uuid: str, naam: KenmerkTypeEnum = KenmerkTypeEnum.ELEKTRISCH_AANSLUITPUNT) -> ElektrischAansluitpuntKenmerk | None:
+        """
+
+        :param asset_uuid:
+        :param naam:
+        :return: Returns object ElektrischAansluitpuntKenmerk, or None if missing.
+        """
+        if naam == KenmerkTypeEnum.ELEKTRISCH_AANSLUITPUNT:
+            type_id = '87dff279-4162-4031-ba30-fb7ffd9c014b'
+        else:
+            raise NotImplementedError(f'Parameter "naam" = {naam} not implemented')
+
+        query_dto = QueryDTO(
+            size=1,
+            from_=0,
+            expansions=ExpansionsDTO(fields=['kenmerk:87dff279-4162-4031-ba30-fb7ffd9c014b']),
+            pagingMode=PagingModeEnum.OFFSET,
+            selection=SelectionDTO(
+                expressions=[ExpressionDTO(
+                    terms=[
+                        TermDTO(property='type.id', operator=OperatorEnum.EQ, value=type_id)
+                    ])
+                ])
+        )
+        url = f"core/api/assets/{asset_uuid}/kenmerken/search"
+        response = self.requester.post(url=url, data=query_dto.json())
+        if response.status_code != 200:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+
+        elektrisch_aansluitpunt = [ElektrischAansluitpuntKenmerk.from_dict(item) for item in response.json()['data']][0]
+        if hasattr(elektrisch_aansluitpunt, 'elektriciteitsAansluitingRef'):
+            return elektrisch_aansluitpunt
+        else:
+            return None
+
+    def disconnect_kenmerk_elektrisch_aansluitpunt(self, asset_uuid: str) -> None:
+        url = f'core/api/assets/{asset_uuid}/kenmerken/87dff279-4162-4031-ba30-fb7ffd9c014b'
+        resp = self.requester.put(url=url, json={})
+        if resp.status_code != 202:
+            logging.error(resp)
+            raise ProcessLookupError(resp.content.decode())
+
+    def search_assets_via_relatie(self, asset_uuid: str, relatie: RelatieEnum) -> [AssetDTO]:
+        """
+        Returns a list of assets via the relatie.
+
+        :param asset_uuid: bron asset
+        :param relatie: relatieTypeEnum
+        :return:
+        """
+        kenmerkType_uuid, relatieType_uuid = self.get_kenmerktype_and_relatietype_id(relatie_uri=relatie.value)
+        url = f'core/api/assets/{asset_uuid}/kenmerken/{kenmerkType_uuid}/assets-via/{relatieType_uuid}'
+        resp = self.requester.get(url=url)
+        if resp.status_code != 200:
+            logging.error(resp)
+            raise ProcessLookupError(resp.content.decode())
+
+        return [AssetDTO.from_dict(item) for item in resp.json()['data']]
     def get_graph(self, asset_uuid: str, depth: int = 1, relatieTypes: list = None, actiefFilter: bool = True) -> Graph:
         """
         Generate the graph, starting from an asset, searching a certain depth and for some relatieTypes
