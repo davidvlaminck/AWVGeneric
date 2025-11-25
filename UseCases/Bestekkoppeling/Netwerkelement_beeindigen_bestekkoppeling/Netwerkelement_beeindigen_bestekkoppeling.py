@@ -49,19 +49,28 @@ if __name__ == '__main__':
         logging.debug(f'Processing ({counter}) asset: {asset.uuid}; naam: {asset.naam}; assettype: {asset.type.uri}')
 
         bestekkoppelingen = eminfra_client.get_bestekkoppelingen_by_asset_uuid(asset_uuid=asset.uuid)
-        actieve_werkbestekken = [k for k in bestekkoppelingen if k.status == BestekKoppelingStatusEnum.ACTIEF and k.categorie == BestekCategorieEnum.WERKBESTEK]
+        actieve_bestekken = [k for k in bestekkoppelingen if k.status == BestekKoppelingStatusEnum.ACTIEF]
+        actieve_bestekken_set = {
+            b.bestekRef.eDeltaDossiernummer for b in actieve_bestekken
+        }
+        nbr_actieve_bestekken = len(actieve_bestekken_set)
 
         bestekRef_swarco_2020_17 = eminfra_client.get_bestekref_by_eDelta_dossiernummer(eDelta_dossiernummer='VWT/NET/2020/017')
-        index, matching_bestekkoppeling = next(((i, x) for i, x in enumerate(bestekkoppelingen) if x.bestekRef.uuid == bestekRef_swarco_2020_17.uuid and x.categorie == BestekCategorieEnum.WERKBESTEK), (None, None))
+        index, matching_bestekkoppeling = next(((i, x) for i, x in enumerate(bestekkoppelingen) if x.status == BestekKoppelingStatusEnum.ACTIEF and x.bestekRef.uuid == bestekRef_swarco_2020_17.uuid and x.categorie == BestekCategorieEnum.WERKBESTEK), (None, None))
 
         logging.debug('Is de bestekkoppeling van Swarco een van de bestaande bestekkoppelingen?'
                       '\nEN is er minstens 1 ander actief bestek?')
-        if matching_bestekkoppeling and len(actieve_werkbestekken) >= 2:
+
+        if matching_bestekkoppeling and nbr_actieve_bestekken >= 2 and datetime.fromisoformat(matching_bestekkoppeling.startDatum).date() == datetime(year=2025, month=11, day=21).date():
             logging.debug(f'Beëindig bestekkoppeling {matching_bestekkoppeling.bestekRef.eDeltaBesteknummer}')
             bestekkoppelingen[index].eindDatum = format_datetime(EINDDATUM)
             # Update all the bestekkoppelingen for this asset
             assets_updated.append({
                 "uuid": asset.uuid
+                , "naam": asset.naam
+                , "bestek": 'VWT/NET/2020/017'
+                , "Start koppeling": matching_bestekkoppeling.startDatum
+                , "Einde koppeling": matching_bestekkoppeling.eindDatum
                 , "eminfra_link": f'https://apps.mow.vlaanderen.be/eminfra/assets/{asset.uuid}'
             })
             eminfra_client.change_bestekkoppelingen_by_asset_uuid(asset.uuid, bestekkoppelingen)
