@@ -23,30 +23,39 @@ if __name__ == '__main__':
     search_query = build_query_search_assettype(assettype_uuid=ASSETTYPE_UUID_NETWERKELEMENT)
     generator = eminfra_client.search_assets(query_dto=search_query, actief=True)
 
+    bestekRef_swarco_2020_17 = eminfra_client.get_bestekref_by_eDelta_dossiernummer(eDelta_dossiernummer='VWT/NET/2020/017')
     assets_updated = []
     for counter, asset in enumerate(generator, start=1):
         logging.debug(f'Processing ({counter}) asset: {asset.uuid}; naam: {asset.naam}; assettype: {asset.type.uri}')
 
         bestekkoppelingen = eminfra_client.get_bestekkoppelingen_by_asset_uuid(asset_uuid=asset.uuid)
-        bestekRef_swarco_2020_17 = eminfra_client.get_bestekref_by_eDelta_dossiernummer(eDelta_dossiernummer='VWT/NET/2020/017')
-        index, matching_bestekkoppeling = next(((i, x) for i, x in enumerate(bestekkoppelingen) if x.status == BestekKoppelingStatusEnum.INACTIEF and x.bestekRef.uuid == bestekRef_swarco_2020_17.uuid and x.categorie == BestekCategorieEnum.WERKBESTEK), (None, None))
+        index = None
+        matching_bestekkoppeling = None
 
-        if matching_bestekkoppeling and datetime.fromisoformat(matching_bestekkoppeling.startDatum).date() == SPECIFIC_DATE:
-            logging.debug(f'Verwijder bestekkoppeling {matching_bestekkoppeling.bestekRef.eDeltaBesteknummer}')
-            assets_updated.append({
-                "uuid": asset.uuid
-                , "naam": asset.naam
-                , "bestek": 'VWT/NET/2020/017'
-                , "Start koppeling": matching_bestekkoppeling.startDatum
-                , "Einde koppeling": matching_bestekkoppeling.eindDatum
-                , "eminfra_link": f'https://apps.mow.vlaanderen.be/eminfra/assets/{asset.uuid}'
-            })
-            del bestekkoppelingen[index]
-            eminfra_client.change_bestekkoppelingen_by_asset_uuid(asset.uuid, bestekkoppelingen)
-        else:
-            logging.debug('Ga verder met het volgende Netwerkelement,'
-                          'geen overeenkomstige bestekkoppeling of minstens 2 actieve werkbestekken.')
-            continue
+        for i, koppeling in enumerate(bestekkoppelingen):
+            if (
+                    koppeling.status == BestekKoppelingStatusEnum.INACTIEF
+                    and koppeling.bestekRef.uuid == bestekRef_swarco_2020_17.uuid
+                    and koppeling.categorie == BestekCategorieEnum.WERKBESTEK
+            ):
+                index = i
+                matching_bestekkoppeling = koppeling
+                break
+
+        if matching_bestekkoppeling:
+            start_date = datetime.fromisoformat(matching_bestekkoppeling.startDatum).date()
+            if start_date == SPECIFIC_DATE:
+                logging.debug(f'Verwijder bestekkoppeling {matching_bestekkoppeling.bestekRef.eDeltaBesteknummer}')
+                assets_updated.append({
+                    "uuid": asset.uuid,
+                    "naam": asset.naam,
+                    "bestek": 'VWT/NET/2020/017',
+                    "Start koppeling": matching_bestekkoppeling.startDatum,
+                    "Einde koppeling": matching_bestekkoppeling.eindDatum,
+                    "eminfra_link": f'https://apps.mow.vlaanderen.be/eminfra/assets/{asset.uuid}',
+                })
+                del bestekkoppelingen[index]
+                eminfra_client.change_bestekkoppelingen_by_asset_uuid(asset.uuid, bestekkoppelingen)
 
     with pd.ExcelWriter(OUTPUT_EXCEL_PATH, mode='w', engine='openpyxl') as writer:
         df = pd.DataFrame(assets_updated)

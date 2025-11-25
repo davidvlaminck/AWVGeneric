@@ -24,6 +24,8 @@ if __name__ == '__main__':
     logging.info("Get all assets of assettype Netwerkelement.")
     search_query = build_query_search_assettype(assettype_uuid=ASSETTYPE_UUID_NETWERKELEMENT)
     generator = eminfra_client.search_assets(query_dto=search_query, actief=True)
+    bestekRef_swarco_2020_17 = eminfra_client.get_bestekref_by_eDelta_dossiernummer(
+        eDelta_dossiernummer='VWT/NET/2020/017')
 
     assets_updated = []
     for counter, asset in enumerate(generator, start=1):
@@ -36,7 +38,6 @@ if __name__ == '__main__':
         }
         nbr_actieve_bestekken = len(actieve_bestekken_set)
 
-        bestekRef_swarco_2020_17 = eminfra_client.get_bestekref_by_eDelta_dossiernummer(eDelta_dossiernummer='VWT/NET/2020/017')
         index, matching_bestekkoppeling = next(((i, x) for i, x in enumerate(bestekkoppelingen) if x.status == BestekKoppelingStatusEnum.ACTIEF and x.bestekRef.uuid == bestekRef_swarco_2020_17.uuid and x.categorie == BestekCategorieEnum.WERKBESTEK), (None, None))
 
         logging.debug('Is de bestekkoppeling van Swarco een van de bestaande bestekkoppelingen?'
