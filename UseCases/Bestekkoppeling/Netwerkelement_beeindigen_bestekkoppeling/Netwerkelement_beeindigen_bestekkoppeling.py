@@ -9,30 +9,11 @@ from API.EMInfraDomain import QueryDTO, PagingModeEnum, SelectionDTO, Expression
 from API.Enums import AuthType, Environment
 from UseCases.utils import configure_logger, load_settings
 from utils.date_helpers import format_datetime
+from utils.query_dto_helpers import build_query_search_assettype
 
 ASSETTYPE_UUID_NETWERKELEMENT = 'b6f86b8d-543d-4525-8458-36b498333416'
 EINDDATUM = datetime(year=2025, month=11, day=21, hour=14)
 OUTPUT_EXCEL_PATH = 'Netwerkelementen_Swarco_VWT-NET-2020-017.xlsx'
-
-# reuse this function from the utils.
-def build_query_search_assettype(assettype_uuid: str) -> QueryDTO:
-    return QueryDTO(
-        size=100, from_=0, pagingMode=PagingModeEnum.OFFSET,
-        selection=SelectionDTO(
-            expressions=[
-                ExpressionDTO(
-                    terms=[TermDTO(
-                        property='type',
-                        operator=OperatorEnum.EQ,
-                        value=f"{assettype_uuid}")]
-                ),
-                ExpressionDTO(
-                    terms=[TermDTO(
-                        property='actief',
-                        operator=OperatorEnum.EQ,
-                        value=True)]
-                    , logicalOp=LogicalOpEnum.AND)
-            ]))
 
 
 if __name__ == '__main__':
