@@ -15,7 +15,7 @@ ASSETTYPE_UUID_LSDEEL = 'b4361a72-e1d5-41c5-bfcc-d48f459f4048'
 ASSETTYPE_UUID_HS = '46dcd9b1-f660-4c8c-8e3e-9cf794b4de75'
 ASSETTYPE_UUID_HSDEEL = 'a9655f50-3de7-4c18-aa25-181c372486b1'
 ASSETTYPE_UUID_HSCABINELEGACY = '1cf24e76-5bf3-44b0-8332-a47ab126b87e'
-MAX_ITERATIONS = 10
+MAX_ITERATIONS = 15000
 
 def set_locatie(client: EMInfraClient, parent_asset: AssetDTO, child_asset: AssetDTO, set_afgeleide_locatie: bool = True) -> None:
     """
@@ -31,8 +31,10 @@ def set_locatie(client: EMInfraClient, parent_asset: AssetDTO, child_asset: Asse
         wkt_geometry_parent = format_locatie_kenmerk_lgc_2_wkt(locatie_kenmerk_parent)
         wkt_geometry_child = format_locatie_kenmerk_lgc_2_wkt(locatie_kenmerk_child)
         if wkt_geometry_child and wkt_geometry_parent:
-            if get_euclidean_distance_wkt(wkt_geometry_parent, wkt_geometry_child) > 0.0:
-                logging.debug('Update locatie indien de afstand tot de parent-asset groter is dan 0.0.')
+            logging.debug('Update locatie indien de afstand tot de parent-asset groter is dan 0.0.')
+            euclidean_distance = get_euclidean_distance_wkt(wkt_geometry_parent, wkt_geometry_child)
+            if euclidean_distance > 0.0:
+                logging.debug(f'Afstand tussen beide assets bedraagt: {euclidean_distance}')
                 client.update_geometrie_by_asset_uuid(asset_uuid=child_asset.uuid, wkt_geometry=wkt_geometry_parent)
         elif not wkt_geometry_child and wkt_geometry_parent:
             logging.debug('update locatie van de child-asset.')
