@@ -46,7 +46,7 @@ def get_first_list_element(lst: list) -> Any:
 
 
 def create_relatie_if_missing(eminfra_client: EMInfraClient, bronAsset: AssetDTO, doelAsset: AssetDTO,
-                              relatie_uri: str) -> AssetRelatieDTO:
+                              relatie: RelatieEnum) -> AssetRelatieDTO:
     """
     Given a relatie type (relatie_uri), and two assets (bronAsset, doelAsset), search for the existing relation(s)
     and create a new relation if missing.
@@ -59,23 +59,20 @@ def create_relatie_if_missing(eminfra_client: EMInfraClient, bronAsset: AssetDTO
     :param relatie_uri:
     :return:
     """
-    logging.info(f'Create relatie {relatie_uri} between {bronAsset.type.korteUri} ({bronAsset.uuid}) and '
+    logging.info(f'Create relatie {relatie.value} between {bronAsset.type.korteUri} ({bronAsset.uuid}) and '
                  f'{doelAsset.type.korteUri} ({doelAsset.uuid}).')
     kenmerkTypeId, relatieTypeId = eminfra_client.get_kenmerktype_and_relatietype_id(
-        relatie_uri=relatie_uri)
+        relatie=relatie)
     relaties = eminfra_client.search_assetrelaties(type=relatieTypeId, bronAsset=bronAsset, doelAsset=doelAsset)
     if len(relaties) > 1:
         raise ValueError(f'Found {len(relaties)}, expected 1')
     elif len(relaties) == 0:
-        relatie = eminfra_client.create_assetrelatie(
-            bronAsset=bronAsset,
-            doelAsset=doelAsset,
-            relatieType_uuid=relatieTypeId)
+        relatie_output = eminfra_client.create_assetrelatie(bronAsset=bronAsset, doelAsset=doelAsset, relatie=relatie)
     elif len(relaties) == 1:
-        relatie = relaties[0]
+        relatie_ouptput = relaties[0]
     else:
         raise NotImplementedError
-    return relatie
+    return relatie_output
 
 
 def transfer_ean_number(eminfra_client, bronAsset, doelAsset, ean_bronAsset):
