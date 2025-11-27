@@ -406,6 +406,7 @@ class GeometryLog(BaseDataclass):
     niveau: GeometryNiveau
     uuid: str
     wkt: str
+    overervingen: list[dict] | None = None
     gaVersie: str | None = None
 
     def __post_init__(self):
