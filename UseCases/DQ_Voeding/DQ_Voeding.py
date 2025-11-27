@@ -15,7 +15,7 @@ ASSETTYPE_UUID_LSDEEL = 'b4361a72-e1d5-41c5-bfcc-d48f459f4048'
 ASSETTYPE_UUID_HS = '46dcd9b1-f660-4c8c-8e3e-9cf794b4de75'
 ASSETTYPE_UUID_HSDEEL = 'a9655f50-3de7-4c18-aa25-181c372486b1'
 ASSETTYPE_UUID_HSCABINELEGACY = '1cf24e76-5bf3-44b0-8332-a47ab126b87e'
-
+MAX_ITERATIONS = 10
 
 def set_locatie(client: EMInfraClient, parent_asset: AssetDTO, child_asset: AssetDTO, set_afgeleide_locatie: bool = True) -> None:
     """
@@ -30,11 +30,11 @@ def set_locatie(client: EMInfraClient, parent_asset: AssetDTO, child_asset: Asse
         locatie_kenmerk_child = client.get_kenmerk_locatie_by_asset_uuid(asset_uuid=child_asset.uuid)
         wkt_geometry_parent = format_locatie_kenmerk_lgc_2_wkt(locatie_kenmerk_parent)
         wkt_geometry_child = format_locatie_kenmerk_lgc_2_wkt(locatie_kenmerk_child)
-        if wkt_geometry_parent and wkt_geometry_child:
+        if wkt_geometry_child and wkt_geometry_parent:
             if get_euclidean_distance_wkt(wkt_geometry_parent, wkt_geometry_child) > 0.0:
                 logging.debug('Update locatie indien de afstand tot de parent-asset groter is dan 0.0.')
                 client.update_geometrie_by_asset_uuid(asset_uuid=child_asset.uuid, wkt_geometry=wkt_geometry_parent)
-        elif wkt_geometry_child is None and wkt_geometry_parent is not None:
+        elif not wkt_geometry_child and wkt_geometry_parent:
             logging.debug('update locatie van de child-asset.')
             client.update_geometrie_by_asset_uuid(asset_uuid=child_asset.uuid, wkt_geometry=wkt_geometry_parent)
 
@@ -66,9 +66,11 @@ def add_relaties_vanuit_kast(client: EMInfraClient) -> list:
 
         child_assets = list(client.search_child_assets(asset_uuid=asset.uuid, recursive=False))
         assets_ls = [item for item in child_assets if
-                     item.type.uri == 'https://lgc.data.wegenenverkeer.be/ns/installatie#LS']
+                     item.type.uri == 'https://lgc.data.wegenenverkeer.be/ns/installatie#LS'
+                     and item.actief == True]
         assets_lsdeel = [item for item in child_assets if
-                         item.type.uri == 'https://lgc.data.wegenenverkeer.be/ns/installatie#LSDeel']
+                         item.type.uri == 'https://lgc.data.wegenenverkeer.be/ns/installatie#LSDeel'
+                         and item.actief == True]
 
         if len(assets_lsdeel) > 1:
             asset_multiple_children.append(asset)
@@ -85,12 +87,12 @@ def add_relaties_vanuit_kast(client: EMInfraClient) -> list:
 
         for asset_lsdeel in assets_lsdeel:
             logging.debug("Bevestiging-relatie van Kast naar LSDeel")
-            create_relatie_if_missing(client=client, bron_asset=asset, doel_asset=asset_lsdeel,
+            create_relatie_if_missing(client=client, bron_asset=asset_lsdeel, doel_asset=asset,
                                       relatie=RelatieEnum.BEVESTIGING)
             set_locatie(client=client, parent_asset=asset, child_asset=asset_lsdeel, set_afgeleide_locatie=True)
         for asset_ls in assets_ls:
             logging.debug("Bevestiging-relatie van Kast naar LS")
-            create_relatie_if_missing(client=client, bron_asset=asset, doel_asset=asset_ls,
+            create_relatie_if_missing(client=client, bron_asset=asset_ls, doel_asset=asset,
                                       relatie=RelatieEnum.BEVESTIGING)
             set_locatie(client=client, parent_asset=asset, child_asset=asset_ls, set_afgeleide_locatie=True)
 
@@ -98,11 +100,14 @@ def add_relaties_vanuit_kast(client: EMInfraClient) -> list:
             heeftbijhorende_assets = client.search_assets_via_relatie(asset_uuid=asset_ls.uuid,
                                                                       relatie=RelatieEnum.HEEFTBIJHORENDEASSETS)
             assets_dnblaagspanning = [item for item in heeftbijhorende_assets if
-                                      item.type.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBLaagspanning']
+                                      item.type.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBLaagspanning'
+                                      and item.actief == True]
             assets_energiemeterdnb = [item for item in heeftbijhorende_assets if
-                                      item.type.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#EnergiemeterDNB']
+                                      item.type.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#EnergiemeterDNB'
+                                      and item.actief == True]
             assets_forfaitaireaansluiting = [item for item in heeftbijhorende_assets if
-                                             item.type.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#ForfaitaireAansluiting']
+                                             item.type.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#ForfaitaireAansluiting'
+                                             and item.actief == True]
 
 
             if len(assets_dnblaagspanning) > 1:
@@ -142,7 +147,7 @@ def add_relaties_vanuit_kast(client: EMInfraClient) -> list:
                 create_relatie_if_missing(client=client, bron_asset=asset_dnblaagspanning,
                                           doel_asset=asset_forfaitaireaansluiting, relatie=RelatieEnum.VOEDT)
 
-        if counter % 10 == 0:
+        if counter % MAX_ITERATIONS == 0:
             break
 
     return asset_multiple_children
@@ -168,17 +173,20 @@ def add_relaties_vanuit_hscabine(client: EMInfraClient) -> [list]:
 
         child_assets = list(client.search_child_assets(asset_uuid=asset.uuid, recursive=False))
         assets_hsdeel = [item for item in child_assets if
-                         item.type.uri == 'https://lgc.data.wegenenverkeer.be/ns/installatie#HSDeel']
+                         item.type.uri == 'https://lgc.data.wegenenverkeer.be/ns/installatie#HSDeel'
+                         and item.actief == True]
         assets_lsdeel = [item for item in child_assets if
-                         item.type.uri == 'https://lgc.data.wegenenverkeer.be/ns/installatie#LSDeel']
+                         item.type.uri == 'https://lgc.data.wegenenverkeer.be/ns/installatie#LSDeel'
+                         and item.actief == True]
         assets_hs = [item for item in child_assets if
-                     item.type.uri == 'https://lgc.data.wegenenverkeer.be/ns/installatie#HS']
+                     item.type.uri == 'https://lgc.data.wegenenverkeer.be/ns/installatie#HS'
+                     and item.actief == True]
 
         if len(assets_hsdeel) > 1:
             asset_multiple_children.append(asset)
         for asset_hsdeel in assets_hsdeel:
             logging.debug("Bevestiging-relatie van HSCabineLegacy naar HSDeel")
-            create_relatie_if_missing(client=client, bron_asset=asset, doel_asset=asset_hsdeel,
+            create_relatie_if_missing(client=client, bron_asset=asset_hsdeel, doel_asset=asset,
                                       relatie=RelatieEnum.BEVESTIGING)
             set_locatie(client=eminfra_client, parent_asset=asset, child_asset=asset_hsdeel)
 
@@ -186,7 +194,7 @@ def add_relaties_vanuit_hscabine(client: EMInfraClient) -> [list]:
             asset_multiple_children.append(asset)
         for asset_lsdeel in assets_lsdeel:
             logging.debug("Bevestiging-relatie van HSCabineLegacy naar LSDeel")
-            create_relatie_if_missing(client=client, bron_asset=asset, doel_asset=asset_lsdeel,
+            create_relatie_if_missing(client=client, bron_asset=asset_lsdeel, doel_asset=asset,
                                       relatie=RelatieEnum.BEVESTIGING)
             set_locatie(client=eminfra_client, parent_asset=asset, child_asset=asset_lsdeel)
 
@@ -215,9 +223,11 @@ def add_relaties_vanuit_hscabine(client: EMInfraClient) -> [list]:
             heeftbijhorende_assets = client.search_assets_via_relatie(asset_uuid=asset_hs.uuid,
                                                                       relatie=RelatieEnum.HEEFTBIJHORENDEASSETS)
             assets_dnbhoogspanning = [item for item in heeftbijhorende_assets if
-                                      item.type.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBHoogspanning']
+                                      item.type.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBHoogspanning'
+                                      and item.actief == True]
             assets_energiemeterdnb = [item for item in heeftbijhorende_assets if
-                                      item.type.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#EnergiemeterDNB']
+                                      item.type.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#EnergiemeterDNB'
+                                      and item.actief == True]
 
             if len(assets_dnbhoogspanning) > 1:
                 asset_multiple_children.append(asset_hs)
@@ -235,7 +245,7 @@ def add_relaties_vanuit_hscabine(client: EMInfraClient) -> [list]:
                                           relatie=RelatieEnum.HOORTBIJ)
                 set_locatie(client=eminfra_client, parent_asset=asset_hs, child_asset=asset_energiemeterdnb, set_afgeleide_locatie=False)
 
-        if counter % 10 == 0:
+        if counter % MAX_ITERATIONS == 0:
             break
 
     return asset_multiple_children
@@ -266,9 +276,10 @@ if __name__ == '__main__':
 
     asset_multiple_children_kast = [format_asset_to_dict(asset=a) for a in asset_multiple_children_kast]
     asset_multiple_children_hscabine = [format_asset_to_dict(asset=a) for a in asset_multiple_children_hscabine]
+
     output_excel_path = 'DQ Voeding assets met meerdere child assets.xlsx'
     with pd.ExcelWriter(output_excel_path, mode='w', engine='openpyxl') as writer:
-        df = pd.DataFrame(asset_multiple_children_kast)
-        df.to_excel(writer, sheet_name='Kast', index=False, freeze_panes=[1, 1])
-        df = pd.DataFrame(asset_multiple_children_hscabine)
-        df.to_excel(writer, sheet_name='HSCabine', index=False, freeze_panes=[1, 1])
+        df1 = pd.DataFrame(asset_multiple_children_kast)
+        df1.to_excel(writer, sheet_name='Kast', index=False, freeze_panes=[1, 1])
+        df2 = pd.DataFrame(asset_multiple_children_hscabine)
+        df2.to_excel(writer, sheet_name='HSCabine', index=False, freeze_panes=[1, 1])
