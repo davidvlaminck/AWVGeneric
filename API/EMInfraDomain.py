@@ -406,6 +406,7 @@ class GeometryLog(BaseDataclass):
     niveau: GeometryNiveau
     uuid: str
     wkt: str
+    gaVersie: str | None = None
 
     def __post_init__(self):
          self._fix_nested_list_classes({('links', Link)})
@@ -417,7 +418,6 @@ class GeometrieKenmerk(BaseDataclass):
     type: dict
     links: [Link]
     logs: list[GeometryLog] | None = None
-    gaVersie: str | None = None
 
     def __post_init__(self):
          self._fix_nested_list_classes({('links', Link), ('logs', GeometryLog)})
