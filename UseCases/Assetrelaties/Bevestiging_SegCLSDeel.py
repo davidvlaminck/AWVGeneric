@@ -27,7 +27,7 @@ if __name__ == '__main__':
         filepath=Path().home() / 'Downloads' / 'Segmentcontroller' / 'Segmentcontroller ontbrekende Bevestiging relatie.xlsx',
         usecols=["segc_uuid", "segc_naam", "lsdeel_uuid", "lsdeel_naam"])
 
-    kenmerkType_uuid, relatieType_uuid = eminfra_client.get_kenmerktype_and_relatietype_id(relatie_uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging')
+    kenmerkType_uuid, relatieType_uuid = eminfra_client.get_kenmerktype_and_relatietype_id(relatie=RelatieEnum.BEVESTIGING)
     for idx, asset in df_assets.iterrows():
         # SegmentController
         # bestaande Bevestiging-relaties ophalen
@@ -45,10 +45,9 @@ if __name__ == '__main__':
             continue
 
         # Genereer nieuwe relatie (Legacy)
-        bevestigingrelatie_uuid = eminfra_client.create_assetrelatie(
-            bronAsset_uuid=asset.get("segc_uuid")
+        bevestigingrelatie_uuid = eminfra_client.create_assetrelatie(bronAsset_uuid=asset.get("segc_uuid")
             , doelAsset_uuid=asset.get("lsdeel_uuid")
-            , relatieType_uuid=relatieType_uuid
+            , relatie=RelatieEnum.BEVESTIGING
         )
         logging.debug(f'Bevestiging-relatie ({bevestigingrelatie_uuid}) aangemaakt tussen Segmentcontroller '
                     f'({asset.get("segc_uuid")}) en LSDeel ({asset.get("lsdeel_uuid")})')
