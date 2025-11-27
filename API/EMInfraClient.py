@@ -1427,7 +1427,7 @@ class EMInfraClient:
             raise ProcessLookupError(response.content.decode("utf-8"))
 
 
-    def get_kenmerktype_and_relatietype_id(self, relatie_uri: str) -> (str, str):
+    def get_kenmerktype_and_relatietype_id(self, relatie: RelatieEnum = None) -> (str, str):
         relaties_dict = {
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Sturing": [
                 "3e207d7c-26cd-468b-843c-6648c7eeebe4",
@@ -1526,7 +1526,7 @@ class EMInfraClient:
                 "de86510a-d61c-46fb-805d-c04c78b27ab6"
             ]
         }
-        return relaties_dict[relatie_uri]
+        return relaties_dict[relatie.value]
 
     def add_relatie(self, assetId: str, kenmerkTypeId: str, relatieTypeId: str, doel_assetId: str) -> None:
         """
