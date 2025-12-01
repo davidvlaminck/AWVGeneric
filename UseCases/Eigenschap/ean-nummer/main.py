@@ -69,7 +69,7 @@ def create_relatie_if_missing(eminfra_client: EMInfraClient, bronAsset: AssetDTO
     elif len(relaties) == 0:
         relatie_output = eminfra_client.create_assetrelatie(bronAsset=bronAsset, doelAsset=doelAsset, relatie=relatie)
     elif len(relaties) == 1:
-        relatie_ouptput = relaties[0]
+        relatie_output = relaties[0]
     else:
         raise NotImplementedError
     return relatie_output
