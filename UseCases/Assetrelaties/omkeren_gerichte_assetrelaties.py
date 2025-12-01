@@ -1,7 +1,4 @@
 import logging
-from pathlib import Path
-
-import pandas as pd
 
 from API.EMInfraClient import EMInfraClient
 from API.EMInfraDomain import (RelatieEnum, OperatorEnum, PagingModeEnum, SelectionDTO, QueryDTO, ExpressionDTO,
@@ -42,48 +39,56 @@ def build_search_query(client: EMInfraClient, assettype_uuid: str, relatie_richt
 if __name__ == '__main__':
     configure_logger()
     logging.info('Omkeren van niet-gerichte assetsrelaties.')
-    eminfra_client = EMInfraClient(env=Environment.DEV, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
 
     search_query = build_search_query(client=eminfra_client, relatie_richting='in', relatie=RelatieEnum.BEVESTIGING,
                                       assettype_uuid=ASSETTYPE_KAST)
     generator = eminfra_client.search_assets(query_dto=search_query)
 
+    counter_ls, counter_lsdeel, counter_vr = 0, 0, 0
+    assettypes = []
     rows = []
     for idx, asset in enumerate(generator):
         logging.info(f"Processing asset: ({idx}): asset_uuid: {asset.uuid}")
 
         logging.info('Oplijsten van doel-assets')
-        assets_gelinkt = eminfra_client.search_assets_via_relatie(asset_uuid=asset, relatie=RelatieEnum.BEVESTIGING)
-        logging.debug('Filter doelassets')
-        assets_ls = [asset for asset in assets_gelinkt if asset.type.uri == 'https://lgc.data.wegenenverkeer.be/ns/installatie#LS']
-        assets_lsdeel = [asset for asset in assets_gelinkt if asset.type.uri == 'https://lgc.data.wegenenverkeer.be/ns/installatie#LSDeel']
+        assets_gelinkt = eminfra_client.search_assets_via_relatie(asset_uuid=asset.uuid, relatie=RelatieEnum.BEVESTIGING)
+        if assets_gelinkt:
+            logging.debug('Filter doelassets')
+            assets_ls = [asset for asset in assets_gelinkt if asset.type.uri == 'https://lgc.data.wegenenverkeer.be/ns/installatie#LS']
+            assets_lsdeel = [asset for asset in assets_gelinkt if asset.type.uri == 'https://lgc.data.wegenenverkeer.be/ns/installatie#LSDeel']
+            assets_vrlegacy = [asset for asset in assets_gelinkt if asset.type.uri == 'https://lgc.data.wegenenverkeer.be/ns/installatie#VRLegacy']
 
-        for asset_ls in assets_ls:
-            logging.info('Verwijder de inkomende relatie.')
-            eminfra_client.remove_assets_via_relatie(bronasset_uuid=asset.uuid, doelasset_uuid=asset_ls, relatie=RelatieEnum.BEVESTIGING)
-
-            logging.info('Voeg een uitgaande relatie toe.')
-            eminfra_client.create_assetrelatie(bronAsset=asset, doelAsset=asset_ls, relatie=RelatieEnum.BEVESTIGING)
+            if not assets_ls and not assets_lsdeel and not assets_vrlegacy:
+                logging.debug("Bevestiging-relatie tussen Kast en ... ?")
+                assettypes.extend(asset.type.uri for asset in assets_gelinkt)
 
 
-        #
-        # bronasset_uuid = df_row["bronuuid"]
-        # doelasset_uuid = df_row["doeluuid"]
-        # relatie = df_row["relatie"]
-        # if relatie == 'Bevestiging':
-        #     rel = RelatieEnum.BEVESTIGING
-        # elif relatie == 'Sturing':
-        #     rel = RelatieEnum.STURING
-        # else:
-        #     raise ValueError(f'Relatie {relatie} not found.')
-        # eminfra_client.remove_assets_via_relatie(bronasset_uuid=bronasset_uuid, doelasset_uuid=doelasset_uuid, relatie=rel)
-        # row = {
-        #     "bronasset_uuid": bronasset_uuid,
-        #     "doelasset_uuid": doelasset_uuid
-        # }
-        # rows.append(row)
+            for asset_ls in assets_ls:
+                counter_ls += 1
+                logging.info('Verwijder de inkomende relatie vanuit LS.')
+                eminfra_client.remove_assets_via_relatie(bronasset_uuid=asset.uuid, doelasset_uuid=asset_ls.uuid, relatie=RelatieEnum.BEVESTIGING)
 
-    # output_excel_path = 'assets_relaties_verwijderd.xlsx'
-    # with pd.ExcelWriter(output_excel_path, mode='w', engine='openpyxl') as writer:
-    #     df = pd.DataFrame(rows)
-    #     df.to_excel(writer, sheet_name='Sheet1', index=False, freeze_panes=[1, 1])
+                logging.info('Voeg een uitgaande relatie toe naar LS.')
+                eminfra_client.create_assetrelatie(bronAsset=asset_ls, doelAsset=asset, relatie=RelatieEnum.BEVESTIGING)
+
+            for asset_lsdeel in assets_lsdeel:
+                counter_lsdeel += 1
+                logging.info('Verwijder de inkomende relatie vanuit LSDeel.')
+                eminfra_client.remove_assets_via_relatie(bronasset_uuid=asset.uuid, doelasset_uuid=asset_lsdeel.uuid, relatie=RelatieEnum.BEVESTIGING)
+
+                logging.info('Voeg een uitgaande relatie toe naar LSDeel.')
+                eminfra_client.create_assetrelatie(bronAsset=asset_lsdeel, doelAsset=asset, relatie=RelatieEnum.BEVESTIGING)
+
+            for asset_vrlegacy in assets_vrlegacy:
+                counter_vr += 1
+                logging.info('Verwijder de inkomende relatie vanuit VR.')
+                eminfra_client.remove_assets_via_relatie(bronasset_uuid=asset.uuid, doelasset_uuid=asset_vrlegacy.uuid, relatie=RelatieEnum.BEVESTIGING)
+
+                logging.info('Voeg een uitgaande relatie toe naar VR.')
+                eminfra_client.create_assetrelatie(bronAsset=asset_vrlegacy, doelAsset=asset, relatie=RelatieEnum.BEVESTIGING)
+    logging.info(counter_ls)
+    logging.info(counter_lsdeel)
+    logging.info(counter_vr)
+
+    logging.info(f'Overige assettypes: {assettypes}')
