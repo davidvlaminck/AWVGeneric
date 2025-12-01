@@ -1963,7 +1963,7 @@ class EMInfraClient:
         :param relatie: relatieTypeEnum
         :return:
         """
-        kenmerkType_uuid, relatieType_uuid = self.get_kenmerktype_and_relatietype_id(relatie_uri=relatie)
+        kenmerkType_uuid, relatieType_uuid = self.get_kenmerktype_and_relatietype_id(relatie=relatie)
         url = f'core/api/assets/{asset_uuid}/kenmerken/{kenmerkType_uuid}/assets-via/{relatieType_uuid}'
         resp = self.requester.get(url=url)
         if resp.status_code != 200:
