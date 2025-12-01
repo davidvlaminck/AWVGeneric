@@ -92,10 +92,25 @@ class RelatieEnum(Enum):
     An enumeration of relatie types with their corresponding values.
     """
     BEVESTIGING = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging'
-    VOEDT = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt'
-    STURING = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Sturing'
-    HOORTBIJ = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HoortBij'
+    GEMIGREERDNAAR = 'https://lgc.data.wegenenverkeer.be/ns/onderdeel#GemigreerdNaar'
+    HEEFTAANVULLENDEGEOMETRIE = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HeeftAanvullendeGeometrie'
+    HEEFTBEHEER = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HeeftBeheer'
     HEEFTBIJHORENDEASSETS = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HeeftBijhorendeAssets'
+    HEEFTBIJLAGE = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HeeftBijlage'
+    HEEFTNETWERKTOEGANG = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HeeftNetwerktoegang'
+    HEEFTNETWERKPROTECTIE = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HeeftNetwerkProtectie'
+    HEEFTTOEGANGSPROCEDURE = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HeeftToegangsprocedure'
+    HOORTBIJ = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HoortBij'
+    ISADMONDERDEELVAN = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#IsAdmOnderdeelVan'
+    ISNETWERKECC = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#IsNetwerkECC'
+    ISSWGEHOSTOP = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#IsSWGehostOp'
+    ISSWONDERDEELVAN = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#IsSWOnderdeelVan'
+    LIGTOP = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#LigtOp'
+    OMHULT = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Omhult'
+    SLUITAANOP = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#SluitAanOp'
+    STURING = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Sturing'
+    VOEDT = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt'
+    VOEDTAANGESTUURD = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#VoedtAangestuurd'
 
 @dataclass
 class BaseDataclass:

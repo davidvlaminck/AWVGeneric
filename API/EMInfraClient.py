@@ -1427,7 +1427,7 @@ class EMInfraClient:
             raise ProcessLookupError(response.content.decode("utf-8"))
 
 
-    def get_kenmerktype_and_relatietype_id(self, relatie_uri: str) -> (str, str):
+    def get_kenmerktype_and_relatietype_id(self, relatie: RelatieEnum) -> (str, str):
         relaties_dict = {
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Sturing": [
                 "3e207d7c-26cd-468b-843c-6648c7eeebe4",
@@ -1526,7 +1526,7 @@ class EMInfraClient:
                 "de86510a-d61c-46fb-805d-c04c78b27ab6"
             ]
         }
-        return relaties_dict[relatie_uri]
+        return relaties_dict[relatie.value]
 
     def add_relatie(self, assetId: str, kenmerkTypeId: str, relatieTypeId: str, doel_assetId: str) -> None:
         """
@@ -1551,7 +1551,8 @@ class EMInfraClient:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-    def create_assetrelatie(self, bronAsset: AssetDTO, doelAsset: AssetDTO, relatieType_uuid: str) -> AssetRelatieDTO:
+    def create_assetrelatie(self, bronAsset: AssetDTO, doelAsset: AssetDTO, relatie: RelatieEnum) -> AssetRelatieDTO:
+        _, relatietype_id = self.get_kenmerktype_and_relatietype_id(relatie=relatie)
         json_body = {
             "bronAsset": {
                 "uuid": f"{bronAsset.uuid}",
@@ -1562,7 +1563,7 @@ class EMInfraClient:
                 "_type": f"{doelAsset._type}"
             },
             "relatieType": {
-                "uuid": f"{relatieType_uuid}"
+                "uuid": f"{relatietype_id}"
             }
         }
         url = 'core/api/assetrelaties'
@@ -1962,7 +1963,7 @@ class EMInfraClient:
         :param relatie: relatieTypeEnum
         :return:
         """
-        kenmerkType_uuid, relatieType_uuid = self.get_kenmerktype_and_relatietype_id(relatie_uri=relatie.value)
+        kenmerkType_uuid, relatieType_uuid = self.get_kenmerktype_and_relatietype_id(relatie=relatie)
         url = f'core/api/assets/{asset_uuid}/kenmerken/{kenmerkType_uuid}/assets-via/{relatieType_uuid}'
         resp = self.requester.get(url=url)
         if resp.status_code != 200:
@@ -1981,7 +1982,7 @@ class EMInfraClient:
         :return: None
 
         """
-        kenmerkType_uuid, relatieType_uuid = self.get_kenmerktype_and_relatietype_id(relatie_uri=relatie.value)
+        kenmerkType_uuid, relatieType_uuid = self.get_kenmerktype_and_relatietype_id(relatie=relatie)
         url = f'core/api/assets/{bronasset_uuid}/kenmerken/{kenmerkType_uuid}/assets-via/{relatieType_uuid}/ops/remove'
         request_body = {
           "name":"remove",
