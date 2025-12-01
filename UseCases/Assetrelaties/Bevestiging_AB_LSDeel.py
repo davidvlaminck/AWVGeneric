@@ -1,5 +1,6 @@
 import logging
 from API.EMInfraClient import EMInfraClient
+from API.EMInfraDomain import RelatieEnum
 from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path
@@ -45,8 +46,10 @@ if __name__ == '__main__':
             continue
 
         # Genereer nieuwe relatie (Legacy)
-        bevestigingrelatie_uuid = eminfra_client.create_assetrelatie(bronAsset_uuid=asset.get("ab_uuid")
-            , doelAsset_uuid=asset.get("lsdeel_uuid")
+        asset_ab = eminfra_client.get_asset_by_id(asset_id=asset.get("ab_uuid"))
+        asset_lsdeel = eminfra_client.get_asset_by_id(asset_id=asset.get("lsdeel_uuid"))
+        bevestigingrelatie_uuid = eminfra_client.create_assetrelatie(bronAsset=asset_ab
+            , doelAsset=asset_lsdeel
             , relatie=RelatieEnum.BEVESTIGING
         )
         logging.debug(f'Bevestiging-relatie ({bevestigingrelatie_uuid}) aangemaakt tussen Afstandsbewaking '
