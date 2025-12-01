@@ -52,8 +52,7 @@ if __name__ == '__main__':
         logging.info(f"Processing asset: ({idx}): asset_uuid: {asset.uuid}")
 
         logging.info('Oplijsten van doel-assets')
-        assets_gelinkt = eminfra_client.search_assets_via_relatie(asset_uuid=asset.uuid, relatie=RelatieEnum.BEVESTIGING)
-        if assets_gelinkt:
+        if assets_gelinkt := eminfra_client.search_assets_via_relatie(asset_uuid=asset.uuid, relatie=RelatieEnum.BEVESTIGING):
             logging.debug('Filter doelassets')
             assets_ls = [asset for asset in assets_gelinkt if asset.type.uri == 'https://lgc.data.wegenenverkeer.be/ns/installatie#LS']
             assets_lsdeel = [asset for asset in assets_gelinkt if asset.type.uri == 'https://lgc.data.wegenenverkeer.be/ns/installatie#LSDeel']
