@@ -15,7 +15,7 @@ ASSETTYPE_UUID_LSDEEL = 'b4361a72-e1d5-41c5-bfcc-d48f459f4048'
 ASSETTYPE_UUID_HS = '46dcd9b1-f660-4c8c-8e3e-9cf794b4de75'
 ASSETTYPE_UUID_HSDEEL = 'a9655f50-3de7-4c18-aa25-181c372486b1'
 ASSETTYPE_UUID_HSCABINELEGACY = '1cf24e76-5bf3-44b0-8332-a47ab126b87e'
-MAX_ITERATIONS = 1000000000
+MAX_ITERATIONS = 250
 
 def set_locatie(client: EMInfraClient, parent_asset: AssetDTO, child_asset: AssetDTO, set_afgeleide_locatie: bool = True) -> None:
     """
@@ -41,7 +41,7 @@ def set_locatie(client: EMInfraClient, parent_asset: AssetDTO, child_asset: Asse
             client.update_geometrie_by_asset_uuid(asset_uuid=child_asset.uuid, wkt_geometry=wkt_geometry_parent)
 
 
-def add_relaties_vanuit_kast(client: EMInfraClient) -> list:
+def add_relaties_vanuit_kast(client: EMInfraClient) -> (list, list):
     """
     Toevoegen van de explicitiete relaties vanuit een Kast op basis van de naampaden.
     Kast (Legacy): zoek de child-assets
@@ -60,6 +60,7 @@ def add_relaties_vanuit_kast(client: EMInfraClient) -> list:
     Assets teruggeven die meerdere child-assets bevatten, terwijl slechts 1 child-asset wordt verwacht.
     """
     asset_multiple_children = []
+    asset_foute_relaties = []
 
     search_query = build_query_search_assettype(assettype_uuid=ASSETTYPE_UUID_KAST)
     generator_asset = client.search_assets(query_dto=search_query, actief=True)
@@ -67,6 +68,9 @@ def add_relaties_vanuit_kast(client: EMInfraClient) -> list:
         logging.info(f'Processing ({counter}) asset: {asset.uuid}')
 
         child_assets = list(client.search_child_assets(asset_uuid=asset.uuid, recursive=False))
+        if not child_assets:
+            continue
+
         assets_ls = [item for item in child_assets if
                      item.type.uri == 'https://lgc.data.wegenenverkeer.be/ns/installatie#LS'
                      and item.actief == True]
@@ -84,23 +88,35 @@ def add_relaties_vanuit_kast(client: EMInfraClient) -> list:
             logging.debug("Voedt-relatie van LS naar LSDeel")
             asset_ls = assets_ls[0]
             asset_lsdeel = assets_lsdeel[0]
-            create_relatie_if_missing(client=client, bron_asset=asset_ls, doel_asset=asset_lsdeel,
+            try:
+                create_relatie_if_missing(client=client, bron_asset=asset_ls, doel_asset=asset_lsdeel,
                                       relatie=RelatieEnum.VOEDT)
+            except:
+                asset_foute_relaties.append(asset_ls)
 
         for asset_lsdeel in assets_lsdeel:
             logging.debug("Bevestiging-relatie van Kast naar LSDeel")
-            create_relatie_if_missing(client=client, bron_asset=asset_lsdeel, doel_asset=asset,
+            try:
+                create_relatie_if_missing(client=client, bron_asset=asset_lsdeel, doel_asset=asset,
                                       relatie=RelatieEnum.BEVESTIGING)
-            set_locatie(client=client, parent_asset=asset, child_asset=asset_lsdeel, set_afgeleide_locatie=True)
+                set_locatie(client=client, parent_asset=asset, child_asset=asset_lsdeel, set_afgeleide_locatie=True)
+            except:
+                asset_foute_relaties.append(asset_lsdeel)
         for asset_ls in assets_ls:
             logging.debug("Bevestiging-relatie van Kast naar LS")
-            create_relatie_if_missing(client=client, bron_asset=asset_ls, doel_asset=asset,
+            try:
+                create_relatie_if_missing(client=client, bron_asset=asset_ls, doel_asset=asset,
                                       relatie=RelatieEnum.BEVESTIGING)
-            set_locatie(client=client, parent_asset=asset, child_asset=asset_ls, set_afgeleide_locatie=True)
+                set_locatie(client=client, parent_asset=asset, child_asset=asset_ls, set_afgeleide_locatie=True)
+            except:
+                asset_foute_relaties.append(asset_ls)
 
             logging.info('Boomstructuur vervolledigen voor alle LS.')
             heeftbijhorende_assets = client.search_assets_via_relatie(asset_uuid=asset_ls.uuid,
                                                                       relatie=RelatieEnum.HEEFTBIJHORENDEASSETS)
+            if not heeftbijhorende_assets:
+                continue
+
             assets_dnblaagspanning = [item for item in heeftbijhorende_assets if
                                       item.type.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBLaagspanning'
                                       and item.actief == True]
@@ -116,45 +132,61 @@ def add_relaties_vanuit_kast(client: EMInfraClient) -> list:
                 asset_multiple_children.append(asset_ls)
             for asset_dnblaagspanning in assets_dnblaagspanning:
                 logging.debug("HeeftBijhorendeAssets-relatie van LS naar DNBLaagspanning")
-                create_relatie_if_missing(client=client, bron_asset=asset_dnblaagspanning, doel_asset=asset_ls,
+                try:
+                    create_relatie_if_missing(client=client, bron_asset=asset_dnblaagspanning, doel_asset=asset_ls,
                                           relatie=RelatieEnum.HOORTBIJ)
+                except:
+                    asset_foute_relaties.append(asset_dnblaagspanning)
 
             if len(assets_energiemeterdnb) > 1:
                 asset_multiple_children.append(asset_ls)
             for asset_energiemeterdnb in assets_energiemeterdnb:
                 logging.debug("HeeftBijhorendeAssets-relatie van LS naar EnergiemeterDNB")
-                create_relatie_if_missing(client=client, bron_asset=asset_energiemeterdnb, doel_asset=asset_ls,
+                try:
+                    create_relatie_if_missing(client=client, bron_asset=asset_energiemeterdnb, doel_asset=asset_ls,
                                           relatie=RelatieEnum.HOORTBIJ)
-                set_locatie(client=client, parent_asset=asset_ls, child_asset=asset_energiemeterdnb, set_afgeleide_locatie=False)
+                    set_locatie(client=client, parent_asset=asset_ls, child_asset=asset_energiemeterdnb, set_afgeleide_locatie=False)
+                except:
+                    asset_foute_relaties.append(asset_energiemeterdnb)
 
             if len(assets_forfaitaireaansluiting) > 1:
                 asset_multiple_children.append(asset_ls)
             for asset_forfaitaireaansluiting in assets_forfaitaireaansluiting:
                 logging.debug("HeeftBijhorendeAssets-relatie van LS naar ForfaitaireAansluiting")
-                create_relatie_if_missing(client=client, bron_asset=asset_forfaitaireaansluiting, doel_asset=asset_ls,
+                try:
+                    create_relatie_if_missing(client=client, bron_asset=asset_forfaitaireaansluiting, doel_asset=asset_ls,
                                           relatie=RelatieEnum.HOORTBIJ)
-                set_locatie(client=client, parent_asset=asset_ls, child_asset=asset_forfaitaireaansluiting,
+                    set_locatie(client=client, parent_asset=asset_ls, child_asset=asset_forfaitaireaansluiting,
                             set_afgeleide_locatie=False)
+                except:
+                    asset_foute_relaties.append(asset_forfaitaireaansluiting)
+
 
             if len(assets_dnblaagspanning) == 1 and len(assets_energiemeterdnb) == 1:
                 asset_dnblaagspanning = assets_dnblaagspanning[0]
                 asset_energiemeterdnb = assets_energiemeterdnb[0]
                 logging.debug("Voedt-relatie van DNBLaagspanning naar EnergiemeterDNB")
-                create_relatie_if_missing(client=client, bron_asset=asset_dnblaagspanning,
+                try:
+                    create_relatie_if_missing(client=client, bron_asset=asset_dnblaagspanning,
                                           doel_asset=asset_energiemeterdnb, relatie=RelatieEnum.VOEDT)
+                except:
+                    asset_foute_relaties.append(asset_dnblaagspanning)
             if len(assets_dnblaagspanning) == 1 and len(assets_forfaitaireaansluiting) == 1:
                 asset_dnblaagspanning = assets_dnblaagspanning[0]
                 asset_forfaitaireaansluiting = assets_forfaitaireaansluiting[0]
                 logging.debug("Voedt-relatie van DNBLaagspanning naar ForfaitaireAansluiting")
-                create_relatie_if_missing(client=client, bron_asset=asset_dnblaagspanning,
+                try:
+                    create_relatie_if_missing(client=client, bron_asset=asset_dnblaagspanning,
                                           doel_asset=asset_forfaitaireaansluiting, relatie=RelatieEnum.VOEDT)
+                except:
+                    asset_foute_relaties.append(asset_dnblaagspanning)
 
         if counter % MAX_ITERATIONS == 0:
             break
 
-    return asset_multiple_children
+    return asset_multiple_children, asset_foute_relaties
 
-def add_relaties_vanuit_hscabine(client: EMInfraClient) -> [list]:
+def add_relaties_vanuit_hscabine(client: EMInfraClient) -> (list, list):
     """
     Toevoegen van de expliciete relaties vanuit een HSCabine (Legacy) op basis van de boomstructuur.
     HSCabine (Legacy): zoek de child-assets
@@ -167,6 +199,7 @@ def add_relaties_vanuit_hscabine(client: EMInfraClient) -> [list]:
     :return:
     """
     asset_multiple_children = []
+    asset_foute_relaties = []
 
     search_query = build_query_search_assettype(assettype_uuid=ASSETTYPE_UUID_HSCABINELEGACY)
     generator_asset = client.search_assets(query_dto=search_query, actief=True)
@@ -174,6 +207,9 @@ def add_relaties_vanuit_hscabine(client: EMInfraClient) -> [list]:
         logging.info(f'Processing ({counter}) asset: {asset.uuid}')
 
         child_assets = list(client.search_child_assets(asset_uuid=asset.uuid, recursive=False))
+        if not child_assets:
+            continue
+
         assets_hsdeel = [item for item in child_assets if
                          item.type.uri == 'https://lgc.data.wegenenverkeer.be/ns/installatie#HSDeel'
                          and item.actief == True]
@@ -188,42 +224,60 @@ def add_relaties_vanuit_hscabine(client: EMInfraClient) -> [list]:
             asset_multiple_children.append(asset)
         for asset_hsdeel in assets_hsdeel:
             logging.debug("Bevestiging-relatie van HSCabineLegacy naar HSDeel")
-            create_relatie_if_missing(client=client, bron_asset=asset_hsdeel, doel_asset=asset,
+            try:
+                create_relatie_if_missing(client=client, bron_asset=asset_hsdeel, doel_asset=asset,
                                       relatie=RelatieEnum.BEVESTIGING)
-            set_locatie(client=eminfra_client, parent_asset=asset, child_asset=asset_hsdeel)
+                set_locatie(client=eminfra_client, parent_asset=asset, child_asset=asset_hsdeel)
+            except:
+                asset_foute_relaties.append(asset_hsdeel)
 
         if len(assets_lsdeel) > 1:
             asset_multiple_children.append(asset)
         for asset_lsdeel in assets_lsdeel:
             logging.debug("Bevestiging-relatie van HSCabineLegacy naar LSDeel")
-            create_relatie_if_missing(client=client, bron_asset=asset_lsdeel, doel_asset=asset,
+            try:
+                create_relatie_if_missing(client=client, bron_asset=asset_lsdeel, doel_asset=asset,
                                       relatie=RelatieEnum.BEVESTIGING)
-            set_locatie(client=eminfra_client, parent_asset=asset, child_asset=asset_lsdeel)
+                set_locatie(client=eminfra_client, parent_asset=asset, child_asset=asset_lsdeel)
+            except:
+                asset_foute_relaties.append(asset_lsdeel)
 
         if len(assets_hs) == 1 and len(assets_hsdeel) == 1:
             asset_hs = assets_hs[0]
             asset_hsdeel = assets_hsdeel[0]
             logging.debug("Voedt-relatie van HS naar HSDeel")
-            create_relatie_if_missing(client=client, bron_asset=asset_hs, doel_asset=asset_hsdeel,
+            try:
+                create_relatie_if_missing(client=client, bron_asset=asset_hs, doel_asset=asset_hsdeel,
                                       relatie=RelatieEnum.VOEDT)
+            except:
+                asset_foute_relaties.append(asset_hs)
 
         if len(assets_hsdeel) == 1 and len(assets_lsdeel) == 1:
             asset_hsdeel = assets_hsdeel[0]
             asset_lsdeel = assets_lsdeel[0]
             logging.debug("Voedt-relatie van HSDeel naar LSDeel")
-            create_relatie_if_missing(client=client, bron_asset=asset_hsdeel, doel_asset=asset_lsdeel,
+            try:
+                create_relatie_if_missing(client=client, bron_asset=asset_hsdeel, doel_asset=asset_lsdeel,
                                       relatie=RelatieEnum.VOEDT)
+            except:
+                asset_foute_relaties.append(asset_hsdeel)
 
         if len(assets_hs) > 1:
             asset_multiple_children.append(asset)
         for asset_hs in assets_hs:
             logging.debug("Bevestiging-relatie van HSCabineLegacy naar HS")
-            create_relatie_if_missing(client=client, bron_asset=asset_hs, doel_asset=asset,
+            try:
+                create_relatie_if_missing(client=client, bron_asset=asset_hs, doel_asset=asset,
                                       relatie=RelatieEnum.BEVESTIGING)
-            set_locatie(client=eminfra_client, parent_asset=asset, child_asset=asset_hs)
+                set_locatie(client=eminfra_client, parent_asset=asset, child_asset=asset_hs)
+            except:
+                asset_foute_relaties.append(asset_hs)
 
             heeftbijhorende_assets = client.search_assets_via_relatie(asset_uuid=asset_hs.uuid,
                                                                       relatie=RelatieEnum.HEEFTBIJHORENDEASSETS)
+            if not heeftbijhorende_assets:
+                continue
+
             assets_dnbhoogspanning = [item for item in heeftbijhorende_assets if
                                       item.type.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBHoogspanning'
                                       and item.actief == True]
@@ -235,22 +289,28 @@ def add_relaties_vanuit_hscabine(client: EMInfraClient) -> [list]:
                 asset_multiple_children.append(asset_hs)
             for asset_dnbhoogspanning in assets_dnbhoogspanning:
                 logging.debug("HeeftBijhorendeAssets-relatie van HS naar DNBHoogspanning")
-                create_relatie_if_missing(client=client, bron_asset=asset_dnbhoogspanning, doel_asset=asset_hs,
+                try:
+                    create_relatie_if_missing(client=client, bron_asset=asset_dnbhoogspanning, doel_asset=asset_hs,
                                           relatie=RelatieEnum.HOORTBIJ)
-                logging.debug("DNBLaagspanning heeft geen eigenschap locatie")
+                    logging.debug("DNBLaagspanning heeft geen eigenschap locatie")
+                except:
+                    asset_foute_relaties.append(asset_dnbhoogspanning)
 
             if len(assets_energiemeterdnb) > 1:
                 asset_multiple_children.append(asset_hs)
             for asset_energiemeterdnb in assets_energiemeterdnb:
                 logging.debug("HeeftBijhorendeAssets-relatie van LS naar EnergiemeterDNB")
-                create_relatie_if_missing(client=client, bron_asset=asset_energiemeterdnb, doel_asset=asset_hs,
+                try:
+                    create_relatie_if_missing(client=client, bron_asset=asset_energiemeterdnb, doel_asset=asset_hs,
                                           relatie=RelatieEnum.HOORTBIJ)
-                set_locatie(client=eminfra_client, parent_asset=asset_hs, child_asset=asset_energiemeterdnb, set_afgeleide_locatie=False)
+                    set_locatie(client=eminfra_client, parent_asset=asset_hs, child_asset=asset_energiemeterdnb, set_afgeleide_locatie=False)
+                except:
+                    asset_foute_relaties.append(asset_energiemeterdnb)
 
         if counter % MAX_ITERATIONS == 0:
             break
 
-    return asset_multiple_children
+    return asset_multiple_children, asset_foute_relaties
 
 
 def format_asset_to_dict(asset: AssetDTO) -> dict:
@@ -270,18 +330,26 @@ def format_asset_to_dict(asset: AssetDTO) -> dict:
 if __name__ == '__main__':
     configure_logger()
     logging.info('Kwaliteitscontrole van voeding-gerelateerde assets.')
-    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=Environment.AIM, auth_type=AuthType.JWT, settings_path=load_settings())
 
-    asset_multiple_children_kast = add_relaties_vanuit_kast(client=eminfra_client)
-
-    asset_multiple_children_hscabine = add_relaties_vanuit_hscabine(client=eminfra_client)
+    asset_multiple_children_kast, asset_foute_relaties_kast = add_relaties_vanuit_kast(client=eminfra_client)
+    asset_multiple_children_hscabine, asset_foute_relaties_hscabine = add_relaties_vanuit_hscabine(client=eminfra_client)
 
     asset_multiple_children_kast = [format_asset_to_dict(asset=a) for a in asset_multiple_children_kast]
     asset_multiple_children_hscabine = [format_asset_to_dict(asset=a) for a in asset_multiple_children_hscabine]
+    asset_foute_relaties_kast = [format_asset_to_dict(asset=a) for a in asset_foute_relaties_kast]
+    asset_foute_relaties_hscabine = [format_asset_to_dict(asset=a) for a in asset_foute_relaties_hscabine]
 
     output_excel_path = 'DQ Voeding assets met meerdere child assets.xlsx'
     with pd.ExcelWriter(output_excel_path, mode='w', engine='openpyxl') as writer:
         df1 = pd.DataFrame(asset_multiple_children_kast)
         df1.to_excel(writer, sheet_name='Kast', index=False, freeze_panes=[1, 1])
         df2 = pd.DataFrame(asset_multiple_children_hscabine)
+        df2.to_excel(writer, sheet_name='HSCabine', index=False, freeze_panes=[1, 1])
+
+    output_excel_path = 'DQ Voeding assets met foute relaties.xlsx'
+    with pd.ExcelWriter(output_excel_path, mode='w', engine='openpyxl') as writer:
+        df1 = pd.DataFrame(asset_foute_relaties_kast)
+        df1.to_excel(writer, sheet_name='Kast', index=False, freeze_panes=[1, 1])
+        df2 = pd.DataFrame(asset_foute_relaties_hscabine)
         df2.to_excel(writer, sheet_name='HSCabine', index=False, freeze_panes=[1, 1])
