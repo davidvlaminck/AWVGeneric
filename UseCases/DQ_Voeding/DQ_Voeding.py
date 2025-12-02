@@ -270,7 +270,7 @@ def format_asset_to_dict(asset: AssetDTO) -> dict:
 if __name__ == '__main__':
     configure_logger()
     logging.info('Kwaliteitscontrole van voeding-gerelateerde assets.')
-    eminfra_client = EMInfraClient(env=Environment.DEV, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
 
     asset_multiple_children_kast = add_relaties_vanuit_kast(client=eminfra_client)
 
