@@ -15,7 +15,7 @@ ASSETTYPE_UUID_LSDEEL = 'b4361a72-e1d5-41c5-bfcc-d48f459f4048'
 ASSETTYPE_UUID_HS = '46dcd9b1-f660-4c8c-8e3e-9cf794b4de75'
 ASSETTYPE_UUID_HSDEEL = 'a9655f50-3de7-4c18-aa25-181c372486b1'
 ASSETTYPE_UUID_HSCABINELEGACY = '1cf24e76-5bf3-44b0-8332-a47ab126b87e'
-MAX_ITERATIONS = 250
+MAX_ITERATIONS = 10000000
 
 def set_locatie(client: EMInfraClient, parent_asset: AssetDTO, child_asset: AssetDTO, set_afgeleide_locatie: bool = True) -> None:
     """
@@ -330,7 +330,8 @@ def format_asset_to_dict(asset: AssetDTO) -> dict:
 if __name__ == '__main__':
     configure_logger()
     logging.info('Kwaliteitscontrole van voeding-gerelateerde assets.')
-    eminfra_client = EMInfraClient(env=Environment.AIM, auth_type=AuthType.JWT, settings_path=load_settings())
+    environment = Environment.PRD
+    eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=load_settings())
 
     asset_multiple_children_kast, asset_foute_relaties_kast = add_relaties_vanuit_kast(client=eminfra_client)
     asset_multiple_children_hscabine, asset_foute_relaties_hscabine = add_relaties_vanuit_hscabine(client=eminfra_client)
@@ -340,14 +341,14 @@ if __name__ == '__main__':
     asset_foute_relaties_kast = [format_asset_to_dict(asset=a) for a in asset_foute_relaties_kast]
     asset_foute_relaties_hscabine = [format_asset_to_dict(asset=a) for a in asset_foute_relaties_hscabine]
 
-    output_excel_path = 'DQ Voeding assets met meerdere child assets.xlsx'
+    output_excel_path = f'DQ Voeding assets met meerdere child assets_{environment.value[0]}.xlsx'
     with pd.ExcelWriter(output_excel_path, mode='w', engine='openpyxl') as writer:
         df1 = pd.DataFrame(asset_multiple_children_kast)
         df1.to_excel(writer, sheet_name='Kast', index=False, freeze_panes=[1, 1])
         df2 = pd.DataFrame(asset_multiple_children_hscabine)
         df2.to_excel(writer, sheet_name='HSCabine', index=False, freeze_panes=[1, 1])
 
-    output_excel_path = 'DQ Voeding assets met foute relaties.xlsx'
+    output_excel_path = f'DQ Voeding assets met foute relaties_{environment.value[0]}.xlsx'
     with pd.ExcelWriter(output_excel_path, mode='w', engine='openpyxl') as writer:
         df1 = pd.DataFrame(asset_foute_relaties_kast)
         df1.to_excel(writer, sheet_name='Kast', index=False, freeze_panes=[1, 1])
