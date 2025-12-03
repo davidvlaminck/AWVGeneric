@@ -1427,7 +1427,7 @@ class EMInfraClient:
             raise ProcessLookupError(response.content.decode("utf-8"))
 
 
-    def get_kenmerktype_and_relatietype_id(self, relatie_uri: str) -> (str, str):
+    def get_kenmerktype_and_relatietype_id(self, relatie: RelatieEnum) -> (str, str):
         relaties_dict = {
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Sturing": [
                 "3e207d7c-26cd-468b-843c-6648c7eeebe4",
@@ -1526,7 +1526,7 @@ class EMInfraClient:
                 "de86510a-d61c-46fb-805d-c04c78b27ab6"
             ]
         }
-        return relaties_dict[relatie_uri]
+        return relaties_dict[relatie.value]
 
     def add_relatie(self, assetId: str, kenmerkTypeId: str, relatieTypeId: str, doel_assetId: str) -> None:
         """
@@ -1552,7 +1552,7 @@ class EMInfraClient:
             raise ProcessLookupError(response.content.decode("utf-8"))
 
     def create_assetrelatie(self, bronAsset: AssetDTO, doelAsset: AssetDTO, relatie: RelatieEnum) -> AssetRelatieDTO:
-        _, relatietype_uuid = self.get_kenmerktype_and_relatietype_id(relatie_uri=relatie.value)
+        _, relatietype_id = self.get_kenmerktype_and_relatietype_id(relatie=relatie)
         json_body = {
             "bronAsset": {
                 "uuid": f"{bronAsset.uuid}",
@@ -1563,7 +1563,7 @@ class EMInfraClient:
                 "_type": f"{doelAsset._type}"
             },
             "relatieType": {
-                "uuid": f"{relatietype_uuid}"
+                "uuid": f"{relatietype_id}"
             }
         }
         url = 'core/api/assetrelaties'
@@ -1963,7 +1963,7 @@ class EMInfraClient:
         :param relatie: relatieTypeEnum
         :return:
         """
-        kenmerkType_uuid, relatieType_uuid = self.get_kenmerktype_and_relatietype_id(relatie_uri=relatie.value)
+        kenmerkType_uuid, relatieType_uuid = self.get_kenmerktype_and_relatietype_id(relatie=relatie)
         url = f'core/api/assets/{asset_uuid}/kenmerken/{kenmerkType_uuid}/assets-via/{relatieType_uuid}'
         resp = self.requester.get(url=url)
         if resp.status_code != 200:
@@ -1971,6 +1971,30 @@ class EMInfraClient:
             raise ProcessLookupError(resp.content.decode())
 
         return [AssetDTO.from_dict(item) for item in resp.json()['data']]
+
+    def remove_assets_via_relatie(self, bronasset_uuid: str, doelasset_uuid: str, relatie: RelatieEnum) -> None:
+        """
+        Loskoppelen van een relatie tussen een bron en een doel-asset.
+
+        :param bronasset_uuid: bron asset uuid
+        :param doelasset_uuid: doel asset uuid
+        :param relatie: relatieTypeEnum
+        :return: None
+
+        """
+        kenmerkType_uuid, relatieType_uuid = self.get_kenmerktype_and_relatietype_id(relatie=relatie)
+        url = f'core/api/assets/{bronasset_uuid}/kenmerken/{kenmerkType_uuid}/assets-via/{relatieType_uuid}/ops/remove'
+        request_body = {
+          "name":"remove",
+          "description":"Relatie loskoppelen van 1 asset",
+          "async":False,
+          "uuids": [f"{doelasset_uuid}"]
+        }
+        resp = self.requester.put(url=url, json=request_body)
+        if resp.status_code != 202:
+            logging.error(resp)
+            raise ProcessLookupError(resp.content.decode())
+
     def get_graph(self, asset_uuid: str, depth: int = 1, relatieTypes: list = None, actiefFilter: bool = True) -> Graph:
         """
         Generate the graph, starting from an asset, searching a certain depth and for some relatieTypes
