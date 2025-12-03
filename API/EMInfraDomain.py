@@ -417,10 +417,12 @@ class ElektrischAansluitpuntKenmerk(BaseDataclass):
 class GeometryLog(BaseDataclass):
     bron: GeometryBron
     links: [Link]
-    nauwkeurigheid: GeometryNauwkeurigheid
     niveau: GeometryNiveau
     uuid: str
     wkt: str
+    nauwkeurigheid: GeometryNauwkeurigheid | None = None
+    overervingen: list[dict] | None = None
+    gaVersie: str | None = None
 
     def __post_init__(self):
          self._fix_nested_list_classes({('links', Link)})

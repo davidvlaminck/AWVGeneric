@@ -121,3 +121,40 @@ def build_betrokkenerelatie(client: EMInfraClient, source: AssetDTO, agent_naam 
                                      , source_uuid=source.uuid
                                      , target_uuid=agent_uuid
                                      , target_typeURI=agent_uri)
+
+def create_relatie_if_missing(client: EMInfraClient, bron_asset: AssetDTO, doel_asset: AssetDTO,
+                              relatie: RelatieEnum) -> AssetRelatieDTO:
+    """
+    Given a relatie type (relatie_uri), and two assets (bronAsset, doelAsset), search for the existing relation(s)
+    and create a new relation if missing.
+    For non-directional assets (e.g. Bevestiging), retry with inversed bron_asset and doel_asset.
+    Raise an error if multiple relations exist.
+    Returns the object AssetRelatieDTO.
+
+    :param client:
+    :param bron_asset:
+    :param doel_asset:
+    :param relatie_uri:
+    :return:
+    """
+    logging.info(f'Create relatie {relatie.value} between {bron_asset.type.korteUri} ({bron_asset.uuid}) and '
+                 f'{doel_asset.type.korteUri} ({doel_asset.uuid}).')
+    _, relatie_type_uuid = client.get_kenmerktype_and_relatietype_id(
+        relatie_uri=relatie.value)
+    if relatie == RelatieEnum.BEVESTIGING: # bidirectionele relaties
+        relaties = client.search_assetrelaties(type=relatie_type_uuid, bronAsset=bron_asset, doelAsset=doel_asset)
+        relaties += client.search_assetrelaties(type=relatie_type_uuid, bronAsset=doel_asset, doelAsset=bron_asset)
+    else:
+        relaties = client.search_assetrelaties(type=relatie_type_uuid, bronAsset=bron_asset, doelAsset=doel_asset)
+    if len(relaties) > 1:
+        raise ValueError(f'Found {len(relaties)}, expected 1')
+    elif len(relaties) == 0:
+        relatie = client.create_assetrelatie(
+            bronAsset=bron_asset,
+            doelAsset=doel_asset,
+            relatie=relatie)
+    elif len(relaties) == 1:
+        relatie = relaties[0]
+    else:
+        raise NotImplementedError
+    return relatie

@@ -137,7 +137,7 @@ class EMInfraClient:
             raise ProcessLookupError(response.content.decode("utf-8"))
 
     def update_kenmerk_locatie_via_relatie(self, bron_asset_uuid: str, doel_asset_uuid: str) -> None:
-        """Update het kenmerk locatie via een bestaande afgeleide relatie"""
+        """Update het kenmerk locatie via een bestaande steun-relatie"""
         json_body = {
             "relatie": {
                 "asset": {
