@@ -402,10 +402,10 @@ class ElektrischAansluitpuntKenmerk(BaseDataclass):
 class GeometryLog(BaseDataclass):
     bron: GeometryBron
     links: [Link]
-    nauwkeurigheid: GeometryNauwkeurigheid
     niveau: GeometryNiveau
     uuid: str
     wkt: str
+    nauwkeurigheid: GeometryNauwkeurigheid | None = None
     overervingen: list[dict] | None = None
     gaVersie: str | None = None
 
