@@ -46,7 +46,7 @@ def get_first_list_element(lst: list) -> Any:
 
 
 def create_relatie_if_missing(eminfra_client: EMInfraClient, bronAsset: AssetDTO, doelAsset: AssetDTO,
-                              relatie_uri: str) -> AssetRelatieDTO:
+                              relatie: RelatieEnum) -> AssetRelatieDTO:
     """
     Given a relatie type (relatie_uri), and two assets (bronAsset, doelAsset), search for the existing relation(s)
     and create a new relation if missing.
@@ -59,23 +59,20 @@ def create_relatie_if_missing(eminfra_client: EMInfraClient, bronAsset: AssetDTO
     :param relatie_uri:
     :return:
     """
-    logging.info(f'Create relatie {relatie_uri} between {bronAsset.type.korteUri} ({bronAsset.uuid}) and '
+    logging.info(f'Create relatie {relatie.value} between {bronAsset.type.korteUri} ({bronAsset.uuid}) and '
                  f'{doelAsset.type.korteUri} ({doelAsset.uuid}).')
     kenmerkTypeId, relatieTypeId = eminfra_client.get_kenmerktype_and_relatietype_id(
-        relatie_uri=relatie_uri)
+        relatie=relatie)
     relaties = eminfra_client.search_assetrelaties(type=relatieTypeId, bronAsset=bronAsset, doelAsset=doelAsset)
     if len(relaties) > 1:
         raise ValueError(f'Found {len(relaties)}, expected 1')
     elif len(relaties) == 0:
-        relatie = eminfra_client.create_assetrelatie(
-            bronAsset=bronAsset,
-            doelAsset=doelAsset,
-            relatieType_uuid=relatieTypeId)
+        relatie_output = eminfra_client.create_assetrelatie(bronAsset=bronAsset, doelAsset=doelAsset, relatie=relatie)
     elif len(relaties) == 1:
-        relatie = relaties[0]
+        relatie_output = relaties[0]
     else:
         raise NotImplementedError
-    return relatie
+    return relatie_output
 
 
 def transfer_ean_number(eminfra_client, bronAsset, doelAsset, ean_bronAsset):
@@ -165,7 +162,7 @@ def process_seinbrug(eminfra_client: EMInfraClient, df: pd.DataFrame):
         eminfra_client.disconnect_kenmerk_elektrisch_aansluitpunt(asset_uuid=asset.uuid)
 
 
-def process_biflash(eminfra_client: EMInfraClient, df: pd.DataFrame):
+def process_forfait(eminfra_client: EMInfraClient, df: pd.DataFrame):
     """
     Toevoegen van twee assets via de HoortBij-relatie: DNBLaagspanning en Forfaitaire aansluiting.
     Toevoegen Voedt-relatie van DNBLaagspanning naar Forfaitaire aansluiting
@@ -379,7 +376,7 @@ if __name__ == '__main__':
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s',
                         filemode="w")
     logging.info('EAN-nummers verplaatsen:\t EAN-nummers overdragen van assets (Legacy) naar DNBLaagspanning (OTL)')
-    eminfra_client = EMInfraClient(env=Environment.DEV, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
 
     filepath = Path().home() / 'Nordend/AWV - Documents/ReportingServiceAssets/Report0144/input' / '[RSA] Assets (legacy) met ingevuld kenmerk_ _elektrische aansluiting_.xlsx'
     usecols = ['uuid', 'naam', 'naampad', 'isTunnel', 'toestand', 'assettype_naam', 'ean', 'aansluiting',
@@ -388,16 +385,19 @@ if __name__ == '__main__':
     df_assets_fictieve_aansluiting = df_assets[df_assets['aansluiting'] == 'A11.FICTIEF']
     df_seinbrug = df_assets[df_assets['opmerkingen (blijvend)'] == 'Operatie toevoegen als commentaar']
     df_biflash = df_assets[df_assets['opmerkingen (blijvend)'] == 'Operatie Bi-flash forfait']
+    df_forfait = df_assets[df_assets['opmerkingen (blijvend)'] == 'FORFAIT']
     df_laagspanning = df_assets[df_assets['opmerkingen (blijvend)'] == 'Operatie Laagspanning']
     df_hoogspanning = df_assets[df_assets['opmerkingen (blijvend)'] == 'Operatie Hoogspanning']
     df_beverentunnel = df_assets[(df_assets['opmerkingen (blijvend)'] == 'Beverentunnel') & (df_assets['assettype_naam'] != 'Hoogspanning (Legacy)')]
     df_craeybeckxtunnel = df_assets[(df_assets['opmerkingen (blijvend)'] == 'Craeybeckxtunnel') & (df_assets['assettype_naam'] != 'Hoogspanning (Legacy)')]
+    df_craeybeckxtunnel_hs = df_assets[(df_assets['opmerkingen (blijvend)'] == 'Craeybeckxtunnel') & (df_assets['assettype_naam'] == 'Hoogspanning (Legacy)')]
     df_jandevostunnel = df_assets[(df_assets['opmerkingen (blijvend)'] == 'Jan de Vos tunnel') & (df_assets['assettype_naam'] != 'Hoogspanning (Legacy)')]
     df_kennedytunnel = df_assets[(df_assets['opmerkingen (blijvend)'] == 'Kennedytunnel') & (df_assets['assettype_naam'] != 'Hoogspanning (Legacy)')]
     df_krijgsbaantunnel = df_assets[(df_assets['opmerkingen (blijvend)'] == 'Krijgsbaantunnel') & (df_assets['assettype_naam'] != 'Hoogspanning (Legacy)')]
     df_leonardtunnel = df_assets[(df_assets['opmerkingen (blijvend)'] == 'Leonardtunnel') & (df_assets['assettype_naam'] != 'Hoogspanning (Legacy)')]
     df_noordzuidtunnel = df_assets[(df_assets['opmerkingen (blijvend)'] == 'Noord-Zuid tunnel') & (df_assets['assettype_naam'] != 'Hoogspanning (Legacy)')]
     df_tijsmanstunnel = df_assets[(df_assets['opmerkingen (blijvend)'] == 'Tijsmanstunnel') & (df_assets['assettype_naam'] != 'Hoogspanning (Legacy)')]
+
 
     headers = ('uuid', 'naam', 'assettype_naam',
                'kast_uuid', 'kast_naam',
@@ -418,7 +418,11 @@ if __name__ == '__main__':
 
     logging.info("Bi-flash: toevoegen van een bijhorende DNBLaagspanning (OTL) en forfaitaire aansluiting (OTL).")
     if not df_biflash.empty:
-        process_biflash(eminfra_client, df_biflash)
+        process_forfait(eminfra_client, df_biflash)
+
+    logging.info("forfait: toevoegen van bijhorende assets conform forfaitaire aansluitingen (DNBLaagspanning (OTL) en forfaitaire aansluiting (OTL)).")
+    if not df_forfait.empty:
+        process_forfait(eminfra_client, df_forfait)
 
     logging.info("Laagspanning: toevoegen van een bijhorende DNBLaagspanning (OTL) en Energiemeter (OTL).")
     if not df_laagspanning.empty:
@@ -427,6 +431,9 @@ if __name__ == '__main__':
     logging.info("Hoogspanning: toevoegen van een bijhorende DNBHoogspanning (OTL) en Energiemeter (OTL).")
     if not df_hoogspanning.empty:
         process_hoogspanning(eminfra_client, df_hoogspanning)
+
+    if not df_craeybeckxtunnel_hs.empty:
+        process_hoogspanning(eminfra_client, df_craeybeckxtunnel_hs)
 
     logging.info("Elektrische aansluitingen loskoppelen voor alle tunnel elementen")
     if not df_beverentunnel.empty:
