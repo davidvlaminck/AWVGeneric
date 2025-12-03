@@ -1552,7 +1552,7 @@ class EMInfraClient:
             raise ProcessLookupError(response.content.decode("utf-8"))
 
     def create_assetrelatie(self, bronAsset: AssetDTO, doelAsset: AssetDTO, relatie: RelatieEnum) -> AssetRelatieDTO:
-        kenmerktype_uuid, relatietype_uuid = self.get_kenmerktype_and_relatietype_id(relatie_uri=relatie.value)
+        _, relatietype_uuid = self.get_kenmerktype_and_relatietype_id(relatie_uri=relatie.value)
         json_body = {
             "bronAsset": {
                 "uuid": f"{bronAsset.uuid}",

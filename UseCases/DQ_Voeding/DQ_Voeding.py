@@ -15,7 +15,26 @@ ASSETTYPE_UUID_LSDEEL = 'b4361a72-e1d5-41c5-bfcc-d48f459f4048'
 ASSETTYPE_UUID_HS = '46dcd9b1-f660-4c8c-8e3e-9cf794b4de75'
 ASSETTYPE_UUID_HSDEEL = 'a9655f50-3de7-4c18-aa25-181c372486b1'
 ASSETTYPE_UUID_HSCABINELEGACY = '1cf24e76-5bf3-44b0-8332-a47ab126b87e'
+INSTALLATIE_TYPES = {
+    "LS": "https://lgc.data.wegenenverkeer.be/ns/installatie#LS",
+    "LSDEEL": "https://lgc.data.wegenenverkeer.be/ns/installatie#LSDeel",
+    "HS": "https://lgc.data.wegenenverkeer.be/ns/installatie#HS",
+    "HSDEEL": "https://lgc.data.wegenenverkeer.be/ns/installatie#HSDeel",
+}
+ONDERDEEL_TYPES = {
+    "DNB_LAAG": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBLaagspanning",
+    "DNB_HOOG": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBHoogspanning",
+    "EM_DNB": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#EnergiemeterDNB",
+    "FORFAIT": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#ForfaitaireAansluiting",
+}
+
 MAX_ITERATIONS = 10000000
+
+def filter_assets(assets: list(AssetDTO), type_uri: str) -> list(AssetDTO):
+    """
+    Filter from a list of assets the active assets that match an uri.
+    """
+    return [a for a in assets if a.type.uri == type_uri and a.actief]
 
 def set_locatie(client: EMInfraClient, parent_asset: AssetDTO, child_asset: AssetDTO, set_afgeleide_locatie: bool = True) -> None:
     """
@@ -71,12 +90,8 @@ def add_relaties_vanuit_kast(client: EMInfraClient) -> (list, list):
         if not child_assets:
             continue
 
-        assets_ls = [item for item in child_assets if
-                     item.type.uri == 'https://lgc.data.wegenenverkeer.be/ns/installatie#LS'
-                     and item.actief == True]
-        assets_lsdeel = [item for item in child_assets if
-                         item.type.uri == 'https://lgc.data.wegenenverkeer.be/ns/installatie#LSDeel'
-                         and item.actief == True]
+        assets_ls = filter_assets(child_assets, INSTALLATIE_TYPES["LS"])
+        assets_lsdeel = filter_assets(child_assets, INSTALLATIE_TYPES["LSDEEL"])
 
         if len(assets_lsdeel) > 1:
             asset_multiple_children.append(asset)
@@ -91,7 +106,7 @@ def add_relaties_vanuit_kast(client: EMInfraClient) -> (list, list):
             try:
                 create_relatie_if_missing(client=client, bron_asset=asset_ls, doel_asset=asset_lsdeel,
                                       relatie=RelatieEnum.VOEDT)
-            except:
+            except Exception:
                 asset_foute_relaties.append(asset_ls)
 
         for asset_lsdeel in assets_lsdeel:
@@ -100,7 +115,7 @@ def add_relaties_vanuit_kast(client: EMInfraClient) -> (list, list):
                 create_relatie_if_missing(client=client, bron_asset=asset_lsdeel, doel_asset=asset,
                                       relatie=RelatieEnum.BEVESTIGING)
                 set_locatie(client=client, parent_asset=asset, child_asset=asset_lsdeel, set_afgeleide_locatie=True)
-            except:
+            except Exception:
                 asset_foute_relaties.append(asset_lsdeel)
         for asset_ls in assets_ls:
             logging.debug("Bevestiging-relatie van Kast naar LS")
@@ -108,7 +123,7 @@ def add_relaties_vanuit_kast(client: EMInfraClient) -> (list, list):
                 create_relatie_if_missing(client=client, bron_asset=asset_ls, doel_asset=asset,
                                       relatie=RelatieEnum.BEVESTIGING)
                 set_locatie(client=client, parent_asset=asset, child_asset=asset_ls, set_afgeleide_locatie=True)
-            except:
+            except Exception:
                 asset_foute_relaties.append(asset_ls)
 
             logging.info('Boomstructuur vervolledigen voor alle LS.')
@@ -117,16 +132,9 @@ def add_relaties_vanuit_kast(client: EMInfraClient) -> (list, list):
             if not heeftbijhorende_assets:
                 continue
 
-            assets_dnblaagspanning = [item for item in heeftbijhorende_assets if
-                                      item.type.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBLaagspanning'
-                                      and item.actief == True]
-            assets_energiemeterdnb = [item for item in heeftbijhorende_assets if
-                                      item.type.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#EnergiemeterDNB'
-                                      and item.actief == True]
-            assets_forfaitaireaansluiting = [item for item in heeftbijhorende_assets if
-                                             item.type.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#ForfaitaireAansluiting'
-                                             and item.actief == True]
-
+            assets_dnblaagspanning = filter_assets(heeftbijhorende_assets, ONDERDEEL_TYPES["DNB_LAAG"])
+            assets_energiemeterdnb = filter_assets(heeftbijhorende_assets, ONDERDEEL_TYPES["EM_DNB"])
+            assets_forfaitaireaansluiting = filter_assets(heeftbijhorende_assets, ONDERDEEL_TYPES["FORFAIT"])
 
             if len(assets_dnblaagspanning) > 1:
                 asset_multiple_children.append(asset_ls)
@@ -135,7 +143,7 @@ def add_relaties_vanuit_kast(client: EMInfraClient) -> (list, list):
                 try:
                     create_relatie_if_missing(client=client, bron_asset=asset_dnblaagspanning, doel_asset=asset_ls,
                                           relatie=RelatieEnum.HOORTBIJ)
-                except:
+                except Exception:
                     asset_foute_relaties.append(asset_dnblaagspanning)
 
             if len(assets_energiemeterdnb) > 1:
@@ -146,7 +154,7 @@ def add_relaties_vanuit_kast(client: EMInfraClient) -> (list, list):
                     create_relatie_if_missing(client=client, bron_asset=asset_energiemeterdnb, doel_asset=asset_ls,
                                           relatie=RelatieEnum.HOORTBIJ)
                     set_locatie(client=client, parent_asset=asset_ls, child_asset=asset_energiemeterdnb, set_afgeleide_locatie=False)
-                except:
+                except Exception:
                     asset_foute_relaties.append(asset_energiemeterdnb)
 
             if len(assets_forfaitaireaansluiting) > 1:
@@ -158,7 +166,7 @@ def add_relaties_vanuit_kast(client: EMInfraClient) -> (list, list):
                                           relatie=RelatieEnum.HOORTBIJ)
                     set_locatie(client=client, parent_asset=asset_ls, child_asset=asset_forfaitaireaansluiting,
                             set_afgeleide_locatie=False)
-                except:
+                except Exception:
                     asset_foute_relaties.append(asset_forfaitaireaansluiting)
 
 
@@ -169,7 +177,7 @@ def add_relaties_vanuit_kast(client: EMInfraClient) -> (list, list):
                 try:
                     create_relatie_if_missing(client=client, bron_asset=asset_dnblaagspanning,
                                           doel_asset=asset_energiemeterdnb, relatie=RelatieEnum.VOEDT)
-                except:
+                except Exception:
                     asset_foute_relaties.append(asset_dnblaagspanning)
             if len(assets_dnblaagspanning) == 1 and len(assets_forfaitaireaansluiting) == 1:
                 asset_dnblaagspanning = assets_dnblaagspanning[0]
@@ -178,7 +186,7 @@ def add_relaties_vanuit_kast(client: EMInfraClient) -> (list, list):
                 try:
                     create_relatie_if_missing(client=client, bron_asset=asset_dnblaagspanning,
                                           doel_asset=asset_forfaitaireaansluiting, relatie=RelatieEnum.VOEDT)
-                except:
+                except Exception:
                     asset_foute_relaties.append(asset_dnblaagspanning)
 
         if counter % MAX_ITERATIONS == 0:
@@ -210,15 +218,9 @@ def add_relaties_vanuit_hscabine(client: EMInfraClient) -> (list, list):
         if not child_assets:
             continue
 
-        assets_hsdeel = [item for item in child_assets if
-                         item.type.uri == 'https://lgc.data.wegenenverkeer.be/ns/installatie#HSDeel'
-                         and item.actief == True]
-        assets_lsdeel = [item for item in child_assets if
-                         item.type.uri == 'https://lgc.data.wegenenverkeer.be/ns/installatie#LSDeel'
-                         and item.actief == True]
-        assets_hs = [item for item in child_assets if
-                     item.type.uri == 'https://lgc.data.wegenenverkeer.be/ns/installatie#HS'
-                     and item.actief == True]
+        assets_hsdeel = filter_assets(child_assets, INSTALLATIE_TYPES["HSDEEL"])
+        assets_lsdeel = filter_assets(child_assets, INSTALLATIE_TYPES["LSDEEL"])
+        assets_hs = filter_assets(child_assets, INSTALLATIE_TYPES["HS"])
 
         if len(assets_hsdeel) > 1:
             asset_multiple_children.append(asset)
@@ -227,8 +229,8 @@ def add_relaties_vanuit_hscabine(client: EMInfraClient) -> (list, list):
             try:
                 create_relatie_if_missing(client=client, bron_asset=asset_hsdeel, doel_asset=asset,
                                       relatie=RelatieEnum.BEVESTIGING)
-                set_locatie(client=eminfra_client, parent_asset=asset, child_asset=asset_hsdeel)
-            except:
+                set_locatie(client=client, parent_asset=asset, child_asset=asset_hsdeel)
+            except Exception:
                 asset_foute_relaties.append(asset_hsdeel)
 
         if len(assets_lsdeel) > 1:
@@ -238,8 +240,8 @@ def add_relaties_vanuit_hscabine(client: EMInfraClient) -> (list, list):
             try:
                 create_relatie_if_missing(client=client, bron_asset=asset_lsdeel, doel_asset=asset,
                                       relatie=RelatieEnum.BEVESTIGING)
-                set_locatie(client=eminfra_client, parent_asset=asset, child_asset=asset_lsdeel)
-            except:
+                set_locatie(client=client, parent_asset=asset, child_asset=asset_lsdeel)
+            except Exception:
                 asset_foute_relaties.append(asset_lsdeel)
 
         if len(assets_hs) == 1 and len(assets_hsdeel) == 1:
@@ -249,7 +251,7 @@ def add_relaties_vanuit_hscabine(client: EMInfraClient) -> (list, list):
             try:
                 create_relatie_if_missing(client=client, bron_asset=asset_hs, doel_asset=asset_hsdeel,
                                       relatie=RelatieEnum.VOEDT)
-            except:
+            except Exception:
                 asset_foute_relaties.append(asset_hs)
 
         if len(assets_hsdeel) == 1 and len(assets_lsdeel) == 1:
@@ -259,7 +261,7 @@ def add_relaties_vanuit_hscabine(client: EMInfraClient) -> (list, list):
             try:
                 create_relatie_if_missing(client=client, bron_asset=asset_hsdeel, doel_asset=asset_lsdeel,
                                       relatie=RelatieEnum.VOEDT)
-            except:
+            except Exception:
                 asset_foute_relaties.append(asset_hsdeel)
 
         if len(assets_hs) > 1:
@@ -269,8 +271,8 @@ def add_relaties_vanuit_hscabine(client: EMInfraClient) -> (list, list):
             try:
                 create_relatie_if_missing(client=client, bron_asset=asset_hs, doel_asset=asset,
                                       relatie=RelatieEnum.BEVESTIGING)
-                set_locatie(client=eminfra_client, parent_asset=asset, child_asset=asset_hs)
-            except:
+                set_locatie(client=client, parent_asset=asset, child_asset=asset_hs)
+            except Exception:
                 asset_foute_relaties.append(asset_hs)
 
             heeftbijhorende_assets = client.search_assets_via_relatie(asset_uuid=asset_hs.uuid,
@@ -278,12 +280,8 @@ def add_relaties_vanuit_hscabine(client: EMInfraClient) -> (list, list):
             if not heeftbijhorende_assets:
                 continue
 
-            assets_dnbhoogspanning = [item for item in heeftbijhorende_assets if
-                                      item.type.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DNBHoogspanning'
-                                      and item.actief == True]
-            assets_energiemeterdnb = [item for item in heeftbijhorende_assets if
-                                      item.type.uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#EnergiemeterDNB'
-                                      and item.actief == True]
+            assets_dnbhoogspanning = filter_assets(heeftbijhorende_assets, ONDERDEEL_TYPES["DNB_HOOG"])
+            assets_energiemeterdnb = filter_assets(heeftbijhorende_assets, ONDERDEEL_TYPES["EM_DNB"])
 
             if len(assets_dnbhoogspanning) > 1:
                 asset_multiple_children.append(asset_hs)
@@ -293,7 +291,7 @@ def add_relaties_vanuit_hscabine(client: EMInfraClient) -> (list, list):
                     create_relatie_if_missing(client=client, bron_asset=asset_dnbhoogspanning, doel_asset=asset_hs,
                                           relatie=RelatieEnum.HOORTBIJ)
                     logging.debug("DNBLaagspanning heeft geen eigenschap locatie")
-                except:
+                except Exception:
                     asset_foute_relaties.append(asset_dnbhoogspanning)
 
             if len(assets_energiemeterdnb) > 1:
@@ -303,8 +301,8 @@ def add_relaties_vanuit_hscabine(client: EMInfraClient) -> (list, list):
                 try:
                     create_relatie_if_missing(client=client, bron_asset=asset_energiemeterdnb, doel_asset=asset_hs,
                                           relatie=RelatieEnum.HOORTBIJ)
-                    set_locatie(client=eminfra_client, parent_asset=asset_hs, child_asset=asset_energiemeterdnb, set_afgeleide_locatie=False)
-                except:
+                    set_locatie(client=client, parent_asset=asset_hs, child_asset=asset_energiemeterdnb, set_afgeleide_locatie=False)
+                except Exception:
                     asset_foute_relaties.append(asset_energiemeterdnb)
 
         if counter % MAX_ITERATIONS == 0:
