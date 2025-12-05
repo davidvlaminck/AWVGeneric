@@ -1,4 +1,6 @@
 import logging
+from pathlib import Path
+
 import pandas as pd
 
 from API.EMInfraClient import EMInfraClient
@@ -44,8 +46,8 @@ if __name__ == '__main__':
     environment = Environment.PRD
     eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=load_settings())
 
-    input_file = f'DQ Voeding assets met meerdere child assets_{environment.value[0]}.xlsx'
-    output_file = f'DQ Voeding assets met meerdere child assets_log_info_{environment.value[0]}.xlsx'
+    input_file = Path.home() / 'Nordend/AWV - Documents/DataQuality/Voeding' / f'DQ Voeding assets met meerdere child assets_{environment.value[0]}.xlsx'
+    output_file = input_file
     df = pd.read_excel(io=input_file, sheet_name='Kast', usecols=["uuid", "type", "naam"], header=0)
 
     df["toezichter"] = None
@@ -76,5 +78,6 @@ if __name__ == '__main__':
         df.at[idx, "energiemeter"] = len(filter_assets(assets=bijhorende_assets, type_uri=ONDERDEEL_TYPES["EM_DNB"]))
         df.at[idx, "forfait"] = len(filter_assets(assets=bijhorende_assets, type_uri=ONDERDEEL_TYPES["FORFAIT"]))
         df.at[idx, "log_info"] = extract_info(asset_list=bijhorende_assets)
-    with pd.ExcelWriter(output_file, mode='w', engine='openpyxl') as writer:
-        df.to_excel(writer, sheet_name='Kast', index=False, freeze_panes=[1, 1])
+
+    with pd.ExcelWriter(output_file, mode='a', engine='openpyxl') as writer:
+        df.to_excel(writer, sheet_name='Kast_extra_info', index=False, freeze_panes=[1, 1])
