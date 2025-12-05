@@ -1509,6 +1509,10 @@ class EMInfraClient:
                 "c3494ff0-9e02-4c11-856c-da8db6238768",
                 "3ff9bf1c-d852-442e-a044-6200fe064b20"
             ],
+            "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#GeeftBevestigingAan": [
+                "cef6a3c0-fd1b-48c3-8ee0-f723e55dd02b",
+                "3ff9bf1c-d852-442e-a044-6200fe064b20"
+            ],
             "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HeeftNetwerktoegang": [
                 "",
                 "3a63adb8-493a-4aa8-8e2e-164fd942b0b9"

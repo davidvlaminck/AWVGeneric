@@ -92,6 +92,7 @@ class RelatieEnum(Enum):
     An enumeration of relatie types with their corresponding values.
     """
     BEVESTIGING = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging'
+    GEEFTBEVESTIGINGAAN = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#GeeftBevestigingAan'
     GEMIGREERDNAAR = 'https://lgc.data.wegenenverkeer.be/ns/onderdeel#GemigreerdNaar'
     HEEFTAANVULLENDEGEOMETRIE = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HeeftAanvullendeGeometrie'
     HEEFTBEHEER = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HeeftBeheer'

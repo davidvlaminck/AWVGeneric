@@ -5,7 +5,7 @@ import pandas as pd
 from pathlib import Path
 
 from API.EMInfraDomain import AssetDTO, QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum, \
-    AgentDTO, LogicalOpEnum, ExpansionsDTO
+    AgentDTO, LogicalOpEnum, ExpansionsDTO, RelatieEnum, AssetRelatieDTO
 from collections.abc import Generator
 from API.EMInfraClient import EMInfraClient
 from API.EMInfraDomain import AssetDTO
@@ -158,3 +158,4 @@ def create_relatie_if_missing(client: EMInfraClient, bron_asset: AssetDTO, doel_
     else:
         raise NotImplementedError
     return relatie
+

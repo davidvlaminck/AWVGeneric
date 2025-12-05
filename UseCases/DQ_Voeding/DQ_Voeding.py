@@ -30,7 +30,7 @@ ONDERDEEL_TYPES = {
 
 MAX_ITERATIONS = 10000000
 
-def filter_assets(assets: list(AssetDTO), type_uri: str) -> list(AssetDTO):
+def filter_assets(assets: [AssetDTO], type_uri: str) -> [AssetDTO]:
     """
     Filter from a list of assets the active assets that match an uri.
     """
