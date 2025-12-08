@@ -11,7 +11,8 @@ from API.EMInfraDomain import BestekKoppelingStatusEnum, BestekCategorieEnum, Be
 from API.Enums import AuthType, Environment
 
 BESTANDSNAMEN = [
-    'Import AIM_MAR klaar v Prod.xlsx'
+    'Import BOL_TYS_met bestekken v Prod (Raf) z Toez.xlsx'
+    # 'Import AIM_MAR klaar v Prod.xlsx'
     # 'Import AIM_CRA_met bestekken v Prod.xlsx'
     # 'Import AIM_RUP_met bestekken v Prod.xlsx'
     # 'Import AIM_ZEL_met bestekken v Prod.xlsx'
@@ -25,13 +26,13 @@ def read_excel_as_df(filepath: Path, usecols:list = None):
 
     if not usecols:
         usecols = [
-        'uuid_prod',
+        'id',
         'naampad', '1e bestek', 'Startdatum 1e bestek', '2e bestek', 'Startdatum 2e bestek', '3e bestek',
         'Startdatum 3e bestek']
 
     df = pd.read_excel(filepath, sheet_name='Sheet0', header=0, usecols=usecols)
     df = df.rename(columns={
-        'uuid_prod': 'uuid',
+        'id': 'uuid',
         '1e bestek': 'bestek1_naam', 'Startdatum 1e bestek': 'bestek1_datum', '2e bestek': 'bestek2_naam',
         'Startdatum 2e bestek': 'bestek2_datum', '3e bestek': 'bestek3_naam',
         'Startdatum 3e bestek': 'bestek3_datum'})
@@ -110,7 +111,7 @@ if __name__ == '__main__':
 
     for bestandsnaam in BESTANDSNAMEN:
         # Read Excel as pandas dataframe
-        filepath_input = Path.home() / 'Downloads' / 'Tunnels' / 'input_orig_bestanden_Patrick' / 'Margaretha Tunnel' / bestandsnaam
+        filepath_input = Path.home() / 'Downloads' / 'Tunnels' / 'input_orig_bestanden_Patrick' / 'Bolivar Tunnel' / bestandsnaam
         df_assets = read_excel_as_df(filepath=filepath_input)
 
         process_assets(df=df_assets)
