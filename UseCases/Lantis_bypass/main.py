@@ -128,13 +128,14 @@ def map_status(nieuwe_status: str) -> AssetDTOToestand:
     Map een string naar de enumeration klasse AssetDTOToestand.
     """
     mapping = {
-        'in-ontwerp': AssetDTOToestand.IN_ONTWERP,
-        'gepland': AssetDTOToestand.GEPLAND,
         'geannuleerd': AssetDTOToestand.GEANNULEERD,
+        'gepland': AssetDTOToestand.GEPLAND,
+        'in-gebruik': AssetDTOToestand.IN_GEBRUIK,
+        'in-ontwerp': AssetDTOToestand.IN_ONTWERP,
         'in-opbouw': AssetDTOToestand.IN_OPBOUW,
-        'verwijderd': AssetDTOToestand.VERWIJDERD,
         'overgedragen': AssetDTOToestand.OVERGEDRAGEN,
         'uit-gebruik': AssetDTOToestand.UIT_GEBRUIK,
+        'verwijderd': AssetDTOToestand.VERWIJDERD,
     }
 
     try:
@@ -567,7 +568,8 @@ class BypassProcessor:
 
                 # Update toestand
                 if asset_info.column_status:
-                    nieuwe_status = asset_row.get(asset_info.column_status)
+                    # default waarde "in-opbouw" indien er geen waarde is ingevuld.
+                    nieuwe_status = asset_row.get(asset_info.column_status, default='in-opbouw')
                     nieuwe_toestand = map_status(nieuwe_status)
                 else:
                     nieuwe_toestand = AssetDTOToestand.IN_OPBOUW
@@ -1037,9 +1039,6 @@ class BypassProcessor:
                                 parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT) -> AssetDTO | None:
         """
         Maak de asset aan indien nog onbestaande en geef de asset terug
-        Update de toestand van de asset
-        Update locatie (indien aanwezig)
-        Add bestekkoppeling (if missing)
 
         :param typeURI: asset typeURI
         :asset_naam: asset naam
@@ -1054,6 +1053,8 @@ class BypassProcessor:
                              expansions=ExpansionsDTO(fields=['parent'])
                              , selection=SelectionDTO(expressions=[
                 ExpressionDTO(terms=[TermDTO(property='type', operator=OperatorEnum.EQ, value=f'{assettype.uuid}')]),
+                ExpressionDTO(terms=[TermDTO(property='actief', operator=OperatorEnum.EQ, value=True)],
+                              logicalOp=LogicalOpEnum.AND),
                 ExpressionDTO(terms=[TermDTO(property='naam', operator=OperatorEnum.EQ, value=f'{asset_naam}')],
                               logicalOp=LogicalOpEnum.AND)
             ]))
@@ -1129,6 +1130,14 @@ class BypassProcessor:
         :param naam:
         :return:
         """
+        mapping_exceptions = {
+            "A13M0.50.K": "A13X0.4"
+        }
+        try:
+            return mapping_exceptions[naam]
+        except KeyError:
+            logging.info("Strip kast naam naar installatie naam.")
+
         # Step 1: Remove suffix ".K" if present
         if naam.endswith('.K'):
             temp_installatie_naam = naam[:-2]
@@ -1581,9 +1590,9 @@ if __name__ == '__main__':
     logging.info('Aanmaken Boomstructuur voor installaties onder Wegkantkast')
     logging.info('Aanmaken installaties')
 
-    bypass.process_installatie(df=bypass.df_assets_wegkantkasten
-                               , column_name='Wegkantkast_Object assetId.identificator'
-                               , asset_type=AssetType.WEGKANTKAST)
+    # bypass.process_installatie(df=bypass.df_assets_wegkantkasten
+    #                            , column_name='Wegkantkast_Object assetId.identificator'
+    #                            , asset_type=AssetType.WEGKANTKAST)
 
     bypass.process_wegkantkasten()
     bypass.process_wegkantkasten_lsdeel()
