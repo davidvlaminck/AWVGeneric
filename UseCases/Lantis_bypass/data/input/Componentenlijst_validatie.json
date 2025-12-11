@@ -123,6 +123,8 @@
         {"name": "Switch gegevens_Object assetId.identificator","type": "object", "nullable": true},
         {"name": "Switch gegevens_UUID switch","type": "object", "nullable": true},
         {"name": "Switch gegevens_Aantal poorten","type": "object", "nullable": true},
+        {"name": "Switch gegevens_IP Cabine Controller","type": "object", "nullable": true},
+        {"name": "Switch gegevens_poort","type": "object", "nullable": true},
         {"name": "Switch gegevens_Glasvezellus","type": "object", "nullable": true}
     ],
     "Openbare verlichting": [
