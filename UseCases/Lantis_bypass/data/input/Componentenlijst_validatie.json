@@ -1,5 +1,8 @@
 {
     "Wegkantkasten": [
+        {"name": "Wegkantkast_ROCO_CTE_OBS.Id", "type": "object", "nullable": true},
+        {"name": "Wegkantkast_Lantis OBJ-code", "type": "object", "nullable": true},
+        {"name": "Wegkantkast_Lantis OBJ-naam", "type": "object", "nullable": true},
         {"name": "Wegkantkast_Object naam ROCO", "type": "object", "nullable": true},
         {"name": "Wegkantkast_Object assetId.toegekendDoor","type": "object", "nullable": true},
         {"name": "Wegkantkast_Object assetId.identificator","type": "object", "nullable": false},
@@ -37,6 +40,9 @@
         {"name": "Status_Status","type": "object", "nullable": true}
     ],
     "HSCabines-CC-SC-HS-LS-Switch-WV": [
+        {"name": "HSCabine_ROCO_CTE_OBS.Id", "type": "object", "nullable": true},
+        {"name": "HSCabine_Lantis OBJ-code", "type": "object", "nullable": true},
+        {"name": "HSCabine_Lantis OBJ-naam", "type": "object", "nullable": true},
         {"name": "HSCabine_Object naam ROCO","type": "object", "nullable": true},
         {"name": "HSCabine_Object assetId.toegekendDoor","type": "object", "nullable": true},
         {"name": "HSCabine_Object assetId.identificator","type": "object", "nullable": false},
@@ -109,6 +115,9 @@
         {"name": "Switch gegevens_Glasvezellus","type": "object", "nullable": true}
     ],
     "Openbare verlichting": [
+        {"name": "WVLichtmast_ROCO_CTE_OBS.Id", "type": "object", "nullable": true},
+        {"name": "WVLichtmast_Lantis OBJ-code", "type": "object", "nullable": true},
+        {"name": "WVLichtmast_Lantis OBJ-naam", "type": "object", "nullable": true},
         {"name": "WVLichtmast_Object naam ROCO","type": "object", "nullable": true},
         {"name": "WVLichtmast_Object assetId.toegekendDoor","type": "object", "nullable": true},
         {"name": "WVLichtmast_Object assetId.identificator","type": "object", "nullable": false},
@@ -125,6 +134,9 @@
         {"name": "parent_asset_uuid","type": "object", "nullable": true}
     ],
     "MIVLVE": [
+        {"name": "LVE_ROCO_CTE_OBS.Id", "type": "object", "nullable": true},
+        {"name": "LVE_Lantis OBJ-code", "type": "object", "nullable": true},
+        {"name": "LVE_Lantis OBJ-naam", "type": "object", "nullable": true},
         {"name": "LVE_Object naam ROCO","type": "object", "nullable": true},
         {"name": "LVE_Object assetId.toegekendDoor","type": "object", "nullable": true},
         {"name": "LVE_Object assetId.identificator","type": "object", "nullable": false},
@@ -162,6 +174,9 @@
         {"name": "Status_Status", "type": "object", "nullable": true}
     ],
     "MIVMeetpunten": [
+        {"name": "Meetpunt_ROCO_CTE_OBS.Id", "type": "object", "nullable": true},
+        {"name": "Meetpunt_Lantis OBJ-code", "type": "object", "nullable": true},
+        {"name": "Meetpunt_Lantis OBJ-naam", "type": "object", "nullable": true},
         {"name": "Meetpunt_Object naam ROCO","type": "object", "nullable": true},
         {"name": "Meetpunt_Object assetId.toegekendDoor","type": "object", "nullable": true},
         {"name": "Meetpunt_Object assetId.identificator","type": "object", "nullable": false},
@@ -185,6 +200,9 @@
         {"name": "Status_Status", "type": "object", "nullable": true}
     ],
     "RSS-borden": [
+        {"name": "DVM-Bord_ROCO_CTE_OBS.Id", "type": "object", "nullable": true},
+        {"name": "DVM-Bord_Lantis OBJ-code", "type": "object", "nullable": true},
+        {"name": "DVM-Bord_Lantis OBJ-naam", "type": "object", "nullable": true},
         {"name": "DVM-Bord_Object naam ROCO","type": "object", "nullable": true},
         {"name": "DVM-Bord_Object assetId.toegekendDoor","type": "object", "nullable": true},
         {"name": "DVM-Bord_Object assetId.identificator","type": "object", "nullable": false},
@@ -244,6 +262,9 @@
         {"name": "Status_Status","type": "object", "nullable": true}
     ],
     "(R)VMS-borden": [
+        {"name": "DVM-Bord_ROCO_CTE_OBS.Id", "type": "object", "nullable": true},
+        {"name": "DVM-Bord_Lantis OBJ-code", "type": "object", "nullable": true},
+        {"name": "DVM-Bord_Lantis OBJ-naam", "type": "object", "nullable": true},
         {"name": "DVM-Bord_Object naam ROCO","type": "object", "nullable": true},
         {"name": "DVM-Bord_Object assetId.toegekendDoor","type": "object", "nullable": true},
         {"name": "DVM-Bord_Object assetId.identificator","type": "object", "nullable": false},
@@ -305,6 +326,9 @@
         {"name": "Status_Status", "type": "object", "nullable": true}
     ],
     "Cameras": [
+        {"name": "Camera_ROCO_CTE_OBS.Id", "type": "object", "nullable": true},
+        {"name": "Camera_Lantis OBJ-code", "type": "object", "nullable": true},
+        {"name": "Camera_Lantis OBJ-naam", "type": "object", "nullable": true},
         {"name": "Camera_Object naam ROCO","type": "object", "nullable": true},
         {"name": "Camera_Object assetId.toegekendDoor","type": "object", "nullable": true},
         {"name": "Camera_Object assetId.identificator", "type": "object", "nullable": false},
@@ -345,6 +369,9 @@
         {"name": "parent_beheerobject_uuid","type": "object", "nullable": true}
     ],
     "Portieken-Seinbruggen": [
+        {"name": "Seinbrug_ROCO_CTE_OBS.Id", "type": "object", "nullable": true},
+        {"name": "Seinbrug_Lantis OBJ-code", "type": "object", "nullable": true},
+        {"name": "Seinbrug_Lantis OBJ-naam", "type": "object", "nullable": true},
         {"name": "Seinbrug_Object naam ROCO","type": "object", "nullable": true},
         {"name": "Seinbrug_Object assetId.toegekendDoor","type": "object", "nullable": true},
         {"name": "Seinbrug_Object assetId.identificator","type": "object", "nullable": false},
@@ -361,6 +388,9 @@
         {"name": "parent_beheerobject_uuid", "type": "object", "nullable": true}
     ],
     "Galgpaal": [
+        {"name": "Galgpaal_ROCO_CTE_OBS.Id", "type": "object", "nullable": true},
+        {"name": "Galgpaal_Lantis OBJ-code", "type": "object", "nullable": true},
+        {"name": "Galgpaal_Lantis OBJ-naam", "type": "object", "nullable": true},
         {"name": "Galgpaal_Object naam ROCO","type": "object", "nullable": true},
         {"name": "Galgpaal_Object assetId.toegekendDoor","type": "object", "nullable": true},
         {"name": "Galgpaal_Object assetId.identificator","type": "object", "nullable": false},
