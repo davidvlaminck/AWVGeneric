@@ -84,12 +84,14 @@ class AssetInfo:
         column_uuid (str, optional): The UUID of the column. Defaults to None.
         column_typeURI (str, optional): The type URI of the column. Defaults to None.
         column_name (str, optional): The name of the column. Defaults to None.
+        column_status (str, optional): The status of the column. Defaults to None.
         column_asset_aanwezig (str, optional): The presence of the asset column. Defaults to None.
     """
     asset_type: AssetType
     column_uuid: str | None = None
     column_typeURI: str | None = None
     column_name: str | None = None
+    column_status: str | None = None
     column_asset_aanwezig: str | None = None
 
 
@@ -119,6 +121,30 @@ class EigenschapInfo:
     """
     eminfra_eigenschap_name: str
     column_eigenschap_name: str
+
+
+def map_status(nieuwe_status: str) -> AssetDTOToestand:
+    """
+    Map een string naar de enumeration klasse AssetDTOToestand.
+    """
+    mapping = {
+        'in-ontwerp': AssetDTOToestand.IN_ONTWERP,
+        'gepland': AssetDTOToestand.GEPLAND,
+        'geannuleerd': AssetDTOToestand.GEANNULEERD,
+        'in-opbouw': AssetDTOToestand.IN_OPBOUW,
+        'verwijderd': AssetDTOToestand.VERWIJDERD,
+        'overgedragen': AssetDTOToestand.OVERGEDRAGEN,
+        'uit-gebruik': AssetDTOToestand.UIT_GEBRUIK,
+    }
+
+    try:
+        return mapping[nieuwe_status]
+    except KeyError:
+        allowed = ", ".join(mapping.keys())
+        raise ValueError(
+            f"Toestand '{nieuwe_status}' is niet gekend. "
+            f"Gebruik een van volgende waarden: {allowed}"
+        )
 
 
 class BypassProcessor:
@@ -540,7 +566,14 @@ class BypassProcessor:
                     self.set_geometrie_via_steun_relatie(asset=asset, relatie_uri=steun_relatie_uri)
 
                 # Update toestand
-                self.update_toestand(asset=asset)
+                if asset_info.column_status:
+                    nieuwe_status = asset_row.get(asset_info.column_status)
+                    nieuwe_toestand = map_status(nieuwe_status)
+                else:
+                    nieuwe_toestand = AssetDTOToestand.IN_OPBOUW
+                huidige_toestand = asset.toestand.value
+                if nieuwe_toestand != huidige_toestand:
+                    self.eminfra_client.update_toestand(asset=asset, toestand=nieuwe_toestand)
 
                 # Bestekkoppelingen
                 self.add_bestekkoppeling_if_missing(asset_uuid=asset.uuid,
@@ -564,7 +597,8 @@ class BypassProcessor:
         logging.info('Aanmaken Wegkantkasten')
         asset_info = AssetInfo(asset_type=AssetType.WEGKANTKAST, column_typeURI='Wegkantkast_Object typeURI',
                                column_uuid='Wegkantkast_UUID Object',
-                               column_name='Wegkantkast_Object assetId.identificator')
+                               column_name='Wegkantkast_Object assetId.identificator',
+                               column_status='Wegkantkast_Status')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
         bypass.process_assets(df=bypass.df_assets_wegkantkasten, asset_info=asset_info,
                               parent_asset_info=parent_asset_info, add_geometry=True, sheetname_prefix='Kast')
@@ -574,7 +608,8 @@ class BypassProcessor:
         asset_info = AssetInfo(asset_type=AssetType.LSDEEL, column_uuid='Laagspanningsdeel_UUID LSDeel',
                                column_name='Laagspanningsdeel_Naam LSDeel',
                                column_typeURI='https://lgc.data.wegenenverkeer.be/ns/installatie#LSDeel',
-                               column_asset_aanwezig='Laagspanningsdeel_LSDeel aanwezig')
+                               column_asset_aanwezig='Laagspanningsdeel_LSDeel aanwezig',
+                               column_status='Laagspanningsdeel_Status')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
                                             column_parent_uuid='Wegkantkast_UUID Object',
                                             column_parent_name='Wegkantkast_Object assetId.identificator')
@@ -593,7 +628,8 @@ class BypassProcessor:
     def process_voeding_HS_cabine(self):
         logging.info('Aanmaken HSCabine')
         asset_info = AssetInfo(asset_type=AssetType.HSCABINE, column_name='HSCabine_Object assetId.identificator',
-                               column_uuid='HSCabine_UUID Object', column_typeURI='HSCabine_Object typeURI')
+                               column_uuid='HSCabine_UUID Object', column_typeURI='HSCabine_Object typeURI',
+                               column_status='HSCabine_Status')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT,
                                             column_parent_uuid=None, column_parent_name=None)
         bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info,
@@ -604,7 +640,8 @@ class BypassProcessor:
         asset_info = AssetInfo(asset_type=AssetType.HSDEEL, column_name='Hoogspanningsdeel_Naam HSDeel',
                                column_uuid='Hoogspanningsdeel_UUID HSDeel',
                                column_typeURI='Hoogspanningsdeel_HSDeel lgc:installatie',
-                               column_asset_aanwezig='Hoogspanningsdeel_HSDeel aanwezig (Ja/Nee)')
+                               column_asset_aanwezig='Hoogspanningsdeel_HSDeel aanwezig (Ja/Nee)',
+                               column_status='Hoogspanningsdeel_Status')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
                                             column_parent_uuid='HSCabine_UUID Object',
                                             column_parent_name='HSCabine_Object assetId.identificator')
@@ -619,7 +656,8 @@ class BypassProcessor:
         asset_info = AssetInfo(asset_type=AssetType.LSDEEL, column_name='Laagspanningsdeel_Naam LSDeel',
                                column_uuid='Laagspanningsdeel_UUID LSDeel',
                                column_typeURI='Laagspanningsdeel_LSDeel lgc:installatie',
-                               column_asset_aanwezig='Laagspanningsdeel_LSDeel aanwezig (Ja/Nee)')
+                               column_asset_aanwezig='Laagspanningsdeel_LSDeel aanwezig (Ja/Nee)',
+                               column_status='Laagspanningsdeel_Status')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
                                             column_parent_uuid='HSCabine_UUID Object',
                                             column_parent_name='HSCabine_Object assetId.identificator')
@@ -637,7 +675,8 @@ class BypassProcessor:
         logging.info('Aanmaken Hoogspanning')
         asset_info = AssetInfo(asset_type=AssetType.HS, column_name='Hoogspanning_Naam HS',
                                column_uuid='Hoogspanning_UUID HS', column_typeURI='Hoogspanning_HS lgc:installatie',
-                               column_asset_aanwezig='Hoogspanning_HS aanwezig (Ja/Nee)')
+                               column_asset_aanwezig='Hoogspanning_HS aanwezig (Ja/Nee)',
+                               column_status='Hoogspanning_Status')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
                                             column_parent_uuid='HSCabine_UUID Object',
                                             column_parent_name='HSCabine_Object assetId.identificator')
@@ -652,7 +691,8 @@ class BypassProcessor:
         asset_info = AssetInfo(asset_type=AssetType.DNBHOOGSPANNING,
                                column_name='DNBHoogspanning_Object assetId.identificator',
                                column_uuid='DNBHoogspanning_UUID Object',
-                               column_typeURI='DNBHoogspanning_Object typeURI')
+                               column_typeURI='DNBHoogspanning_Object typeURI',
+                               column_status='DNBHoogspanning_Status')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
                                             column_parent_uuid='Hoogspanning_UUID HS',
                                             column_parent_name=None)
@@ -672,7 +712,8 @@ class BypassProcessor:
         asset_info = AssetInfo(asset_type=AssetType.ENERGIEMETERDNB,
                                column_name='EnergiemeterDNB_Object assetId.identificator',
                                column_uuid='EnergiemeterDNB_UUID Object',
-                               column_typeURI='EnergiemeterDNB_Object typeURI')
+                               column_typeURI='EnergiemeterDNB_Object typeURI',
+                               column_status='EnergiemeterDNB_Status')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
                                             column_parent_uuid='Hoogspanning_UUID HS',
                                             column_parent_name=None)
@@ -688,7 +729,8 @@ class BypassProcessor:
     def process_voeding_cabinecontroller(self):
         logging.info('Aanmaken CabineController')
         asset_info = AssetInfo(asset_type=AssetType.CABINECONTROLLER, column_name='CabineController_Naam CC',
-                               column_uuid='CabineController_UUID CC', column_typeURI='CabineController_CC TypeURI')
+                               column_uuid='CabineController_UUID CC', column_typeURI='CabineController_CC TypeURI',
+                               column_status='CabineController_Status')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT,
                                             column_parent_uuid=None, column_parent_name=None)
         bevestigingrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING,
@@ -704,7 +746,8 @@ class BypassProcessor:
     def process_voeding_segmentcontroller(self):
         logging.info('Aanmaken SegmentController')
         asset_info = AssetInfo(asset_type=AssetType.SEGC, column_name='Segmentcontroller_Naam SC',
-                               column_uuid='Segmentcontroller_UUID SC', column_typeURI='Segmentcontroller_SC TypeURI')
+                               column_uuid='Segmentcontroller_UUID SC', column_typeURI='Segmentcontroller_SC TypeURI',
+                               column_status='SegmentController_Status')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT,
                                             column_parent_uuid=None, column_parent_name=None)
         bevestigingrelatie = RelatieInfo(uri=RelatieType.BEVESTIGING,
@@ -720,7 +763,8 @@ class BypassProcessor:
         asset_info = AssetInfo(asset_type=AssetType.WVGROEP, column_name='Wegverlichtingsgroep_Naam WV',
                                column_uuid='Wegverlichtingsgroep_UUID WV',
                                column_typeURI='Wegverlichtingsgroep_WV lgc:installatie',
-                               column_asset_aanwezig='Wegverlichtingsgroep_WV aanwezig (Ja/Nee)')
+                               column_asset_aanwezig='Wegverlichtingsgroep_WV aanwezig (Ja/Nee)',
+                               column_status='Wegverlichtingsgroep_Status')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT,
                                             column_parent_uuid=None, column_parent_name=None)
         bypass.process_assets(df=bypass.df_assets_voeding, asset_info=asset_info, parent_asset_info=parent_asset_info,
@@ -729,7 +773,8 @@ class BypassProcessor:
     def process_openbare_verlichting(self):
         logging.info('Aanmaken WVLichtmast')
         asset_info = AssetInfo(asset_type=AssetType.WVLICHTMAST, column_name='WVLichtmast_Object assetId.identificator',
-                               column_uuid='WVLichtmast_UUID Object', column_typeURI='WVLichtmast_Object typeURI')
+                               column_uuid='WVLichtmast_UUID Object', column_typeURI='WVLichtmast_Object typeURI',
+                               column_status='WVLichtmast_Status')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
                                             column_parent_uuid='parent_asset_uuid', column_parent_name=None)
         voedingsrelatie = RelatieInfo(uri=RelatieType.VOEDT,
@@ -743,7 +788,8 @@ class BypassProcessor:
     def process_mivlve(self):
         logging.info('Aanmaken Meetlussen MIVLVE')
         asset_info = AssetInfo(asset_type=AssetType.MIVLVE, column_uuid='LVE_UUID Object',
-                               column_name='LVE_Object assetId.identificator', column_typeURI='LVE_Object typeURI')
+                               column_name='LVE_Object assetId.identificator', column_typeURI='LVE_Object typeURI',
+                               column_status='LVE_Status')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
                                             column_parent_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset',
                                             column_parent_name='Bevestigingsrelatie_Bevestigingsrelatie doelAssetId.identificator')
@@ -765,7 +811,8 @@ class BypassProcessor:
         logging.info('Aanmaken Meetpunten')
         asset_info = AssetInfo(asset_type=AssetType.MPT, column_uuid='Meetpunt_UUID Object',
                                column_name='Meetpunt_Object assetId.identificator',
-                               column_typeURI='Meetpunt_Object typeURI')
+                               column_typeURI='Meetpunt_Object typeURI',
+                               column_status='Meetpunt_Status')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
                                             column_parent_uuid='Sturingsrelaties_UUID Sturingsrelatie bronAsset',
                                             column_parent_name='Sturingsrelatie_Sturingsrelatie bron AssetId.identificator')
@@ -789,7 +836,8 @@ class BypassProcessor:
         logging.debug('Camgroep onder 1 installatie plaatsen')
         asset_info = AssetInfo(asset_type=AssetType.CAMERA,
                                column_typeURI='Camera_Object typeURI',
-                               column_name='Camera_Object assetId.identificator', column_uuid='Camera_UUID Object')
+                               column_name='Camera_Object assetId.identificator', column_uuid='Camera_UUID Object',
+                               column_status='Camera_Status')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT,
                                             column_parent_name=None,
                                             column_parent_uuid='parent_beheerobject_uuid')
@@ -811,7 +859,8 @@ class BypassProcessor:
         logging.info('Aanmaken RSSBord')
         asset_info = AssetInfo(asset_type=AssetType.RSSBORD,
                                column_typeURI='DVM-Bord_Object typeURI',
-                               column_name='DVM-Bord_Object assetId.identificator', column_uuid='DVM-Bord_UUID Object')
+                               column_name='DVM-Bord_Object assetId.identificator', column_uuid='DVM-Bord_UUID Object',
+                               column_status='DVM-Bord_Status')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
                                             column_parent_name='HoortBij Relatie voor RSS-groep_HoortBij doelAssetId.identificator',
                                             column_parent_uuid='HoortBij Relatie voor RSS-groep_UUID HoortBij doelAsset')
@@ -837,7 +886,8 @@ class BypassProcessor:
         logging.info('Aanmaken RVMS-Bord')
         asset_info = AssetInfo(asset_type=AssetType.RVMSBORD,
                                column_typeURI='DVM-Bord_Object typeURI',
-                               column_name='DVM-Bord_Object assetId.identificator', column_uuid='DVM-Bord_UUID Object')
+                               column_name='DVM-Bord_Object assetId.identificator', column_uuid='DVM-Bord_UUID Object',
+                               column_status='DVM-Bord_Status')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
                                             column_parent_name='HoortBij Relatie DynBordGroep_HoortBij doelAssetId.identificator',
                                             column_parent_uuid='HoortBij Relatie DynBordGroep_UUID HoortBij doelAsset')
@@ -861,7 +911,8 @@ class BypassProcessor:
     def process_seinbruggen(self):
         logging.info('Aanmaken Seinbrug DVM')
         asset_info = AssetInfo(asset_type=AssetType.SEINBRUG, column_typeURI='Seinbrug_Object typeURI',
-                               column_uuid='Seinbrug_UUID Object', column_name='Seinbrug_Object assetId.identificator')
+                               column_uuid='Seinbrug_UUID Object', column_name='Seinbrug_Object assetId.identificator',
+                               column_status='Seinbrug_Status')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT,
                                             column_parent_uuid='parent_beheerobject_uuid')
         # todo Activeer de eigenschap na de verweving. De eigenschap "vrije hoogte" is pas beschikbaar na verweving van Seinbrug naar OTL.
@@ -1341,23 +1392,6 @@ class BypassProcessor:
 
         self.eminfra_client.update_eigenschap(assetId=asset.uuid, eigenschap=eigenschap_value_update)
 
-    def update_toestand(self, asset: AssetDTO) -> None:
-        """
-        Update de toestand van een asset.
-
-        Doe niets indien de toestand van de asset 'IN_GEBRUIK' of 'OVERGEDRAGEN' is.
-        Wijzig de toestand naar 'IN_OPBOUW' in alle andere situaties.
-
-        :param asset:
-        :return:
-        """
-        toestand = asset.toestand.value
-        if toestand in [AssetDTOToestand.IN_GEBRUIK.value, AssetDTOToestand.OVERGEDRAGEN.value]:
-            logging.info(f'Asset {asset.uuid} heeft toestand "{toestand}" en wordt niet geüpdatet')
-        elif asset.toestand.value != AssetDTOToestand.IN_OPBOUW.value:
-            logging.debug(f'Update toestand: "{asset.uuid}": "{AssetDTOToestand.IN_OPBOUW.value}"')
-            self.eminfra_client.update_toestand(asset=asset, toestand=AssetDTOToestand.IN_OPBOUW)
-
     def process_mivlve_poort(self):
         logging.info('Aanmaken Poort')
         asset_info = AssetInfo(asset_type=AssetType.POORT, column_uuid='Netwerkgegevens_UUID Poort',
@@ -1427,7 +1461,8 @@ class BypassProcessor:
     def process_galgpaal(self):
         logging.info('Aanmaken Galgpaal')
         asset_info = AssetInfo(asset_type=AssetType.GALGPAAL, column_typeURI='Galgpaal_Object typeURI',
-                               column_uuid='Galgpaal_UUID Object', column_name='Galgpaal_Object assetId.identificator')
+                               column_uuid='Galgpaal_UUID Object', column_name='Galgpaal_Object assetId.identificator',
+                               column_status='Galgpaal_Status')
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.BEHEEROBJECT,
                                             column_parent_uuid='parent_beheerobject_uuid')
         bypass.process_assets(df=bypass.df_assets_galgpaal, asset_info=asset_info, parent_asset_info=parent_asset_info,
@@ -1536,7 +1571,7 @@ if __name__ == '__main__':
     bypass = BypassProcessor(
         environment=Environment.PRD
         , input_path_componentenlijst=Path(
-            __file__).resolve().parent / 'data' / 'input' / 'Componentenlijst_20251008.xlsx'
+            __file__).resolve().parent / 'data' / 'input' / 'Componentenlijst_20251211.xlsx'
         , output_excel_path=Path(
             __file__).resolve().parent / 'data' / 'output' / f'lantis_bypass_{datetime.now().strftime(format="%Y-%m-%d")}.xlsx'
     )
