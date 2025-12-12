@@ -632,7 +632,7 @@ class BypassProcessor:
         parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
                                             column_parent_uuid='Wegkantkast_UUID Object',
                                             column_parent_name='Wegkantkast_Object assetId.identificator')
-        bevestigingsrelatie = RelatieInfo(bronAsset_uuid=None
+        bevestigingsrelatie = RelatieInfo(bronAsset_uuid='Laagspanningsdeel_UUID LSDeel'
                                           , doelAsset_uuid='Wegkantkast_UUID Object'
                                           , uri=RelatieEnum.BEVESTIGING
                                           , column_typeURI_relatie='Bevestigingsrelatie LSDeel_Bevestigingsrelatie typeURI')
