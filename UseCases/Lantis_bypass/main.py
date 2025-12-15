@@ -801,7 +801,7 @@ class BypassProcessor:
                                       doelAsset_uuid=None,
                                       column_typeURI_relatie='Voedingsrelaties_Voedingsrelatie typeURI')
         bypass.process_assets(df=bypass.df_assets_openbare_verlichting, asset_info=asset_info,
-                              parent_asset_info=parent_asset_info, relatie_infos=[voedingsrelatie],
+                              parent_asset_info=parent_asset_info, relatie_infos=[voedingsrelatie], add_geometry=True,
                               sheetname_prefix='HS')
 
     def process_mivlve(self):
@@ -1608,25 +1608,25 @@ if __name__ == '__main__':
     # De sturingsrelatie toevoegen van de EM-installatie naar de Poort.
     # bypass.process_cameras_poort()
 
-    logging.info('Boomstructuur van de Hoogspanningscabine')
-    logging.info('Aanmaken Boomstructuur voor installaties onder Wegkantkast')
-    logging.info('Aanmaken installaties')
-    bypass.process_installatie(df=bypass.df_assets_voeding, column_name='HSCabine_Object assetId.identificator',
-                               asset_type=AssetType.HSCABINE)
+    # logging.info('Boomstructuur van de Hoogspanningscabine')
+    # logging.info('Aanmaken Boomstructuur voor installaties onder Wegkantkast')
+    # logging.info('Aanmaken installaties')
+    # bypass.process_installatie(df=bypass.df_assets_voeding, column_name='HSCabine_Object assetId.identificator',
+    #                            asset_type=AssetType.HSCABINE)
+    #
+    # logging.info('Aanmaken Hoogspannings Cabine')
+    # bypass.process_voeding_HS_cabine()
+    # bypass.process_voeding_hoogspanningsdeel()
+    # bypass.process_voeding_laagspanningsdeel()
 
-    logging.info('Aanmaken Hoogspannings Cabine')
-    bypass.process_voeding_HS_cabine()
-    bypass.process_voeding_hoogspanningsdeel()
-    bypass.process_voeding_laagspanningsdeel()
+    # bypass.process_voeding_hoogspanning()
 
-    bypass.process_voeding_hoogspanning()
+    # bypass.process_voeding_DNBHoogspanning()
+    # bypass.process_voeding_energiemeter_DNB()
 
-    bypass.process_voeding_DNBHoogspanning()
-    bypass.process_voeding_energiemeter_DNB()
-
-    bypass.process_voeding_cabinecontroller()
-    bypass.process_voeding_segmentcontroller()
+    # bypass.process_voeding_cabinecontroller()
+    # bypass.process_voeding_segmentcontroller()
 
     # wegverlichting in een latere fase activeren
-    bypass.process_voeding_wegverlichtingsgroep()
-    # bypass.process_openbare_verlichting()
+    # bypass.process_voeding_wegverlichtingsgroep()
+    bypass.process_openbare_verlichting()
