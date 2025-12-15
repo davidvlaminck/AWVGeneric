@@ -864,15 +864,18 @@ class BypassProcessor:
         eigenschap_infos.append(EigenschapInfo(eminfra_eigenschap_name='heeftAid', column_eigenschap_name='Camera_heeftAid'))
         voedingsrelatie = RelatieInfo(uri=RelatieEnum.VOEDT,
                                       bronAsset_uuid='Voedingsrelaties_UUID Voedingsrelatie bronAsset',
-                                      doelAsset_uuid=None,
+                                      doelAsset_uuid='Camera_UUID Object',
                                       column_typeURI_relatie='Voedingsrelaties_Voedingsrelatie typeURI')
-        bevestigingsrelatie = RelatieInfo(uri=RelatieEnum.BEVESTIGING,
-                                          bronAsset_uuid=None,
-                                          doelAsset_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset',
-                                          column_typeURI_relatie='Bevestigingsrelatie_Bevestigingsrelatie typeURI')
+        # bevestigingsrelatie = RelatieInfo(uri=RelatieEnum.BEVESTIGING,
+        #                                   bronAsset_uuid=None,
+        #                                   doelAsset_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset',
+        #                                   column_typeURI_relatie='Bevestigingsrelatie_Bevestigingsrelatie typeURI')
         bypass.process_assets(df=bypass.df_assets_cameras, asset_info=asset_info, parent_asset_info=parent_asset_info,
                               eigenschap_infos=eigenschap_infos, add_geometry=True,
-                              relatie_infos=[voedingsrelatie, bevestigingsrelatie], sheetname_prefix='Camera')
+                              relatie_infos=[
+                                  voedingsrelatie
+                                  # , bevestigingsrelatie
+                              ], sheetname_prefix='Camera')
 
     def process_RSS_borden(self):
         logging.info('Aanmaken RSSBord')
@@ -1576,31 +1579,31 @@ if __name__ == '__main__':
     #                            , asset_type=AssetType.WEGKANTKAST)
 
     # bypass.process_wegkantkasten()
-    bypass.process_wegkantkasten_lsdeel()
+    # bypass.process_wegkantkasten_lsdeel()
+    #
+    # bypass.process_mivlve()
+    # bypass.process_mivmeetpunten()
 
-    bypass.process_mivlve()
-    bypass.process_mivmeetpunten()
+    # bypass.process_installatie(df=bypass.df_assets_portieken_seinbruggen
+    #                            , column_name='Seinbrug_Object assetId.identificator'
+    #                            , asset_type=AssetType.SEINBRUG)
+    # bypass.process_seinbruggen()
+    #
+    # bypass.process_galgpaal()
 
-    bypass.process_installatie(df=bypass.df_assets_portieken_seinbruggen
-                               , column_name='Seinbrug_Object assetId.identificator'
-                               , asset_type=AssetType.SEINBRUG)
-    bypass.process_seinbruggen()
-
-    bypass.process_galgpaal()
-
-    bypass.process_RSS_groep()
-    bypass.process_RSS_borden()
+    # bypass.process_RSS_groep()
+    # bypass.process_RSS_borden()
     # Activeer pas nadat de poort is aangemaakt door Swarco
     # De sturingsrelatie toevoegen van de EM-installatie naar de Poort.
     ## bypass.process_RSS_poort()
 
-    bypass.process_RVMS_groep()
-    bypass.process_RVMS_borden()
+    # bypass.process_RVMS_groep()
+    # bypass.process_RVMS_borden()
     # Activeer pas nadat de poort is aangemaakt door Swarco
     # De sturingsrelatie toevoegen van de EM-installatie naar de Poort.
     # bypass.process_RVMS_poort()
 
-    bypass.process_camera()
+    # bypass.process_camera()
     # Activeer pas nadat de poort is aangemaakt door Swarco
     # De sturingsrelatie toevoegen van de EM-installatie naar de Poort.
     # bypass.process_cameras_poort()
