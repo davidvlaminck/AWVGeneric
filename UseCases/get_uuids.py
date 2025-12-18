@@ -14,7 +14,7 @@ if __name__ == '__main__':
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
 
     filepath = Path.home() / 'downloads' / 'netwerkpoorten.xlsx'
-    if not Path.exists(filepath):
+    if not filepath.exists():
         raise FileNotFoundError(f'Filepath does not exists {filepath}.')
     df_assets = pd.read_excel(filepath, sheet_name='Sheet1', header=0, usecols=["asset_naam", "uuid"])
 
