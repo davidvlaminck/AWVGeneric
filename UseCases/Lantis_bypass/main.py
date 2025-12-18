@@ -547,7 +547,7 @@ class BypassProcessor:
 
                 # Aanmaken van relaties
                 for relatie_info in relatie_infos:
-                    # uri aanweig in Excel-file
+                    # uri aanwezig in Excel-file
                     if relatie_info.column_typeURI_relatie and asset_row.get(relatie_info.column_typeURI_relatie):
                         relatie_descriptive_naam = relatie_info.uri.value.split('#')[-1]
                         bronAsset_uuid = asset_row.get(relatie_info.bronAsset_uuid, asset.uuid)
@@ -822,9 +822,13 @@ class BypassProcessor:
         bevestigingsrelatie = RelatieInfo(uri=RelatieEnum.BEVESTIGING, bronAsset_uuid=None,
                                           doelAsset_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset',
                                           column_typeURI_relatie='Bevestigingsrelatie_Bevestigingsrelatie typeURI')
+        sturingsrelatie = RelatieInfo(uri=RelatieEnum.STURING, bronAsset_uuid=None,
+                                      doelAsset_uuid='Netwerkgegevens_UUID Poort',
+                                      column_typeURI_relatie='Sturingsrelaties_Sturingsrelatie typeURI')
         bypass.process_assets(df=bypass.df_assets_mivlve, asset_info=asset_info, parent_asset_info=parent_asset_info,
                               eigenschap_infos=eigenschap_infos, add_geometry=True,
-                              relatie_infos=[voedingsrelatie, bevestigingsrelatie], sheetname_prefix='MIVLVE')
+                              relatie_infos=[voedingsrelatie, bevestigingsrelatie, sturingsrelatie],
+                              sheetname_prefix='MIVLVE')
 
     def process_mivmeetpunten(self):
         logging.info('Aanmaken Meetpunten')
@@ -866,15 +870,21 @@ class BypassProcessor:
                                       bronAsset_uuid='Voedingsrelaties_UUID Voedingsrelatie bronAsset',
                                       doelAsset_uuid='Camera_UUID Object',
                                       column_typeURI_relatie='Voedingsrelaties_Voedingsrelatie typeURI')
+        # tijdelijk on-hold.
         # bevestigingsrelatie = RelatieInfo(uri=RelatieEnum.BEVESTIGING,
         #                                   bronAsset_uuid=None,
         #                                   doelAsset_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset',
         #                                   column_typeURI_relatie='Bevestigingsrelatie_Bevestigingsrelatie typeURI')
+        sturingsrelatie = RelatieInfo(uri=RelatieEnum.STURING,
+                                      bronAsset_uuid=None,
+                                      doelAsset_uuid='Netwerkgegevens_UUID Poort',
+                                      column_typeURI_relatie='Sturingsrelaties_Sturingsrelatie typeURI')
         bypass.process_assets(df=bypass.df_assets_cameras, asset_info=asset_info, parent_asset_info=parent_asset_info,
                               eigenschap_infos=eigenschap_infos, add_geometry=True,
                               relatie_infos=[
-                                  voedingsrelatie
-                                  # , bevestigingsrelatie
+                                  voedingsrelatie,
+                                  # bevestigingsrelatie,
+                                  sturingsrelatie
                               ], sheetname_prefix='Camera')
 
     def process_RSS_borden(self):
@@ -899,9 +909,13 @@ class BypassProcessor:
                                       bronAsset_uuid='Voedingsrelaties_UUID Voedingsrelatie bronAsset',
                                       doelAsset_uuid=None,
                                       column_typeURI_relatie='Voedingsrelaties_Voedingsrelatie typeURI')
+        sturingsrelatie = RelatieInfo(uri=RelatieEnum.STURING, bronAsset_uuid=None,
+                                      doelAsset_uuid='Netwerkgegevens_UUID Poort',
+                                      column_typeURI_relatie='Sturingsrelatie_Sturingsrelatie typeURI')
         bypass.process_assets(df=bypass.df_assets_RSS_borden, asset_info=asset_info,
                               parent_asset_info=parent_asset_info, eigenschap_infos=[eigenschap_info],
-                              add_geometry=True, relatie_infos=[hoortbijrelatie, bevestigingsrelatie, voedingsrelatie],
+                              add_geometry=True,
+                              relatie_infos=[hoortbijrelatie, bevestigingsrelatie, voedingsrelatie, sturingsrelatie],
                               sheetname_prefix='Seinbrug_RSS')
 
     def process_RVMS_borden(self):
@@ -925,9 +939,12 @@ class BypassProcessor:
                                       bronAsset_uuid='Voedingsrelaties_UUID Voedingsrelatie bronAsset',
                                       doelAsset_uuid=None,
                                       column_typeURI_relatie='Voedingsrelaties_Voedingsrelatie typeURI')
+        sturingsrelatie = RelatieInfo(uri=RelatieEnum.STURING, bronAsset_uuid=None,
+                                      doelAsset_uuid='Netwerkgegevens_UUID Poort',
+                                      column_typeURI_relatie='Sturingsrelaties_Sturingsrelatie typeURI')
         bypass.process_assets(df=bypass.df_assets_RVMS_borden, asset_info=asset_info,
                               parent_asset_info=parent_asset_info, add_geometry=True,
-                              relatie_infos=[hoortbijrelatie, bevestigingsrelatie, voedingsrelatie],
+                              relatie_infos=[hoortbijrelatie, bevestigingsrelatie, voedingsrelatie, sturingsrelatie],
                               sheetname_prefix='Seinbrug_RVMS')
 
     def process_seinbruggen(self):
@@ -1564,15 +1581,15 @@ if __name__ == '__main__':
     bypass = BypassProcessor(
         environment=Environment.PRD
         , input_path_componentenlijst=Path(
-            __file__).resolve().parent / 'data' / 'input' / 'Componentenlijst_20251211.xlsx'
+            __file__).resolve().parent / 'data' / 'input' / 'Componentenlijst_20251218.xlsx'
         , output_excel_path=Path(
             __file__).resolve().parent / 'data' / 'output' / f'lantis_bypass_{datetime.now().strftime(format="%Y-%m-%d")}.xlsx'
     )
 
     bypass.import_data()
 
-    logging.info('Aanmaken Boomstructuur voor installaties onder Wegkantkast')
-    logging.info('Aanmaken installaties')
+    # logging.info('Aanmaken Boomstructuur voor installaties onder Wegkantkast')
+    # logging.info('Aanmaken installaties')
 
     # bypass.process_installatie(df=bypass.df_assets_wegkantkasten
     #                            , column_name='Wegkantkast_Object assetId.identificator'
@@ -1580,7 +1597,8 @@ if __name__ == '__main__':
 
     # bypass.process_wegkantkasten()
     # bypass.process_wegkantkasten_lsdeel()
-    #
+
+    # todo: case per case de sturingsrelatie toevoegen.
     # bypass.process_mivlve()
     # bypass.process_mivmeetpunten()
 
@@ -1592,18 +1610,18 @@ if __name__ == '__main__':
     # bypass.process_galgpaal()
 
     # bypass.process_RSS_groep()
-    # bypass.process_RSS_borden()
+    bypass.process_RSS_borden()
     # Activeer pas nadat de poort is aangemaakt door Swarco
     # De sturingsrelatie toevoegen van de EM-installatie naar de Poort.
     ## bypass.process_RSS_poort()
 
     # bypass.process_RVMS_groep()
-    # bypass.process_RVMS_borden()
+    bypass.process_RVMS_borden()
     # Activeer pas nadat de poort is aangemaakt door Swarco
     # De sturingsrelatie toevoegen van de EM-installatie naar de Poort.
     # bypass.process_RVMS_poort()
 
-    # bypass.process_camera()
+    bypass.process_camera()
     # Activeer pas nadat de poort is aangemaakt door Swarco
     # De sturingsrelatie toevoegen van de EM-installatie naar de Poort.
     # bypass.process_cameras_poort()
@@ -1629,4 +1647,4 @@ if __name__ == '__main__':
 
     # wegverlichting in een latere fase activeren
     # bypass.process_voeding_wegverlichtingsgroep()
-    bypass.process_openbare_verlichting()
+    # bypass.process_openbare_verlichting()
