@@ -1,8 +1,6 @@
 import json
 import logging
-from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
 import re
 
 from API.EMInfraDomain import OperatorEnum, BoomstructuurAssetTypeEnum, \
@@ -13,148 +11,9 @@ from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path
 
+from UseCases.Lantis_bypass.LantisDomain import AssetType, RelatieInfo, ParentAssetInfo, AssetInfo, EigenschapInfo
+from UseCases.Lantis_bypass.LantisFunctions import map_relatie, map_status
 from UseCases.utils import create_relatie_if_missing
-
-
-class AssetType(Enum):
-    """
-    An enumeration of asset types with their corresponding values.
-    """
-    AB = 'Afstandsbewaking'
-    CABINECONTROLLER = 'Cabinecontroller'
-    CAMERA = 'Camera'
-    CAMGROEP = 'CAMGroep'
-    DNBHOOGSPANNING = 'DNBHOOGSPANNING'
-    DYNBORDGROEP = 'DYNBORDGROEP'
-    ENERGIEMETERDNB = 'ENERGIEMETERDNB'
-    GALGPAAL = 'GALGPAAL'
-    HS = 'HS'
-    HSCABINE = 'HSCabine'
-    HSDEEL = 'HSDeel'
-    INSTALLATIE = 'Installatie'
-    IP = 'IP'
-    LSDEEL = 'LSDeel'
-    MIVLVE = 'MIVLVE'
-    MPT = 'Meetpunt'
-    POORT = 'Poort'
-    RSSBORD = 'RSSBord'
-    RSSGROEP = 'DynBordGroep'
-    RVMSBORD = 'RVMSBord'
-    RVMSGROEP = 'DynBordGroep'
-    SEGC = 'Segmentcontroller'
-    SEINBRUG = 'Seinbrug'
-    TT = 'Teletransmissieverbinding'
-    WEGKANTKAST = 'Wegkantkast'
-    WVGROEP = 'Wegverlichtingsgroep'
-    WVLICHTMAST = 'Wegverlichtingsmast'
-
-
-@dataclass
-class RelatieInfo:
-    """
-    A data class representing relationship information.
-
-    Args:
-        uri (RelatieEnum): The type of relationship.
-        bronAsset_uuid (str, optional): The UUID of the source asset. Defaults to None.
-        doelAsset_uuid (str, optional): The UUID of the target asset. Defaults to None.
-        column_typeURI_relatie (str, optional): The type URI of the relationship column. Defaults to None.
-    """
-    uri: RelatieEnum
-    bronAsset_uuid: str | None = None
-    doelAsset_uuid: str | None = None
-    column_typeURI_relatie: str | None = None
-
-
-@dataclass
-class AssetInfo:
-    """
-    A data class representing asset information.
-
-    Args:
-        asset_type (AssetType): The type of the asset.
-        column_uuid (str, optional): The UUID of the column. Defaults to None.
-        column_typeURI (str, optional): The type URI of the column. Defaults to None.
-        column_name (str, optional): The name of the column. Defaults to None.
-        column_status (str, optional): The status of the column. Defaults to None.
-        column_asset_aanwezig (str, optional): The presence of the asset column. Defaults to None.
-    """
-    asset_type: AssetType
-    column_uuid: str | None = None
-    column_typeURI: str | None = None
-    column_name: str | None = None
-    column_status: str | None = None
-    column_asset_aanwezig: str | None = None
-
-
-@dataclass
-class ParentAssetInfo:
-    """
-    A data class representing parent asset information.
-
-    Args:
-        parent_asset_type (BoomstructuurAssetTypeEnum): The type of the parent asset.
-        column_parent_uuid (str, optional): The UUID of the parent column. Defaults to None.
-        column_parent_name (str, optional): The name of the parent column. Defaults to None.
-    """
-    parent_asset_type: BoomstructuurAssetTypeEnum
-    column_parent_uuid: str | None = None
-    column_parent_name: str | None = None
-
-
-@dataclass
-class EigenschapInfo:
-    """
-    A data class representing property information.
-
-    Args:
-        eminfra_eigenschap_name (str): The name of the EMInfra property.
-        column_eigenschap_name (str): The name of the column property.
-    """
-    eminfra_eigenschap_name: str
-    column_eigenschap_name: str
-
-
-def map_status(nieuwe_status: str) -> AssetDTOToestand:
-    """
-    Map een string naar de enumeration klasse AssetDTOToestand.
-    """
-    mapping = {
-        'geannuleerd': AssetDTOToestand.GEANNULEERD,
-        'gepland': AssetDTOToestand.GEPLAND,
-        'in-gebruik': AssetDTOToestand.IN_GEBRUIK,
-        'in-ontwerp': AssetDTOToestand.IN_ONTWERP,
-        'in-opbouw': AssetDTOToestand.IN_OPBOUW,
-        'overgedragen': AssetDTOToestand.OVERGEDRAGEN,
-        'uit-gebruik': AssetDTOToestand.UIT_GEBRUIK,
-        'verwijderd': AssetDTOToestand.VERWIJDERD,
-    }
-
-    try:
-        return mapping[nieuwe_status]
-    except KeyError as e:
-        allowed = ", ".join(mapping.keys())
-        raise ValueError(
-            f"Toestand '{nieuwe_status}' is niet gekend. "
-            f"Gebruik een van volgende waarden: {allowed}"
-        ) from e
-
-
-def map_relatie(relatie_uri: str) -> RelatieEnum:
-    mapping = {
-        'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging': RelatieEnum.BEVESTIGING,
-        'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt': RelatieEnum.VOEDT,
-        'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Sturing': RelatieEnum.STURING,
-        'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HoortBij': RelatieEnum.HOORTBIJ,
-    }
-    try:
-        return mapping[relatie_uri]
-    except KeyError as e:
-        allowed = ", ".join(mapping.keys())
-        raise ValueError(
-            f"Relatie_uri '{relatie_uri}' is niet gekend. "
-            f"Gebruik een van volgende waarden: {allowed}"
-        ) from e
 
 
 class BypassProcessor:
@@ -941,7 +800,7 @@ class BypassProcessor:
                                       column_typeURI_relatie='Voedingsrelaties_Voedingsrelatie typeURI')
         sturingsrelatie = RelatieInfo(uri=RelatieEnum.STURING, bronAsset_uuid=None,
                                       doelAsset_uuid='Netwerkgegevens_UUID Poort',
-                                      column_typeURI_relatie='Sturingsrelaties_Sturingsrelatie typeURI')
+                                      column_typeURI_relatie='Sturingsrelatie_Sturingsrelatie typeURI')
         bypass.process_assets(df=bypass.df_assets_RVMS_borden, asset_info=asset_info,
                               parent_asset_info=parent_asset_info, add_geometry=True,
                               relatie_infos=[hoortbijrelatie, bevestigingsrelatie, voedingsrelatie, sturingsrelatie],
@@ -1403,17 +1262,6 @@ class BypassProcessor:
 
         self.eminfra_client.update_eigenschap(assetId=asset.uuid, eigenschap=eigenschap_value_update)
 
-    def process_mivlve_poort(self):
-        logging.info('Aanmaken Poort')
-        asset_info = AssetInfo(asset_type=AssetType.POORT, column_uuid='Netwerkgegevens_UUID Poort',
-                               column_name='Netwerkgegevens_assetId.identificator Poort',
-                               column_typeURI='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Netwerkpoort')
-        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
-                                            column_parent_uuid='Bevestigingsrelatie_UUID Bevestigingsrelatie doelAsset')
-        sturingrelatie = RelatieInfo(uri=RelatieEnum.STURING, bronAsset_uuid='Netwerkgegevens_UUID Poort',
-                                     doelAsset_uuid='LVE_UUID Object')
-        bypass.process_assets(df=bypass.df_assets_mivlve, asset_info=asset_info, parent_asset_info=parent_asset_info,
-                              relatie_infos=[sturingrelatie], sheetname_prefix='MIVLVE')
 
     def process_RSS_groep(self):
         logging.info('Aanmaken RSS-Groep')
@@ -1428,20 +1276,6 @@ class BypassProcessor:
                               parent_asset_info=parent_asset_info,
                               sheetname_prefix='Seinbrug_RSS')  # geen eigenschappen, noch relaties voor de RSS-groep
 
-    def process_RSS_poort(self):
-        logging.info('Aanmaken Poort')
-        asset_info = AssetInfo(asset_type=AssetType.POORT, column_uuid='Netwerkgegevens_UUID Poort',
-                               column_name='Netwerkgegevens_Poort',
-                               column_typeURI='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Netwerkpoort')
-        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
-                                            column_parent_uuid='DVM-Bord_UUID Object',
-                                            column_parent_name='DVM-bord_Object assetId.identificator')
-        sturingrelatie = RelatieInfo(uri=RelatieEnum.STURING, bronAsset_uuid='Netwerkgegevens_UUID Poort',
-                                     doelAsset_uuid='DVM-Bord_UUID Object')
-        bypass.process_assets(df=bypass.df_assets_RSS_borden, asset_info=asset_info,
-                              parent_asset_info=parent_asset_info, relatie_infos=[sturingrelatie],
-                              sheetname_prefix='Seinbrug')
-
     def process_RVMS_groep(self):
         logging.info('Aanmaken RVMS-Groep')
         asset_info = AssetInfo(asset_type=AssetType.DYNBORDGROEP,
@@ -1455,20 +1289,6 @@ class BypassProcessor:
                               parent_asset_info=parent_asset_info,
                               sheetname_prefix='Seinbrug_RVMS')  # geen eigenschappen, noch relaties voor de RVMS-groep
 
-    def process_RVMS_poort(self):
-        logging.info('Aanmaken Poort')
-        asset_info = AssetInfo(asset_type=AssetType.POORT, column_uuid='Netwerkgegevens_UUID Poort',
-                               column_name='Netwerkgegevens_Poort',
-                               column_typeURI='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Netwerkpoort')
-        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
-                                            column_parent_uuid='DVM-Bord_UUID Object',
-                                            column_parent_name='DVM-bord_Object assetId.identificator')
-        sturingrelatie = RelatieInfo(uri=RelatieEnum.STURING, bronAsset_uuid='Netwerkgegevens_UUID Poort',
-                                     doelAsset_uuid='DVM-Bord_UUID Object')
-        bypass.process_assets(df=bypass.df_assets_RVMS_borden, asset_info=asset_info,
-                              parent_asset_info=parent_asset_info, relatie_infos=[sturingrelatie],
-                              sheetname_prefix='Seinbrug')
-
     def process_galgpaal(self):
         logging.info('Aanmaken Galgpaal')
         asset_info = AssetInfo(asset_type=AssetType.GALGPAAL, column_typeURI='Galgpaal_Object typeURI',
@@ -1478,21 +1298,6 @@ class BypassProcessor:
                                             column_parent_uuid='parent_beheerobject_uuid')
         bypass.process_assets(df=bypass.df_assets_galgpaal, asset_info=asset_info, parent_asset_info=parent_asset_info,
                               add_geometry=True, sheetname_prefix='Seinbrug')
-
-    def process_cameras_poort(self):
-        logging.info('Aanmaken Poort')
-        asset_info = AssetInfo(asset_type=AssetType.POORT,
-                               column_uuid='Netwerkgegevens_UUID Poort',
-                               column_name='Netwerkgegevens_assetId.identificator Poort',
-                               column_typeURI='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Netwerkpoort')
-        parent_asset_info = ParentAssetInfo(parent_asset_type=BoomstructuurAssetTypeEnum.ASSET,
-                                            column_parent_uuid='Camera_UUID Object',
-                                            column_parent_name='Camera_Object assetId.identificator')
-        sturingrelatie = RelatieInfo(uri=RelatieEnum.STURING,
-                                     bronAsset_uuid='Netwerkgegevens_UUID Poort',
-                                     doelAsset_uuid='Camera_UUID Object')
-        bypass.process_assets(df=bypass.df_assets_cameras, asset_info=asset_info, parent_asset_info=parent_asset_info,
-                              relatie_infos=[sturingrelatie], sheetname_prefix='Camera')
 
     def add_toezichter_if_missing(self, asset: AssetDTO) -> None:
         """
@@ -1588,63 +1393,52 @@ if __name__ == '__main__':
 
     bypass.import_data()
 
-    # logging.info('Aanmaken Boomstructuur voor installaties onder Wegkantkast')
-    # logging.info('Aanmaken installaties')
+    logging.info('Aanmaken Boomstructuur voor installaties onder Wegkantkast')
+    logging.info('Aanmaken installaties')
 
-    # bypass.process_installatie(df=bypass.df_assets_wegkantkasten
-    #                            , column_name='Wegkantkast_Object assetId.identificator'
-    #                            , asset_type=AssetType.WEGKANTKAST)
+    bypass.process_installatie(df=bypass.df_assets_wegkantkasten
+                               , column_name='Wegkantkast_Object assetId.identificator'
+                               , asset_type=AssetType.WEGKANTKAST)
 
-    # bypass.process_wegkantkasten()
-    # bypass.process_wegkantkasten_lsdeel()
+    bypass.process_wegkantkasten()
+    bypass.process_wegkantkasten_lsdeel()
 
-    # todo: case per case de sturingsrelatie toevoegen.
-    # bypass.process_mivlve()
-    # bypass.process_mivmeetpunten()
+    bypass.process_mivlve()
+    bypass.process_mivmeetpunten()
 
-    # bypass.process_installatie(df=bypass.df_assets_portieken_seinbruggen
-    #                            , column_name='Seinbrug_Object assetId.identificator'
-    #                            , asset_type=AssetType.SEINBRUG)
-    # bypass.process_seinbruggen()
-    #
-    # bypass.process_galgpaal()
+    bypass.process_installatie(df=bypass.df_assets_portieken_seinbruggen
+                               , column_name='Seinbrug_Object assetId.identificator'
+                               , asset_type=AssetType.SEINBRUG)
+    bypass.process_seinbruggen()
 
-    # bypass.process_RSS_groep()
+    bypass.process_galgpaal()
+
+    bypass.process_RSS_groep()
     bypass.process_RSS_borden()
-    # Activeer pas nadat de poort is aangemaakt door Swarco
-    # De sturingsrelatie toevoegen van de EM-installatie naar de Poort.
-    ## bypass.process_RSS_poort()
 
-    # bypass.process_RVMS_groep()
+    bypass.process_RVMS_groep()
     bypass.process_RVMS_borden()
-    # Activeer pas nadat de poort is aangemaakt door Swarco
-    # De sturingsrelatie toevoegen van de EM-installatie naar de Poort.
-    # bypass.process_RVMS_poort()
 
     bypass.process_camera()
-    # Activeer pas nadat de poort is aangemaakt door Swarco
-    # De sturingsrelatie toevoegen van de EM-installatie naar de Poort.
-    # bypass.process_cameras_poort()
 
-    # logging.info('Boomstructuur van de Hoogspanningscabine')
-    # logging.info('Aanmaken Boomstructuur voor installaties onder Wegkantkast')
-    # logging.info('Aanmaken installaties')
-    # bypass.process_installatie(df=bypass.df_assets_voeding, column_name='HSCabine_Object assetId.identificator',
-    #                            asset_type=AssetType.HSCABINE)
-    #
-    # logging.info('Aanmaken Hoogspannings Cabine')
-    # bypass.process_voeding_HS_cabine()
-    # bypass.process_voeding_hoogspanningsdeel()
-    # bypass.process_voeding_laagspanningsdeel()
+    logging.info('Boomstructuur van de Hoogspanningscabine')
+    logging.info('Aanmaken Boomstructuur voor installaties onder Wegkantkast')
+    logging.info('Aanmaken installaties')
+    bypass.process_installatie(df=bypass.df_assets_voeding, column_name='HSCabine_Object assetId.identificator',
+                               asset_type=AssetType.HSCABINE)
 
-    # bypass.process_voeding_hoogspanning()
+    logging.info('Aanmaken Hoogspannings Cabine')
+    bypass.process_voeding_HS_cabine()
+    bypass.process_voeding_hoogspanningsdeel()
+    bypass.process_voeding_laagspanningsdeel()
 
-    # bypass.process_voeding_DNBHoogspanning()
-    # bypass.process_voeding_energiemeter_DNB()
+    bypass.process_voeding_hoogspanning()
 
-    # bypass.process_voeding_cabinecontroller()
-    # bypass.process_voeding_segmentcontroller()
+    bypass.process_voeding_DNBHoogspanning()
+    bypass.process_voeding_energiemeter_DNB()
 
-    # wegverlichting in een latere fase activeren
-    # bypass.process_voeding_wegverlichtingsgroep()
-    # bypass.process_openbare_verlichting()
+    bypass.process_voeding_cabinecontroller()
+    bypass.process_voeding_segmentcontroller()
+
+    bypass.process_voeding_wegverlichtingsgroep()
+    bypass.process_openbare_verlichting()
