@@ -46,15 +46,15 @@ class EMInfraClient:
         self.assets = AssetService(self.requester)
         self.assettypes = AssettypesService(self.requester)
         self.beheerobject = BeheerobjectService(self.requester)
-        self.documenten = DocumentService(self.requester)
-        self.kenmerken = KenmerkService(self.requester)
         self.bestekken = BestekService(self.requester)
-        self.locatie = LocatieService(self.requester)
-        self.geometrie = GeometrieService(self.requester)
-        self.toezichter = ToezichterService(self.requester)
-        self.schadebeheerder = SchadebeheerderService(self.requester)
+        self.documenten = DocumentService(self.requester)
         self.feed = FeedService(self.requester)
+        self.geometrie = GeometrieService(self.requester)
         self.graph = GraphService(self.requester)
+        self.kenmerken = KenmerkService(self.requester)
+        self.locatie = LocatieService(self.requester)
+        self.schadebeheerder = SchadebeheerderService(self.requester)
+        self.toezichter = ToezichterService(self.requester)
 
 
     def get_assets_by_filter(self, filter: dict, size: int = 100, order_by_property: str = None) -> Generator[dict]:
