@@ -9,9 +9,13 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from API.eminfra.assets import AssetService
+from API.eminfra.assettypes import AssettypesService
+from API.eminfra.beheerobject import BeheerobjectService
 from API.eminfra.bestekken import BestekService
 from API.eminfra.documenten import DocumentService
+from API.eminfra.feed import FeedService
 from API.eminfra.geometrie import GeometrieService
+from API.eminfra.graph import GraphService
 from API.eminfra.kenmerken import KenmerkService
 from API.eminfra.locatie import LocatieService
 from API.eminfra.schadebeheerder import SchadebeheerderService
@@ -32,33 +36,6 @@ from utils.date_helpers import validate_dates, format_datetime
 from utils.query_dto_helpers import add_expression
 
 
-DEFAULT_GRAPH_RELATIE_TYPES = [
-    "3ff9bf1c-d852-442e-a044-6200fe064b20",
-    "e801b062-74e1-4b39-9401-163dd91d5494",
-    "afbe8124-a9e2-41b9-a944-c14a41a9f4d5",
-    "f0ed1efa-fe29-4861-89dc-5d3bc40f0894",
-    "de86510a-d61c-46fb-805d-c04c78b27ab6",
-    "6c91fe94-8e29-4906-a02c-b8507495ad21",
-    "cd5104b3-5e98-4055-8af2-5724bf141e44",
-    "e7d8e795-06ef-4e0f-b049-c736b54447c9",
-    "34d043f5-583d-4c1e-9f99-4d89fcb84ef4",
-    "3a63adb8-493a-4aa8-8e2e-164fd942b0b9",
-    "0da67bde-0152-445f-8f29-6a9319f890fd",
-    "812dd4f3-c34e-43d1-88f1-3bcd0b1e89c2",
-    "fef0df58-8243-4869-a056-a71346bf6acd",
-    "dcc18707-2ca1-4b35-bfff-9fa262da96dd",
-    "41c7e2eb-17be-4f53-a49e-0f3bc31efdd0",
-    "20b29934-fd5e-490f-a94b-e566513be407",
-    "1aa9795c-7ed0-4d96-87b9-e51159055755",
-    "321c18b8-92ca-4188-a28a-f00cdfaa0e31",
-    "e2c644ec-7fbd-48ff-906a-4747b43b11a5",
-    "b4e89ae7-cb69-449c-946b-fdff13f63a7a",
-    "93c88f93-6e8c-4af3-a723-7e7a6d6956ac",
-    "f2c5c4a1-0899-4053-b3b3-2d662c717b44",
-    "a6747802-7679-473f-b2bd-db2cfd1b88d7",
-]
-
-
 class EMInfraClient:
     def __init__(self, auth_type: AuthType, env: Environment, settings_path: Path = None, cookie: str = None):
         self.requester = RequesterFactory.create_requester(auth_type=auth_type, env=env, settings_path=settings_path,
@@ -67,6 +44,8 @@ class EMInfraClient:
 
         # Sub-services
         self.assets = AssetService(self.requester)
+        self.assettypes = AssettypesService(self.requester)
+        self.beheerobject = BeheerobjectService(self.requester)
         self.documenten = DocumentService(self.requester)
         self.kenmerken = KenmerkService(self.requester)
         self.bestekken = BestekService(self.requester)
@@ -74,257 +53,9 @@ class EMInfraClient:
         self.geometrie = GeometrieService(self.requester)
         self.toezichter = ToezichterService(self.requester)
         self.schadebeheerder = SchadebeheerderService(self.requester)
+        self.feed = FeedService(self.requester)
+        self.graph = GraphService(self.requester)
 
-
-
-    def get_bestekref_by_eDelta_dossiernummer(self, eDelta_dossiernummer: str) -> BestekRef | None:
-        query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
-                             selection=SelectionDTO(
-                                 expressions=[ExpressionDTO(
-                                     terms=[TermDTO(property='eDeltaDossiernummer',
-                                                    operator=OperatorEnum.EQ,
-                                                    value=eDelta_dossiernummer)])]))
-
-        response = self.requester.post('core/api/bestekrefs/search', data=query_dto.json())
-        if response.status_code != 200:
-            logging.error(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
-
-        bestekrefs_list = [BestekRef.from_dict(item) for item in response.json()['data']]
-        if len(bestekrefs_list) != 1:
-            raise ValueError(
-                f'Expected one single bestek for {eDelta_dossiernummer}. Got {len(bestekrefs_list)} instead.')
-        return bestekrefs_list[0]
-
-    def get_bestekref_by_eDelta_besteknummer(self, eDelta_besteknummer: str) -> BestekRef | None:
-        query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
-                             selection=SelectionDTO(
-                                 expressions=[ExpressionDTO(
-                                     terms=[TermDTO(property='eDeltaBesteknummer',
-                                                    operator=OperatorEnum.EQ,
-                                                    value=eDelta_besteknummer)])]))
-
-        response = self.requester.post('core/api/bestekrefs/search', data=query_dto.json())
-        if response.status_code != 200:
-            logging.error(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
-
-        bestekrefs_list = [BestekRef.from_dict(item) for item in response.json()['data']]
-        if len(bestekrefs_list) != 1:
-            raise ValueError(
-                f'Expected one single bestek for {eDelta_besteknummer}. Got {len(bestekrefs_list)} instead.')
-
-        return [BestekRef.from_dict(item) for item in response.json()['data']][0]
-
-    def change_bestekkoppelingen_by_asset_uuid(self, asset_uuid: str, bestekkoppelingen: [BestekKoppeling]) -> None:
-        response = self.requester.put(
-            url=f'core/api/assets/{asset_uuid}/kenmerken/ee2e627e-bb79-47aa-956a-ea167d20acbd/bestekken',
-            data=json.dumps({'data': [item.asdict() for item in bestekkoppelingen]}))
-        if response.status_code != 202:
-            logging.error(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
-
-    def adjust_date_bestekkoppeling(self, asset_uuid: str, bestek_ref_uuid: str, start_datetime: datetime = None,
-                                    end_datetime: datetime = None) -> dict | None:
-        """
-        Adjusts the startdate and/or the enddate of an existing bestekkoppeling.
-
-        :param asset_uuid: asset uuid
-        :param bestek_ref_uuid: bestekkoppeling uuid.
-        :param start_datetime: start-date of the bestekkoppeling, datetime
-        :param end_datetime: end-date of the bestekkoppeling, datetime
-        :return: response of the API call, or None when nothing is updated.
-        """
-        validate_dates(start_datetime=start_datetime, end_datetime=end_datetime)
-
-        bestekkoppelingen = self.bestekken.get_bestekkoppeling(asset_uuid)
-        if matching_koppeling := next(
-                (
-                        k
-                        for k in bestekkoppelingen
-                        if k.bestekRef.uuid == bestek_ref_uuid
-                ),
-                None,
-        ):
-            if start_datetime:
-                matching_koppeling.startDatum = format_datetime(start_datetime)
-            if end_datetime:
-                matching_koppeling.eindDatum = format_datetime(end_datetime)
-
-        return self.change_bestekkoppelingen_by_asset_uuid(asset_uuid, bestekkoppelingen)
-
-    def end_bestekkoppeling(self, asset_uuid: str, bestek_ref_uuid: str,
-                            end_datetime: datetime = datetime.now()) -> dict | None:
-        """
-        End a bestekkoppeling by setting an enddate. Defaults to the actual date of execution.
-
-        :param asset_uuid: asset uuid
-        :param bestek_ref_uuid: bestekkoppeling uuid.
-        :param end_datetime: end-date of the bestek
-        :return: response of the API call, or None when nothing is updated.
-        """
-        # format the end_date
-        end_datetime = format_datetime(end_datetime)
-
-        bestekkoppelingen = self.bestekken.get_bestekkoppeling(asset_uuid)
-        if matching_koppeling := next(
-                (
-                        k
-                        for k in bestekkoppelingen
-                        if k.bestekRef.uuid == bestek_ref_uuid
-                ),
-                None,
-        ):
-            matching_koppeling.eindDatum = end_datetime
-
-        return self.change_bestekkoppelingen_by_asset_uuid(asset_uuid, bestekkoppelingen)
-
-    def add_bestekkoppeling(self, asset_uuid: str, eDelta_besteknummer: str = None, eDelta_dossiernummer: str = None,
-                            start_datetime: datetime = datetime.now(), end_datetime: datetime = None,
-                            categorie: str = BestekCategorieEnum.WERKBESTEK, insert_index: int = 0) -> dict | None:
-        """
-        Add a new bestekkoppeling. Start date default the execution date. End date default open-ended.
-        The optional parameters "eDelta_besteknummer" and "eDelta_dossiernummer" are mutually exclusive, meaning that one of both optional parameters must be provided.
-
-        :param asset_uuid: asset uuid
-        :param eDelta_besteknummer: besteknummer
-        :param eDelta_dossiernummer: dossiernummer
-        :param start_datetime: start-date of the bestek. Default None > actual date.
-        :param end_datetime: end-date of the bestek. Default None > open-ended.
-        :param categorie: bestek categorie. Default WERKBESTEK
-        :return: response of the API call, or None when nothing is updated.
-        """
-        if (eDelta_besteknummer is None) == (eDelta_dossiernummer is None):  # True if both are None or both are set
-            raise ValueError("Exactly one of 'eDelta_besteknummer' or 'eDelta_dossiernummer' must be provided.")
-        elif eDelta_besteknummer:
-            new_bestekRef = self.get_bestekref_by_eDelta_besteknummer(eDelta_besteknummer=eDelta_besteknummer)
-        else:
-            new_bestekRef = self.get_bestekref_by_eDelta_dossiernummer(eDelta_dossiernummer=eDelta_dossiernummer)
-
-        # Format the start_date, or set actual date if None
-        start_datetime = format_datetime(start_datetime)
-
-        # Format the end_date if present
-        if end_datetime:
-            end_datetime = format_datetime(end_datetime)
-
-        bestekkoppelingen = self.bestekken.get_bestekkoppeling(asset_uuid)
-
-        # Check if the new bestekkoppeling doesn't exist and append at the first index position, else do nothing
-        if not (matching_koppeling := next(
-                (k for k in bestekkoppelingen if k.bestekRef.uuid == new_bestekRef.uuid),
-                None, )):
-            new_bestekkoppeling = BestekKoppeling(
-                bestekRef=new_bestekRef,
-                status=BestekKoppelingStatusEnum.ACTIEF,
-                startDatum=start_datetime,
-                eindDatum=end_datetime,
-                categorie=categorie
-            )
-            # Insert the new bestekkoppeling at the first index position.
-            bestekkoppelingen.insert(insert_index, new_bestekkoppeling)
-
-            return self.change_bestekkoppelingen_by_asset_uuid(asset_uuid, bestekkoppelingen)
-
-    def replace_bestekkoppeling(self, asset_uuid: str, eDelta_besteknummer_old: str = None,
-                                eDelta_dossiernummer_old: str = None, eDelta_besteknummer_new: str = None,
-                                eDelta_dossiernummer_new: str = None, start_datetime: datetime = datetime.now(),
-                                end_datetime: datetime = None,
-                                categorie: BestekCategorieEnum = BestekCategorieEnum.WERKBESTEK) -> dict | None:
-        """
-        Replaces an existing bestekkoppeling: ends the existing bestekkoppeling and add a new one.
-
-        Call the functions end_bestekkoppeling and add_bestekkoppeling respectively
-        The optional parameters "eDelta_besteknummer[old|new]" and "eDelta_dossiernummer[old|new]" are mutually exclusive, meaning that one of both optional parameters must be provided.
-        The optional parameter start_datetime is the enddate of the existing bestek and the start date of the new bestek. Default value is the actual date.
-
-        :param asset_uuid: asset uuid
-        :param eDelta_besteknummer_old: besteknummer existing
-        :param eDelta_dossiernummer_old: dossiernummer existing
-        :param eDelta_besteknummer_new: besteknummer new
-        :param eDelta_dossiernummer_new: dossiernummer new
-        :param start_datetime: start-date of the new bestek, and end-date of the existing bestek. Default None > actual date.
-        :param end_datetime: end-date of the new bestek. Default None > open-ended.
-        :param categorie: bestek categorie. Default WERKBESTEK
-        :return: response of the API call, or None when nothing is updated.
-        """
-        # End bestekkoppeling
-        if (eDelta_besteknummer_old is None) == (
-                eDelta_dossiernummer_old is None):  # True if both are None or both are set
-            raise ValueError("Exactly one of 'eDelta_besteknummer_old' or 'eDelta_dossiernummer_old' must be provided.")
-        elif eDelta_besteknummer_old:
-            bestekref = self.get_bestekref_by_eDelta_besteknummer(eDelta_besteknummer=eDelta_besteknummer_old)
-        else:
-            bestekref = self.get_bestekref_by_eDelta_dossiernummer(eDelta_dossiernummer=eDelta_dossiernummer_old)
-
-        self.end_bestekkoppeling(asset_uuid=asset_uuid, bestek_ref_uuid=bestekref.uuid, end_datetime=start_datetime)
-
-        # Add bestekkoppeling
-        if (eDelta_besteknummer_new is None) == (
-                eDelta_dossiernummer_new is None):  # True if both are None or both are set
-            raise ValueError("Exactly one of 'eDelta_besteknummer_new' or 'eDelta_dossiernummer_new' must be provided.")
-        else:
-            self.add_bestekkoppeling(asset_uuid=asset_uuid, eDelta_besteknummer=eDelta_besteknummer_new,
-                                     eDelta_dossiernummer=eDelta_dossiernummer_new, start_datetime=start_datetime,
-                                     end_datetime=end_datetime, categorie=categorie)
-
-    def get_feedproxy_page(self, feed_name: str, page_num: int, page_size: int = 1):
-        url = f"feedproxy/feed/{feed_name}/{page_num}/{page_size}"
-        json_dict = self.requester.get(url).json()
-        return FeedPage.from_dict(json_dict)
-
-    def get_assettype_by_id(self, assettype_id: str) -> AssettypeDTO:
-        url = f"core/api/assettypes/{assettype_id}"
-        json_dict = self.requester.get(url).json()
-        return AssettypeDTO.from_dict(json_dict)
-
-    def search_assettype(self, uri: str) -> AssettypeDTO:
-        """
-        Searches assettype based on the URI. One single Assettype is returned, based on an exact search of the URI.
-        :param uri:
-        :return:
-        """
-        query_dto = QueryDTO(
-            size=1,
-            from_=0,
-            pagingMode=PagingModeEnum.OFFSET,
-            selection=SelectionDTO(
-                expressions=[ExpressionDTO(
-                    terms=[
-                        TermDTO(property='uri', operator=OperatorEnum.EQ, value=uri)
-                    ])
-                ])
-        )
-        url = "core/api/assettypes/search"
-        json_dict = self.requester.post(url, data=query_dto.json()).json()
-        assettypes = [AssettypeDTO.from_dict(item) for item in json_dict['data']]
-        if len(assettypes) != 1:
-            raise ValueError(f'Exactly one Assettype should be returned when searching for uri: "{uri}" Check URI.')
-        return assettypes[0]
-
-    def get_all_assettypes(self, size: int = 100) -> Generator[AssettypeDTO]:
-        from_ = 0
-        while True:
-            url = f"core/api/assettypes?from={from_}&size={size}"
-            json_dict = self.requester.get(url).json()
-            yield from [AssettypeDTO.from_dict(item) for item in json_dict['data']]
-            dto_list_total = json_dict['totalCount']
-            from_ = json_dict['from'] + size
-            if from_ >= dto_list_total:
-                break
-
-    def get_all_legacy_assettypes(self, size: int = 100) -> Generator[AssettypeDTO]:
-        yield from [assettype_dto for assettype_dto in self.get_all_assettypes(size)
-                    if assettype_dto.korteUri.startswith('lgc:')]
-
-    def get_all_otl_assettypes(self, size: int = 100) -> Generator[AssettypeDTO]:
-        yield from [assettype_dto for assettype_dto in self.get_all_assettypes(size)
-                    if ':' not in assettype_dto.korteUri]
-
-    def get_beheerobject_by_uuid(self, beheerobject_uuid: str) -> BeheerobjectDTO:
-        url = f"core/api/beheerobjecten/{beheerobject_uuid}"
-        json_dict = self.requester.get(url).json()
-        return BeheerobjectDTO.from_dict(json_dict)
 
     def get_assets_by_filter(self, filter: dict, size: int = 100, order_by_property: str = None) -> Generator[dict]:
         """filter for otl/assets/search"""
@@ -872,52 +603,6 @@ class EMInfraClient:
             else:
                 break
 
-    def remove_parent_from_asset(self, parent_uuid: str, asset_uuid: str):
-        """Removes an asset from its parent.
-
-        :param parent_uuid: The UUID of the parent asset.
-        :type parent_uuid: str
-        :param asset_uuid: The UUID of the asset to remove the parent from.
-        :type asset_uuid: str
-        """
-        payload = {
-            "name": "remove",
-            "description": "Verwijderen uit boomstructuur van 1 asset",
-            "async": False,
-            "uuids": [asset_uuid],
-        }
-        url = f"core/api/beheerobjecten/{parent_uuid}/assets/ops/remove"
-        response = self.requester.put(
-            url=url,
-            json=payload
-        )
-        if response.status_code != 202:
-            ProcessLookupError(f'Failed to remove parent from asset: {response.text}')
-
-    def reorganise_asset(self, parent_uuid: str, asset_uuids: [str]) -> None:
-        """
-        Move asset(s) to a parent asset.
-
-        :param parent_uuid:
-        :param asset_uuids: list of asset_uuids to move
-        :return:
-        """
-        request_body = {
-            "name": "reorganize",
-            "moveOperations": [
-                {
-                    "targetType": "asset",
-                    "assetsUuids": asset_uuids,
-                    "targetUuid": parent_uuid
-                }
-            ]
-        }
-        response = self.requester.put(
-            url='core/api/beheerobjecten/ops/reorganize', json=request_body
-        )
-        if response.status_code != 202:
-            logging.error(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
 
     def search_agent(self, naam: str, ovoCode: str = None, actief: bool = True) -> Generator[AgentDTO]:
         query_dto = QueryDTO(
@@ -1134,48 +819,6 @@ class EMInfraClient:
         if response.status_code != 202:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
-
-    def update_toestand(self, asset: AssetDTO, toestand: AssetDTOToestand = AssetDTOToestand.IN_ONTWERP,
-                        actief: bool = True) -> None:
-        """
-        Update toestand of an asset. Keep the asset's naam, commentaar.
-        Set default actief = True
-
-        :param asset:
-        :param toestand:
-        :return:
-        """
-        request_body = {
-            "naam": asset.naam,
-            "actief": actief,
-            "toestand": toestand.value,
-            "commentaar": asset.commentaar
-        }
-        response = self.requester.put(url=f'core/api/assets/{asset.uuid}', json=request_body)
-        if response.status_code != 202:
-            logging.error(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
-
-    def update_commentaar(self, asset: AssetDTO, commentaar: str) -> None:
-        """
-        Update commentaar of an asset.
-        Keep the asset's naam, status, toestand.
-
-        :param asset:
-        :param commentaar:
-        :return:
-        """
-        request_body = {
-            "naam": asset.naam,
-            "actief": asset.actief,
-            "toestand": asset.toestand.value,
-            "commentaar": commentaar
-        }
-        response = self.requester.put(url=f'core/api/assets/{asset.uuid}', json=request_body)
-        if response.status_code != 202:
-            logging.error(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
-
 
     def get_kenmerktype_and_relatietype_id(self, relatie: RelatieEnum) -> (str, str):
         relaties_dict = {
@@ -1422,133 +1065,6 @@ class EMInfraClient:
             eigenschap_value_list = [item for item in eigenschap_value_list if item.eigenschap.naam == eigenschap_naam]
         return eigenschap_value_list
 
-    def search_beheerobjecten(self, naam: str, beheerobjecttype: BeheerobjectTypeDTO = None, actief: bool = None,
-                              operator: OperatorEnum = OperatorEnum.CONTAINS) -> Generator[BeheerobjectDTO]:
-        query_dto = QueryDTO(
-            size=100, from_=0, pagingMode=PagingModeEnum.OFFSET,
-            selection=SelectionDTO(
-                expressions=[ExpressionDTO(
-                    terms=[TermDTO(property='naam', operator=operator, value=naam)])]))
-
-        if beheerobjecttype:
-            query_dto.selection.expressions.append(
-                ExpressionDTO(
-                    logicalOp=LogicalOpEnum.AND
-                    , terms=[TermDTO(property='type', operator=OperatorEnum.EQ, value=beheerobjecttype.uuid)])
-            )
-
-        if actief or not actief:
-            query_dto.selection.expressions.append(
-                ExpressionDTO(
-                    logicalOp=LogicalOpEnum.AND
-                    , terms=[TermDTO(property='actief', operator=OperatorEnum.EQ, value=actief)])
-            )
-
-        url = 'core/api/beheerobjecten/search'
-        while True:
-            json_dict = self.requester.post(url, data=query_dto.json()).json()
-            yield from [BeheerobjectDTO.from_dict(item) for item in json_dict['data']]
-            dto_list_total = json_dict['totalCount']
-            query_dto.from_ = json_dict['from'] + query_dto.size
-            if query_dto.from_ >= dto_list_total:
-                break
-
-    def get_beheerobjecttypes(self) -> list[BeheerobjectTypeDTO]:
-        url = 'core/api/beheerobjecttypes'
-        json_dict = self.requester.get(url).json()
-        return [BeheerobjectTypeDTO.from_dict(item) for item in json_dict['data']]
-
-    def create_beheerobject(self, naam: str, beheerobjecttype: BeheerobjectTypeDTO = None) -> dict | None:
-        """
-
-        :param naam:
-        :param beheerobjecttype: Optional parameter. Set default value to installatie when missing
-        :return:
-        """
-        if beheerobjecttype is None:
-            beheerobjecttypes = self.get_beheerobjecttypes()
-            default_beheerobjecttype = [item for item in beheerobjecttypes if item.naam == 'INSTAL (Beheerobject)']
-            if not default_beheerobjecttype:
-                raise ValueError("Default beheerobjecttype 'INSTAL (Beheerobject)' not found")
-            beheerobjecttype = default_beheerobjecttype[0]
-        json_body = {
-            "naam": naam,
-            "typeUuid": beheerobjecttype.uuid
-        }
-        url = 'core/api/beheerobjecten'
-        response = self.requester.post(url, json=json_body)
-        if response.status_code != 202:
-            logging.error(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
-        return response.json()
-
-    def activeer_asset(self, asset: AssetDTO) -> dict:
-        json_body = {
-            "actief": True
-            , "naam": asset.naam
-        }
-        response = self.requester.put(
-            url=f'core/api/assets/{asset.uuid}'
-            , json=json_body
-        )
-        if response.status_code != 202:
-            logging.error(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
-        return response.json()
-
-    def deactiveer_asset(self, asset: AssetDTO) -> dict:
-        json_body = {
-            "actief": False
-            , "naam": asset.naam
-        }
-        response = self.requester.put(
-            url=f'core/api/assets/{asset.uuid}'
-            , json=json_body
-        )
-        if response.status_code != 202:
-            logging.error(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
-        return response.json()
-
-    def update_beheerobject_status(self, beheerObject: BeheerobjectDTO, status: bool) -> dict:
-        json_body = {
-            "naam":beheerObject.naam
-            ,"actief": status
-            ,"typeUuid": beheerObject.type.get("uuid")
-        }
-        response = self.requester.put(
-            url=f'core/api/beheerobjecten/{beheerObject.uuid}'
-            , json=json_body
-        )
-        if response.status_code != 202:
-            logging.error(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
-        return response.json()
-
-    def reorganize_beheerobject(self, parentAsset: AssetDTO, childAsset: AssetDTO,
-                                parentType: BoomstructuurAssetTypeEnum = BoomstructuurAssetTypeEnum.ASSET) -> dict:
-        """
-        Assets verplaatsen in de boomstructuur met 1 parent en 1 child-asset.
-
-        :param parentAsset:
-        :param childAsset:
-        :return:
-        """
-        json_body = {
-            "name": "reorganize",
-            "moveOperations":
-                [{"assetsUuids": [f'{childAsset.uuid}']
-                     , "targetType": parentType.value
-                     , "targetUuid": f'{parentAsset.uuid}'}]
-        }
-        response = self.requester.put(
-            url='core/api/beheerobjecten/ops/reorganize'
-            , json=json_body
-        )
-        if response.status_code != 202:
-            logging.error(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
-
     def update_asset(self, uuid: str, naam: str, toestand: str, commentaar: str, actief: bool):
         """
         Activate asset by default when updating.
@@ -1672,34 +1188,3 @@ class EMInfraClient:
         if resp.status_code != 202:
             logging.error(resp)
             raise ProcessLookupError(resp.content.decode())
-
-    def get_graph(self, asset_uuid: str, depth: int = 1, relatieTypes: list = None, actiefFilter: bool = True) -> Graph:
-        """
-        Generate the graph, starting from an asset, searching a certain depth and for some relatieTypes
-
-        :param asset_uuid: central asset (node) to start the search from.
-        :param depth: depth of the Graph. default depth of 1 step
-        :param relatieTypes: List of relatietypes. Default None returns all possible relatietypes
-        :param actiefFilter: Returns only active assets (nodes)
-        :return:
-        """
-        relatieTypes = relatieTypes or DEFAULT_GRAPH_RELATIE_TYPES
-
-        request_body = {
-            "limit": 1000,
-            "uuidsToInclude": [asset_uuid],
-            "uuidsToExpand": [asset_uuid],
-            "expandDepth": depth,
-            "relatieTypesToReturn": relatieTypes,
-            "relatieTypesToExpand": relatieTypes,
-            "actiefFilter": actiefFilter
-        }
-        uri = 'core/api/assets/graph'
-        response = self.requester.post(
-            url=uri
-            , data=json.dumps(request_body)
-        )
-        if response.status_code != 201:
-            logging.error(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
-        return Graph.from_dict(response.json())
