@@ -7,10 +7,15 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from pathlib import Path
-from assets import AssetService
-from documenten import DocumentService
-from kenmerken import KenmerkService
-from bestekken import BestekService
+
+from API.eminfra.assets import AssetService
+from API.eminfra.bestekken import BestekService
+from API.eminfra.documenten import DocumentService
+from API.eminfra.geometrie import GeometrieService
+from API.eminfra.kenmerken import KenmerkService
+from API.eminfra.locatie import LocatieService
+from API.eminfra.schadebeheerder import SchadebeheerderService
+from API.eminfra.toezichter import ToezichterService
 
 from API.EMInfraDomain import (OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO, PagingModeEnum, QueryDTO, BestekRef, \
     BestekKoppeling, FeedPage, AssettypeDTO, AssetDTO, BetrokkenerelatieDTO, AgentDTO, \
@@ -25,7 +30,6 @@ from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 from utils.date_helpers import validate_dates, format_datetime
 from utils.query_dto_helpers import add_expression
-import os
 
 
 DEFAULT_GRAPH_RELATIE_TYPES = [
@@ -54,243 +58,24 @@ DEFAULT_GRAPH_RELATIE_TYPES = [
     "a6747802-7679-473f-b2bd-db2cfd1b88d7",
 ]
 
-@dataclass
-class Query(BaseDataclass):
-    size: int
-    filters: dict
-    orderByProperty: str
-    fromCursor: str | None = None
-
-
 
 class EMInfraClient:
     def __init__(self, auth_type: AuthType, env: Environment, settings_path: Path = None, cookie: str = None):
         self.requester = RequesterFactory.create_requester(auth_type=auth_type, env=env, settings_path=settings_path,
                                                            cookie=cookie)
         self.requester.first_part_url += 'eminfra/'
-        # Shared constants
-        self.SCHADEBEHEERDER_UUID = 'd911dc02-f214-4f64-9c46-720dbdeb0d02'
 
         # Sub-services
         self.assets = AssetService(self.requester)
         self.documenten = DocumentService(self.requester)
         self.kenmerken = KenmerkService(self.requester)
         self.bestekken = BestekService(self.requester)
+        self.locatie = LocatieService(self.requester)
+        self.geometrie = GeometrieService(self.requester)
+        self.toezichter = ToezichterService(self.requester)
+        self.schadebeheerder = SchadebeheerderService(self.requester)
 
 
-
-    def get_bestekkoppelingen_by_asset_uuid(self, asset_uuid: str) -> [BestekKoppeling]:
-        response = self.requester.get(
-            url=f'core/api/installaties/{asset_uuid}/kenmerken/ee2e627e-bb79-47aa-956a-ea167d20acbd/bestekken')
-        if response.status_code != 200:
-            logging.error(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
-
-        return [BestekKoppeling.from_dict(item) for item in response.json()['data']]
-
-    def get_kenmerk_locatie_by_asset_uuid(self, asset_uuid: str) -> LocatieKenmerk:
-        response = self.requester.get(
-            url=f'core/api/assets/{asset_uuid}/kenmerken/80052ed4-2f91-400c-8cba-57624653db11')
-        if response.status_code != 200:
-            logging.error(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
-        return LocatieKenmerk.from_dict(response.json())
-
-    def update_kenmerk_locatie_by_asset_uuid(self, asset_uuid: str, wkt_geom: str) -> None:
-        json_body = {"geometrie": f"{wkt_geom}"}
-        response = self.requester.put(
-            url=f'core/api/assets/{asset_uuid}/kenmerken/80052ed4-2f91-400c-8cba-57624653db11/geometrie'
-            , data=json.dumps(json_body)
-        )
-        if response.status_code != 202:
-            logging.error(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
-
-    def update_kenmerk_locatie_via_relatie(self, bron_asset_uuid: str, doel_asset_uuid: str) -> None:
-        """Update het kenmerk locatie via een bestaande steun-relatie"""
-        json_body = {
-            "relatie": {
-                "asset": {
-                    "uuid": f'{doel_asset_uuid}',
-                    "_type": "installatie"}}}
-        response = self.requester.put(
-            url=f'core/api/assets/{bron_asset_uuid}/kenmerken/80052ed4-2f91-400c-8cba-57624653db11'
-            , data=json.dumps(json_body)
-        )
-        if response.status_code != 202:
-            logging.error(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
-
-    def get_kenmerk_geometrie(self, asset_uuid: str) -> GeometrieKenmerk:
-        response = self.requester.get(
-            url=f'core/api/assets/{asset_uuid}/kenmerken/aabe29e0-9303-45f1-839e-159d70ec2859')
-        if response.status_code != 200:
-            logging.error(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
-        return GeometrieKenmerk.from_dict(response.json())
-
-    def update_geometrie_by_asset_uuid(self, asset_uuid: str, wkt_geometry: str) -> None:
-        """
-        Update de bestaande geometrie eigenschap door 3 hulpfuncties in te roepen:
-        - get_kenmerk_geometrie()
-        - delete_kenmerk_geometrie()
-        - add_kenmerk_geometrie()
-
-        :param asset_uuid:
-        :param wkt_geometry:
-        :return:
-        """
-        # step 1: search existing geometry
-        geometriekenmerk = self.get_kenmerk_geometrie(asset_uuid=asset_uuid)
-
-        # step 2: remove existing geometry
-        if geometriekenmerk.logs:
-            if log_id := geometriekenmerk.logs[0].uuid:
-                self.delete_kenmerk_geometrie(asset_uuid, log_id)
-
-        # step 3: add new geometry
-        self.add_kenmerk_geometrie(asset_uuid=asset_uuid, wkt_geometry=wkt_geometry)
-
-    def get_kenmerk_toezichter_by_asset_uuid(self, asset_uuid: str) -> ToezichterKenmerk:
-        response = self.requester.get(
-            url=f'core/api/assets/{asset_uuid}/kenmerken/f0166ba2-757c-4cf3-bf71-2e4fdff43fa3')
-        if response.status_code != 200:
-            logging.error(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
-        return ToezichterKenmerk.from_dict(response.json())
-
-    def add_kenmerk_toezichter_by_asset_uuid(self, asset_uuid: str, toezichtgroep_uuid: str,
-                                             toezichter_uuid: str) -> None:
-        """
-        Both toezichter and toezichtsgroep must be updated simultaneously.
-        Updating only one of both (toezichter/toezichtsgroep), purges the other.
-        :param asset_uuid:
-        :param toezichtgroep_uuid:
-        :param toezichter_uuid:
-        :return:
-        """
-        payload = {}
-        if toezichter_uuid:
-            payload["toezichter"] = {
-                "uuid": toezichter_uuid
-            }
-        if toezichtgroep_uuid:
-            payload["toezichtGroep"] = {
-                "uuid": toezichtgroep_uuid
-            }
-        response = self.requester.put(
-            url=f'core/api/assets/{asset_uuid}/kenmerken/f0166ba2-757c-4cf3-bf71-2e4fdff43fa3'
-            , json=payload
-        )
-        if response.status_code != 202:
-            logging.error(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
-
-    def get_kenmerk_schadebeheerder_by_asset_uuid(self, asset_uuid: str) -> SchadebeheerderKenmerk | None:
-        data = self.kenmerken.get(asset_uuid, self.SCHADEBEHEERDER_UUID)
-        if sb := data.get("schadeBeheerder"):
-            return SchadebeheerderKenmerk.from_dict(sb)
-        return None
-
-    def get_kenmerk_schadebeheerder_by_name(self, name: str) -> SchadebeheerderKenmerk:
-        query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
-                             selection=SelectionDTO(
-                                 expressions=[
-                                     ExpressionDTO(
-                                         terms=[TermDTO(property='naam',
-                                                        operator=OperatorEnum.EQ,
-                                                        value=f'{name}')])
-                                 ]))
-        response = self.requester.post(
-            url='core/api/beheerders/search', data=query_dto.json())
-        if response.status_code != 200:
-            logging.error(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
-
-        schadebeheerders = [SchadebeheerderKenmerk.from_dict(item) for item in response.json()['data']]
-        if len(schadebeheerders) != 1:
-            raise ValueError(f'Expected one single schadebeheerder for {name}. Got {len(schadebeheerders)} instead.')
-        return schadebeheerders[0]
-
-    def add_kenmerk_schadebeheerder(
-            self, asset_uuid: str, schadebeheerder: str = None, schadebeheerder_uuid: str = None
-    ) -> None:
-        """
-        Toevoegen van een schadebeheerder aan een asset op basis van de naam of de uuid.
-        Zodra de parameter "schadebeheerder" beschikbaar is, wordt de parameter "schadebeheerder_uuid" niet meer gebruikt.
-        :param asset_uuid:
-        :param schadebeheerder: naam van de schadebeerder
-        :param schadebeheerder_uuid: uuid van de schadebeheerder
-        :return:
-        """
-        if not (schadebeheerder or schadebeheerder_uuid):
-            raise ValueError("één van beide (naam of UUID) is verplicht.")
-        if schadebeheerder:
-            schadebeheerder_uuid = self.get_kenmerk_schadebeheerder_by_name(schadebeheerder).uuid
-        payload = {"schadeBeheerder": {"uuid": schadebeheerder_uuid}}
-        self.kenmerken.put(asset_uuid, self.SCHADEBEHEERDER_UUID, payload)
-
-    def get_identiteit(self, toezichter_uuid: str) -> IdentiteitKenmerk:
-        response = self.requester.get(
-            url=f'identiteit/api/identiteiten/{toezichter_uuid}')
-        if response.status_code != 200:
-            logging.error(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
-        return IdentiteitKenmerk.from_dict(response.json())
-
-    def get_toezichtgroep(self, toezichtGroep_uuid: str) -> ToezichtgroepDTO:
-        response = self.requester.get(
-            url=f'identiteit/api/toezichtgroepen/{toezichtGroep_uuid}')
-        if response.status_code != 200:
-            logging.error(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
-        return ToezichtgroepDTO.from_dict(response.json())
-
-    def search_documents_by_asset_uuid(self, asset_uuid: str, query_dto: QueryDTO) -> Generator[AssetDocumentDTO]:
-        """Search documents by asset uuid
-
-        Retrieves AssetDocumentDTO associated with a specific asset_uuid, and filter the documents with a query.
-
-        Args:
-            asset_uuid: str
-            query_dto: QueryDTO
-            document filter
-        :return:
-            Generator of AssetDocumentDTO
-        """
-        query_dto.from_ = 0
-        if query_dto.size is None:
-            query_dto.size = 100
-        url = f"core/api/assets/{asset_uuid}/documenten/search"
-        while True:
-            json_dict = self.requester.post(url, data=query_dto.json()).json()
-            yield from [AssetDocumentDTO.from_dict(item) for item in json_dict['data']]
-            dto_list_total = json_dict['totalCount']
-            query_dto.from_ = json_dict['from'] + query_dto.size
-            if query_dto.from_ >= dto_list_total:
-                break
-
-    def get_documents_by_asset_uuid(self, asset_uuid: str, size: int = 10) -> Generator[AssetDocumentDTO]:
-        """Get documents by asset uuid
-
-        Retrieves all AssetDocumentDTO associated with a specific asset_uuid
-
-        Args:
-            asset_uuid: str
-            size: int
-            the number of document to retrieve in one API call
-        :return:
-            Generator of AssetDocumentDTO
-        """
-        _from = 0
-        while True:
-            url = f"core/api/assets/{asset_uuid}/documenten?from={_from}&pagingMode=OFFSET&size={size}"
-            json_dict = self.requester.get(url).json()
-            yield from [AssetDocumentDTO.from_dict(item) for item in json_dict['data']]
-            dto_list_total = json_dict['totalCount']
-            from_ = json_dict['from'] + size
-            if from_ >= dto_list_total:
-                break
 
     def get_bestekref_by_eDelta_dossiernummer(self, eDelta_dossiernummer: str) -> BestekRef | None:
         query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
@@ -352,7 +137,7 @@ class EMInfraClient:
         """
         validate_dates(start_datetime=start_datetime, end_datetime=end_datetime)
 
-        bestekkoppelingen = self.bestekken.get_by_asset_uuid(asset_uuid)
+        bestekkoppelingen = self.bestekken.get_bestekkoppeling(asset_uuid)
         if matching_koppeling := next(
                 (
                         k
@@ -381,7 +166,7 @@ class EMInfraClient:
         # format the end_date
         end_datetime = format_datetime(end_datetime)
 
-        bestekkoppelingen = self.bestekken.get_by_asset_uuid(asset_uuid)
+        bestekkoppelingen = self.bestekken.get_bestekkoppeling(asset_uuid)
         if matching_koppeling := next(
                 (
                         k
@@ -423,7 +208,7 @@ class EMInfraClient:
         if end_datetime:
             end_datetime = format_datetime(end_datetime)
 
-        bestekkoppelingen = self.bestekken.get_by_asset_uuid(asset_uuid)
+        bestekkoppelingen = self.bestekken.get_bestekkoppeling(asset_uuid)
 
         # Check if the new bestekkoppeling doesn't exist and append at the first index position, else do nothing
         if not (matching_koppeling := next(
@@ -1821,39 +1606,6 @@ class EMInfraClient:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
         return response.json()
-
-    def delete_kenmerk_geometrie(self, asset_uuid: str, log_id: str):
-        response = self.requester.delete(
-            url=f'core/api/assets/{asset_uuid}/kenmerken/aabe29e0-9303-45f1-839e-159d70ec2859/logs/{log_id}')
-        if response.status_code != 202:
-            logging.error(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
-
-    def add_kenmerk_geometrie(self, asset_uuid, wkt_geometry, geometry_log: GeometryNiveau = GeometryNiveau.MIN_1
-                              , geometry_bron: GeometryBron = GeometryBron.MANUEEL
-                              , geometry_nauwkeurigheid: GeometryNauwkeurigheid = GeometryNauwkeurigheid._50):
-        """
-
-        :param asset_uuid:
-        :param wkt_geometry: Well Known Text geometrie
-        :param geometry_log: default waarde "-1"
-        :param geometry_bron: default waarde "Manueel"
-        :param geometry_nauwkeurigheid: default waarde "<50 cm"
-        :return:
-        """
-        json_body = {
-            "wkt": f"{wkt_geometry}",
-            "niveau": f"{geometry_log.value}",
-            "nauwkeurigheid": f"{geometry_nauwkeurigheid.value}",
-            "bron": f"{geometry_bron.value}"
-        }
-        response = self.requester.post(
-            url=f'core/api/assets/{asset_uuid}/kenmerken/aabe29e0-9303-45f1-839e-159d70ec2859/logs'
-            , data=json.dumps(json_body)
-        )
-        if response.status_code != 202:
-            logging.error(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
 
     def search_kenmerk_hoortbij(self, asset_uuid: str, naam: KenmerkTypeEnum = KenmerkTypeEnum.HEEFTBIJHORENDEASSETS) -> [KenmerkType]:
         if naam == KenmerkTypeEnum.HEEFTBIJHORENDEASSETS:

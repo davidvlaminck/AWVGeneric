@@ -2,7 +2,7 @@ import json
 import logging
 from pathlib import Path
 
-from API.EMInfraDomain import AssetDocumentDTO
+from API.EMInfraDomain import AssetDocumentDTO, Generator
 
 
 class DocumentService:
@@ -20,7 +20,7 @@ class DocumentService:
             Path: The full path of the downloaded PDF file.
         """
         # Check if the directory exists, create if not exist
-        os.makedirs(directory, exist_ok=True)
+        directory.mkdir(parents=True, exist_ok=True)
 
         file_name = document.naam
         if not document.document['links']:
@@ -36,3 +36,25 @@ class DocumentService:
             logging.info(f'Writing file {file_name} to temp location: {directory}.')
             f.write(file.content)
             return directory / file_name
+
+    def get_documents(self, asset_uuid: str, size: int = 10) -> Generator[AssetDocumentDTO]:
+        """Get documents by asset uuid
+
+        Retrieves all AssetDocumentDTO associated with a specific asset_uuid
+
+        Args:
+            asset_uuid: str
+            size: int
+            the number of document to retrieve in one API call
+        :return:
+            Generator of AssetDocumentDTO
+        """
+        _from = 0
+        while True:
+            url = f"core/api/assets/{asset_uuid}/documenten?from={_from}&pagingMode=OFFSET&size={size}"
+            json_dict = self.requester.get(url).json()
+            yield from [AssetDocumentDTO.from_dict(item) for item in json_dict['data']]
+            dto_list_total = json_dict['totalCount']
+            from_ = json_dict['from'] + size
+            if from_ >= dto_list_total:
+                break
