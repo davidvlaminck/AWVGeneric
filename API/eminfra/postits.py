@@ -2,7 +2,8 @@ import logging
 from datetime import datetime
 from typing import Generator
 
-from API.EMInfraDomain import PostitDTO, QueryDTO, PagingModeEnum, SelectionDTO, OperatorEnum, LogicalOpEnum, AssetDTO
+from API.eminfra.eminfra_domain import (PostitDTO, QueryDTO, PagingModeEnum, SelectionDTO, OperatorEnum,
+                                        LogicalOpEnum, AssetDTO)
 from utils.date_helpers import validate_dates, format_datetime
 from utils.query_dto_helpers import add_expression
 

@@ -1,8 +1,9 @@
 import logging
 
-from API.EMInfraDomain import AssetTypeKenmerkTypeDTO, KenmerkTypeDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, \
-    TermDTO, QueryDTO, OperatorEnum, ResourceRefDTO, AssetTypeKenmerkTypeAddDTO, KenmerkTypeEnum, KenmerkType, \
-    ExpansionsDTO, AssetDTO
+from API.eminfra.eminfra_domain import (AssetTypeKenmerkTypeDTO, KenmerkTypeDTO, PagingModeEnum, SelectionDTO,
+                                        ExpressionDTO, TermDTO, QueryDTO, OperatorEnum, ResourceRefDTO,
+                                        AssetTypeKenmerkTypeAddDTO, KenmerkTypeEnum, KenmerkType, ExpansionsDTO,
+                                        AssetDTO)
 
 
 class KenmerkService:

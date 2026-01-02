@@ -1,5 +1,5 @@
 from typing import Generator
-from API.EMInfraDomain import (QueryDTO, ExpressionDTO, TermDTO, OperatorEnum, LogicalOpEnum, SelectionDTO,
+from API.eminfra.eminfra_domain import (QueryDTO, ExpressionDTO, TermDTO, OperatorEnum, LogicalOpEnum, SelectionDTO,
                                PagingModeEnum, AgentDTO)
 
 

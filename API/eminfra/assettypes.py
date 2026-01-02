@@ -1,5 +1,5 @@
-from API.EMInfraDomain import AssettypeDTO, Generator, QueryDTO, PagingModeEnum, SelectionDTO, TermDTO, ExpressionDTO, \
-    OperatorEnum
+from API.eminfra.eminfra_domain import (AssettypeDTO, Generator, QueryDTO, PagingModeEnum, SelectionDTO, TermDTO,
+                                        ExpressionDTO, OperatorEnum)
 
 
 class AssettypesService:

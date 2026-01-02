@@ -1,6 +1,6 @@
 import json
 
-from API.EMInfraDomain import Graph, GraphLinks, AssetDTO
+from API.eminfra.eminfra_domain import Graph, AssetDTO
 
 
 class GraphService:

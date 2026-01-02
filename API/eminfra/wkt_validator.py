@@ -1,6 +1,7 @@
 from shapely import wkt
 from shapely.errors import WKTReadingError
 
+
 def is_valid_wkt(wkt_string: str) -> bool:
     """
     Validate whether a string is a valid OGC WKT geometry.

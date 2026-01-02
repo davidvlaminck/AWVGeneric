@@ -1,6 +1,6 @@
 import json
 from typing import Generator
-from API.EMInfraDomain import (AssetDTO, AssetDTOToestand, QueryDTO, ExpressionDTO, TermDTO, OperatorEnum,
+from API.eminfra.eminfra_domain import (AssetDTO, AssetDTOToestand, QueryDTO, ExpressionDTO, TermDTO, OperatorEnum,
                                LogicalOpEnum, ExpansionsDTO, SelectionDTO, PagingModeEnum, AssettypeDTO, RelatieEnum,
                                BoomstructuurAssetTypeEnum)
 from API.eminfra.relaties import RelatieService

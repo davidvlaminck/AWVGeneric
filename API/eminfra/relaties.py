@@ -1,9 +1,8 @@
-import uuid
 from typing import Generator
 
-from API.EMInfraDomain import AssetDTO, AssetDTOToestand, RelatieTypeDTO, RelatieEnum, AssetRelatieDTO, QueryDTO, \
-    PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum, LogicalOpEnum, AssettypeDTO
-from utils.query_dto_helpers import add_expression
+from API.eminfra.eminfra_domain import (AssetDTO, RelatieTypeDTO, RelatieEnum, AssetRelatieDTO, QueryDTO,
+                                        PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum,
+                                        LogicalOpEnum)
 from API.eminfra.assets import AssetService
 
 class RelatieService:
@@ -278,6 +277,6 @@ class RelatieService:
         asset_uuid_gemigreerd = relatie_gemigreerd.get('RelatieObject.doelAssetId').get(
             'DtcIdentificator.identificator')[:36]
         return next(
-            AssetService.search_asset_by_uuid(asset_uuid=asset_uuid_gemigreerd),
+            AssetService.search_asset_by_uuid(self, asset_uuid=asset_uuid_gemigreerd),
             None,
         )

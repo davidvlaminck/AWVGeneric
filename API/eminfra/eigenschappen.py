@@ -1,8 +1,9 @@
 import logging
 from typing import Generator
 
-from API.EMInfraDomain import Eigenschap, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, QueryDTO, OperatorEnum, \
-    LogicalOpEnum, EigenschapValueDTO, EigenschapValueUpdateDTO, KenmerkTypeEnum, AssetDTO
+from API.eminfra.eminfra_domain import (Eigenschap, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, QueryDTO,
+                                        OperatorEnum, LogicalOpEnum, EigenschapValueDTO, EigenschapValueUpdateDTO,
+                                        KenmerkTypeEnum, AssetDTO)
 from API.eminfra.kenmerken import KenmerkService
 
 class EigenschapService:
