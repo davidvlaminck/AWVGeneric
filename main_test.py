@@ -1,6 +1,6 @@
-from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum
-from API.EMSONClient import EMSONClient
+from API.eminfra.eminfra_client import EMInfraClient
+from API.eminfra.eminfra_domain import  QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum
+from API.eminfra.assets import AssetService
 from API.Enums import AuthType, Environment
 
 if __name__ == '__main__':
@@ -18,7 +18,7 @@ if __name__ == '__main__':
                                  terms=[TermDTO(property='type',
                                                 operator=OperatorEnum.EQ,
                                                 value='a7eadedf-b5cf-491b-8b89-ccced9a37004')])]))
-    asset = list(eminfra_client.search_assets(query_dto))
+    asset = list(AssetService.search_assets(query_dto))
     print(asset)
 
     # bestekken = eminfra_client.get_bestekkoppelingen_by_asset_uuid('030a47c0-bf19-434a-aa19-e33377c82f79')
