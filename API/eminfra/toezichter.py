@@ -9,20 +9,18 @@ class ToezichterService:
         self.requester = requester
         self.TOEZICHTER_UUID = 'f0166ba2-757c-4cf3-bf71-2e4fdff43fa3'
 
-    # todo:
-    # test of bij het ToezichterKenmerk de eigenschappen toezichter en toezichtGroep kunnen vervangen worden door IdentiteitKenmerk en ToezichtgroepDTO
-    def get_toezichter(self, asset_uuid: str) -> ToezichterKenmerk:
+    def get_toezichter(self, asset: AssetDTO) -> ToezichterKenmerk:
         response = self.requester.get(
-            url=f'core/api/assets/{asset_uuid}/kenmerken/{self.TOEZICHTER_UUID}')
+            url=f'core/api/assets/{asset.uuid}/kenmerken/{self.TOEZICHTER_UUID}')
         if response.status_code != 200:
             raise ProcessLookupError(response.content.decode("utf-8"))
         return ToezichterKenmerk.from_dict(response.json())
 
-    def add_toezichter(self, asset_uuid: str, toezichtgroep_uuid: str, toezichter_uuid: str) -> None:
+    def add_toezichter(self, asset: AssetDTO, toezichtgroep_uuid: str, toezichter_uuid: str) -> None:
         """
         Both toezichter and toezichtsgroep must be updated simultaneously.
         Updating only one of both (toezichter/toezichtsgroep), purges the other.
-        :param asset_uuid:
+        :param asset:
         :param toezichtgroep_uuid:
         :param toezichter_uuid:
         :return:
@@ -37,7 +35,7 @@ class ToezichterService:
                 "uuid": toezichtgroep_uuid
             }
         response = self.requester.put(
-            url=f'core/api/assets/{asset_uuid}/kenmerken/{self.TOEZICHTER_UUID}'
+            url=f'core/api/assets/{asset.uuid}/kenmerken/{self.TOEZICHTER_UUID}'
             , json=payload
         )
         if response.status_code != 202:

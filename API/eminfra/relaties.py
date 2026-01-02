@@ -263,15 +263,15 @@ class RelatieService:
         if resp.status_code != 202:
             raise ProcessLookupError(resp.content.decode())
 
-    def zoek_verweven_asset(self, bron_uuid: str) -> AssetDTO | None:
+    def zoek_verweven_asset(self, bronAsset: AssetDTO) -> AssetDTO | None:
         """
         Zoek de OTL-asset op basis van een Legacy-asset die verbonden zijn via een Gemigreerd-relatie.
         Returns None indien de Gemigreerd-relatie ontbreekt.
 
-        :param bron_uuid: uuid van de bron asset (Legacy)
+        :param bronAsset: uuid van de bron asset (Legacy)
         :return:
         """
-        relaties = self.search_assetrelaties_OTL(bronAsset_uuid=bron_uuid)
+        relaties = self.search_assetrelaties_OTL(bronAsset=bronAsset)
         relatie_gemigreerd = next(
             (r for r in relaties if r.get('@type') == 'https://lgc.data.wegenenverkeer.be/ns/onderdeel#GemigreerdNaar'),
             None)

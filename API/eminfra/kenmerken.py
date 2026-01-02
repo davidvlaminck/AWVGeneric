@@ -2,29 +2,36 @@ import logging
 
 from API.EMInfraDomain import AssetTypeKenmerkTypeDTO, KenmerkTypeDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, \
     TermDTO, QueryDTO, OperatorEnum, ResourceRefDTO, AssetTypeKenmerkTypeAddDTO, KenmerkTypeEnum, KenmerkType, \
-    ExpansionsDTO
+    ExpansionsDTO, AssetDTO
 
 
 class KenmerkService:
     def __init__(self, requester):
         self.requester = requester
 
-    def get(self, asset_uuid: str, kenmerk_uuid: str) -> dict:
-        url = f'core/api/assets/{asset_uuid}/kenmerken/{kenmerk_uuid}'
+    def get(self, asset: AssetDTO, kenmerk_uuid: str) -> dict:
+        url = f'core/api/assets/{asset.uuid}/kenmerken/{kenmerk_uuid}'
         resp = self.requester.get(url=url)
         if resp.status_code != 200:
             logging.error(resp)
             raise ProcessLookupError(resp.content.decode())
         return resp.json()
 
-    def put(self, asset_uuid: str, kenmerk_uuid: str, payload: dict) -> None:
-        url = f'core/api/assets/{asset_uuid}/kenmerken/{kenmerk_uuid}'
+    def put(self, asset: AssetDTO, kenmerk_uuid: str, payload: dict) -> None:
+        url = f'core/api/assets/{asset.uuid}/kenmerken/{kenmerk_uuid}'
         resp = self.requester.put(url=url, json=payload)
         if resp.status_code != 202:
             logging.error(resp)
             raise ProcessLookupError(resp.content.decode())
 
     def get_kenmerktype_by_assettype_uuid(self, uuid: str) -> [AssetTypeKenmerkTypeDTO]:
+        """
+        Returns a list of kenmerktypes of an assettype
+        :param uuid: assettype uuid
+        :type uuid: str
+        :return: [AssetTypeKenmerkTypeDTO]
+        :rtype:
+        """
         url = f"core/api/assettypes/{uuid}/kenmerktypes"
         json_dict = self.requester.get(url).json()
         return [AssetTypeKenmerkTypeDTO.from_dict(item) for item in json_dict['data']]
@@ -52,18 +59,34 @@ class KenmerkService:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-    def update_kenmerk(self, asset_uuid: str, kenmerk_uuid: str, request_body: dict) -> None:
-        response = self.requester.put(url=f'core/api/assets/{asset_uuid}/kenmerken/{kenmerk_uuid}', json=request_body)
+    def update_kenmerk(self, asset: AssetDTO, kenmerk_uuid: str, request_body: dict) -> None:
+        """
+        Update een kenmerk van een asset
+
+        :param asset:
+        :type asset: AssetDTO
+        :param kenmerk_uuid:
+        :type kenmerk_uuid: str
+        :param request_body:
+        :type request_body: dict
+        :return: None
+        :rtype:
+        """
+        response = self.requester.put(url=f'core/api/assets/{asset.uuid}/kenmerken/{kenmerk_uuid}', json=request_body)
         if response.status_code != 202:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
     def get_kenmerken(self, assetId: str, naam: KenmerkTypeEnum = None) -> list[KenmerkType] | KenmerkType:
         """
+        Oplijsten van een specifiek of alle kenmerken van een asset
 
         :param assetId:
-        :param naam: Naam van het kenmerk. Default None, returns all Kenmerken.
-        :return:
+        :type assetId: AssetDTO
+        :param naam: Kenmerk naam. Optioneel.
+        :type naam: KenmerkTypeEnum
+        :return: [KenmerkType]
+        :rtype: list
         """
         url = f'core/api/assets/{assetId}/kenmerken'
         response = self.requester.get(url)

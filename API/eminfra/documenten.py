@@ -2,7 +2,7 @@ import json
 import logging
 from pathlib import Path
 
-from API.EMInfraDomain import AssetDocumentDTO, Generator
+from API.EMInfraDomain import AssetDocumentDTO, Generator, AssetDTO
 
 
 class DocumentService:
@@ -37,21 +37,19 @@ class DocumentService:
             f.write(file.content)
             return directory / file_name
 
-    def get_documents(self, asset_uuid: str, size: int = 10) -> Generator[AssetDocumentDTO]:
-        """Get documents by asset uuid
-
-        Retrieves all AssetDocumentDTO associated with a specific asset_uuid
-
-        Args:
-            asset_uuid: str
-            size: int
-            the number of document to retrieve in one API call
-        :return:
-            Generator of AssetDocumentDTO
+    def get_documents(self, asset: AssetDTO, size: int = 10) -> Generator[AssetDocumentDTO]:
+        """
+        Retrieves all AssetDocumentDTO associated with an asset
+        :param asset:
+        :type asset: AssetDTO
+        :param size: aantal documenten
+        :type size: str
+        :return: Generator[AssetDocumentDTO]
+        :rtype:
         """
         _from = 0
         while True:
-            url = f"core/api/assets/{asset_uuid}/documenten?from={_from}&pagingMode=OFFSET&size={size}"
+            url = f"core/api/assets/{asset.uuid}/documenten?from={_from}&pagingMode=OFFSET&size={size}"
             json_dict = self.requester.get(url).json()
             yield from [AssetDocumentDTO.from_dict(item) for item in json_dict['data']]
             dto_list_total = json_dict['totalCount']

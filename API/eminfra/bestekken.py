@@ -3,7 +3,7 @@ import logging
 from datetime import datetime
 
 from API.EMInfraDomain import BestekKoppeling, BestekRef, PagingModeEnum, SelectionDTO, OperatorEnum, ExpressionDTO, \
-    TermDTO, QueryDTO, BestekCategorieEnum, BestekKoppelingStatusEnum
+    TermDTO, QueryDTO, BestekCategorieEnum, BestekKoppelingStatusEnum, AssetDTO
 from utils.date_helpers import validate_dates, format_datetime
 
 
@@ -12,9 +12,16 @@ class BestekService:
         self.requester = requester
         self.BESTEKKOPPELING_UUID = 'ee2e627e-bb79-47aa-956a-ea167d20acbd'
 
-    def get_bestekkoppeling(self, asset_uuid: str) -> [BestekKoppeling]:
+    def get_bestekkoppeling(self, asset: AssetDTO) -> [BestekKoppeling]:
+        """
+        Ophalen van de bestekkoppelingen, gelinkt aan een asset
+
+        :param asset:
+        :type asset: AssetDTO
+        :return: [Bestekkoppeling]
+        """
         response = self.requester.get(
-            url=f'core/api/installaties/{asset_uuid}/kenmerken/{self.BESTEKKOPPELING_UUID}/bestekken')
+            url=f'core/api/installaties/{asset.uuid}/kenmerken/{self.BESTEKKOPPELING_UUID}/bestekken')
         if response.status_code != 200:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
@@ -22,6 +29,16 @@ class BestekService:
         return [BestekKoppeling.from_dict(item) for item in response.json()['data']]
 
     def get_bestekref(self, eDelta_dossiernummer: str = None, eDelta_besteknummer: str = None) -> BestekRef | None:
+        """
+        Opzoeken van een BestekRef op basis van een dossiernummer of een besteknummer.
+
+        :param eDelta_dossiernummer:
+        :type eDelta_dossiernummer: str
+        :param eDelta_besteknummer:
+        :type eDelta_besteknummer: str
+        :return: Bestekreferentie
+        :rtype: BestekRef | None
+        """
         if eDelta_dossiernummer:
             return self._get_bestekref_by_eDelta_dossiernummer(eDelta_dossiernummer=eDelta_dossiernummer)
         elif eDelta_besteknummer:
@@ -71,7 +88,7 @@ class BestekService:
 
     def change_bestekkoppelingen_by_asset_uuid(self, asset_uuid: str, bestekkoppelingen: [BestekKoppeling]) -> None:
         response = self.requester.put(
-            url=f'core/api/assets/{asset_uuid}/kenmerken/ee2e627e-bb79-47aa-956a-ea167d20acbd/bestekken',
+            url=f'core/api/assets/{asset_uuid}/kenmerken/{self.BESTEKKOPPELING_UUID}/bestekken',
             data=json.dumps({'data': [item.asdict() for item in bestekkoppelingen]}))
         if response.status_code != 202:
             logging.error(response)

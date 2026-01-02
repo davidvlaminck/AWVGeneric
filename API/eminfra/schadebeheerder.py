@@ -1,5 +1,5 @@
 from API.EMInfraDomain import (SchadebeheerderKenmerk, QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO,
-                               TermDTO, OperatorEnum)
+                               TermDTO, OperatorEnum, AssetDTO)
 from API.eminfra.kenmerken import KenmerkService
 
 
@@ -9,16 +9,16 @@ class SchadebeheerderService:
         self.kenmerken = KenmerkService(self.requester)
         self.SCHADEBEHEERDER_UUID = 'd911dc02-f214-4f64-9c46-720dbdeb0d02'
 
-    def get_schadebeheerder(self, asset_uuid: str = None, name: str = None) -> [SchadebeheerderKenmerk] | None:
-        if asset_uuid:
-            return self._get_schadebeheerder_by_uuid(asset_uuid=asset_uuid)
+    def get_schadebeheerder(self, asset: AssetDTO = None, name: str = None) -> [SchadebeheerderKenmerk] | None:
+        if asset:
+            return self._get_schadebeheerder_by_uuid(asset_uuid=asset.uuid)
         elif name:
             return self._get_schadebeheerder_by_name(name=name)
         else:
             raise ValueError('At least one optional parameter asset_uuid or name is mandatory')
 
-    def _get_schadebeheerder_by_uuid(self, asset_uuid: str) -> SchadebeheerderKenmerk | None:
-        data = self.kenmerken.get(asset_uuid, self.SCHADEBEHEERDER_UUID)
+    def _get_schadebeheerder_by_uuid(self, asset: AssetDTO) -> SchadebeheerderKenmerk | None:
+        data = self.kenmerken.get(asset.uuid, self.SCHADEBEHEERDER_UUID)
         if sb := data.get("schadeBeheerder"):
             return [SchadebeheerderKenmerk.from_dict(sb)]
         return None
@@ -39,7 +39,7 @@ class SchadebeheerderService:
 
         return [SchadebeheerderKenmerk.from_dict(item) for item in response.json()['data']]
 
-    def add_schadebeheerder(self, asset_uuid: str, schadebeheerder: SchadebeheerderKenmerk) -> None:
+    def add_schadebeheerder(self, asset: AssetDTO, schadebeheerder: SchadebeheerderKenmerk) -> None:
         """
         Toevoegen van een schadebeheerder aan een asset.
         :param asset_uuid:
@@ -47,4 +47,4 @@ class SchadebeheerderService:
         :return:
         """
         payload = {"schadeBeheerder": {"uuid": schadebeheerder.uuid}}
-        self.kenmerken.put(asset_uuid, self.SCHADEBEHEERDER_UUID, payload)
+        self.kenmerken.put(asset.uuid, self.SCHADEBEHEERDER_UUID, payload)
