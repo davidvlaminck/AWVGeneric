@@ -53,13 +53,15 @@ class PostitService:
             if query_dto.from_ >= dto_list_total:
                 break
 
-    def get_postit(self, asset: AssetDTO, postit_uuid: str) -> Generator[PostitDTO] | None:
+    def get_postit(self, asset: AssetDTO, postit_uuid: str) -> PostitDTO | None:
         """
         Search one postit of an asset.
 
-        :param asset_uuid: asset_uuid
+        :param asset: asset
+        :type asset: AssetDTO
         :param postit_uuid: postit_uuid
-        :return: Generator[PostitDTO] or None
+        :type postit_uuid: str
+        :return: PostitDTO or None
         """
         url = f"core/api/assets/{asset.uuid}/postits/{postit_uuid}"
 
@@ -116,7 +118,7 @@ class PostitService:
         if startDatum and eindDatum:
             validate_dates(start_datetime=startDatum, end_datetime=eindDatum)
 
-        actual_postit = self.get_postit(asset=asset.uuid, postit_uuid=postit_uuid)
+        actual_postit = self.get_postit(asset=asset, postit_uuid=postit_uuid)
         actual_commentaar = actual_postit.commentaar
         actual_startDatum = actual_postit.startDatum
         actual_eindDatum = actual_postit.eindDatum

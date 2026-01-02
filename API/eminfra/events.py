@@ -2,7 +2,7 @@ from typing import Generator
 from datetime import datetime, timedelta
 
 from API.EMInfraDomain import EventType, IdentiteitKenmerk, EventContext, Event, QueryDTO, \
-    SelectionDTO, PagingModeEnum, ExpressionDTO, TermDTO, OperatorEnum, LogicalOpEnum
+    SelectionDTO, PagingModeEnum, ExpressionDTO, TermDTO, OperatorEnum, LogicalOpEnum, AssetDTO
 from utils.date_helpers import format_datetime
 
 
@@ -15,23 +15,21 @@ class EventService:
         json_dict = self.requester.get(url).json()
         yield from [EventType.from_dict(item) for item in json_dict['data']]
 
-    def search_eventcontexts(self, omschrijving: str = None) -> Generator[EventContext]:
+    def search_eventcontexts(self, omschrijving: str) -> Generator[EventContext]:
         """
         Search all events linked to a specific context. For example aanlevering DA-2025-00001
         """
-        if omschrijving:
-            query_dto = QueryDTO(size=100,
-                                 from_=0,
-                                 orderByProperty='omschrijving',
-                                 pagingMode=PagingModeEnum.OFFSET,
-                                 selection=SelectionDTO(
-                                     expressions=[
-                                         ExpressionDTO(
-                                             terms=[TermDTO(property='omschrijving', operator=OperatorEnum.CONTAINS,
-                                                            value=f'{omschrijving}',
-                                                            logicalOp=None)]
-                                             , logicalOp=None)]))
-
+        query_dto = QueryDTO(size=100,
+                             from_=0,
+                             orderByProperty='omschrijving',
+                             pagingMode=PagingModeEnum.OFFSET,
+                             selection=SelectionDTO(
+                                 expressions=[
+                                     ExpressionDTO(
+                                         terms=[TermDTO(property='omschrijving', operator=OperatorEnum.CONTAINS,
+                                                        value=f'{omschrijving}',
+                                                        logicalOp=None)]
+                                         , logicalOp=None)]))
         url = "core/api/eventcontexts/search"
         while True:
             json_dict = self.requester.post(url, data=query_dto.json()).json()
@@ -41,7 +39,7 @@ class EventService:
             if query_dto.from_ >= dto_list_total:
                 break
 
-    def search_events(self, asset_uuid: str = None, created_after: datetime = None, created_before: datetime = None,
+    def search_events(self, asset: AssetDTO = None, created_after: datetime = None, created_before: datetime = None,
                       created_by: IdentiteitKenmerk = None, event_type: EventType = None,
                       event_context: EventContext = None) -> Generator[Event]:
         """
@@ -51,7 +49,8 @@ class EventService:
         Additional postprocessing filtering outside the function is required to narrow down the events to
          a more restricted time range.
 
-        :param asset_uuid: asset identificator
+        :param asset: Asset
+        :type asset: AssetDTO
         :param created_after: date after which the asset was edited
         :param created_before: date before the asset was edited
         :param created_by: person who created the asset
@@ -59,15 +58,15 @@ class EventService:
         :param event_context: context of the event
         :return: A generator yielding Event objects.
         """
-        if all(p is None for p in (asset_uuid, created_after, created_before, created_by, event_type, event_context)):
+        if all(p is None for p in (asset.uuid, created_after, created_before, created_by, event_type, event_context)):
             raise ValueError("At least one parameter must be provided.")
 
         query_dto = QueryDTO(size=100, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              selection=SelectionDTO(expressions=[]))
 
-        if asset_uuid:
+        if asset.uuid:
             expression = ExpressionDTO(
-                terms=[TermDTO(property='objectId', operator=OperatorEnum.EQ, value=f'{asset_uuid}')],
+                terms=[TermDTO(property='objectId', operator=OperatorEnum.EQ, value=f'{asset.uuid}')],
                 logicalOp=LogicalOpEnum.AND)
             query_dto.selection.expressions.append(expression)
 

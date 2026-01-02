@@ -6,19 +6,18 @@ from API.eminfra.kenmerken import KenmerkService
 class SchadebeheerderService:
     def __init__(self, requester):
         self.requester = requester
-        self.kenmerken = KenmerkService(self.requester)
         self.SCHADEBEHEERDER_UUID = 'd911dc02-f214-4f64-9c46-720dbdeb0d02'
 
     def get_schadebeheerder(self, asset: AssetDTO = None, name: str = None) -> [SchadebeheerderKenmerk] | None:
         if asset:
-            return self._get_schadebeheerder_by_uuid(asset_uuid=asset.uuid)
+            return self._get_schadebeheerder_by_uuid(asset=asset)
         elif name:
             return self._get_schadebeheerder_by_name(name=name)
         else:
             raise ValueError('At least one optional parameter asset_uuid or name is mandatory')
 
     def _get_schadebeheerder_by_uuid(self, asset: AssetDTO) -> SchadebeheerderKenmerk | None:
-        data = self.kenmerken.get(asset.uuid, self.SCHADEBEHEERDER_UUID)
+        data = KenmerkService.get(self, asset.uuid, self.SCHADEBEHEERDER_UUID)
         if sb := data.get("schadeBeheerder"):
             return [SchadebeheerderKenmerk.from_dict(sb)]
         return None
@@ -42,9 +41,11 @@ class SchadebeheerderService:
     def add_schadebeheerder(self, asset: AssetDTO, schadebeheerder: SchadebeheerderKenmerk) -> None:
         """
         Toevoegen van een schadebeheerder aan een asset.
-        :param asset_uuid:
-        :param schadebeheerder: SchadebeheerderKenmerk
-        :return:
+        :param asset: Asset
+        :type asset: AssetDTO
+        :param schadebeheerder
+        :type schadebeheerder: SchadebeheerderKenmerk
+        :return: None
         """
         payload = {"schadeBeheerder": {"uuid": schadebeheerder.uuid}}
-        self.kenmerken.put(asset.uuid, self.SCHADEBEHEERDER_UUID, payload)
+        KenmerkService.put(self, asset, self.SCHADEBEHEERDER_UUID, payload)

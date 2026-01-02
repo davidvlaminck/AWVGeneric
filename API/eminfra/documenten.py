@@ -53,6 +53,6 @@ class DocumentService:
             json_dict = self.requester.get(url).json()
             yield from [AssetDocumentDTO.from_dict(item) for item in json_dict['data']]
             dto_list_total = json_dict['totalCount']
-            from_ = json_dict['from'] + size
-            if from_ >= dto_list_total:
+            _from = json_dict['from'] + size
+            if _from >= dto_list_total:
                 break

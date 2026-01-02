@@ -2,7 +2,7 @@ import logging
 from typing import Generator
 
 from API.EMInfraDomain import Eigenschap, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, QueryDTO, OperatorEnum, \
-    LogicalOpEnum, EigenschapValueDTO
+    LogicalOpEnum, EigenschapValueDTO, EigenschapValueUpdateDTO, KenmerkTypeEnum, AssetDTO
 from API.eminfra.kenmerken import KenmerkService
 
 class EigenschapService:
@@ -53,12 +53,14 @@ class EigenschapService:
 
         return [Eigenschap.from_dict(item) for item in response.json()['data']]
 
-    def update_eigenschap(self, assetId: str, eigenschap: EigenschapValueDTO | EigenschapValueUpdateDTO) -> None:
+    def update_eigenschap(self, asset: AssetDTO, eigenschap: EigenschapValueDTO | EigenschapValueUpdateDTO) -> None:
         """
         Updates an eigenschap value on an asset, handling both DTO types.
 
-        :param assetId: The ID of the asset.
-        :param eigenschap: Either an EigenschapValueDTO or EigenschapValueUpdateDTO.
+        :param asset: Asset
+        :type asset: AssetDTO
+        :param eigenschap
+        :type eigenschap: EigenschapValueDTO | EigenschapValueUpdateDTO
         """
         request_body = {
             "data": [
@@ -72,24 +74,24 @@ class EigenschapService:
         if hasattr(eigenschap, "kenmerkType") and hasattr(eigenschap.kenmerkType, "uuid"):
             kenmerk_uuid = eigenschap.kenmerkType.uuid
         else:
-            kenmerk_eigenschap = self.get_kenmerken(assetId=assetId, naam=KenmerkTypeEnum.EIGENSCHAPPEN)
+            kenmerk_eigenschap = KenmerkService.get_kenmerken(assetId=asset.uuid, naam=KenmerkTypeEnum.EIGENSCHAPPEN)
             kenmerk_uuid = kenmerk_eigenschap.type.get("uuid", None)
 
-        response = self.requester.patch(url=f'core/api/assets/{assetId}/kenmerken/{kenmerk_uuid}/eigenschapwaarden',
+        response = self.requester.patch(url=f'core/api/assets/{asset.uuid}/kenmerken/{kenmerk_uuid}/eigenschapwaarden',
                                         json=request_body)
         if response.status_code != 202:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
     def list_eigenschap(self, kenmerktypeId: str) -> [Eigenschap]:
-        url = f"core/api/kenmerkypes/{kenmerktypeId}/eigenschappen"
+        url = f"core/api/kenmerktypes/{kenmerktypeId}/eigenschappen"
         json_dict = self.requester.get(url).json()
         return [Eigenschap.from_dict(item) for item in json_dict['data']]
 
 
     def get_eigenschappen(self, assetId: str, eigenschap_naam: str = None) -> list[EigenschapValueDTO]:
         # ophalen kenmerk_uuid
-        kenmerken = KenmerkService.get_kenmerken(assetId=assetId)
+        kenmerken = KenmerkService.get_kenmerken(self, assetId=assetId)
         kenmerk_uuid = \
             [kenmerk.type.get('uuid') for kenmerk in kenmerken if kenmerk.type.get('naam').startswith('Eigenschappen')][0]
 

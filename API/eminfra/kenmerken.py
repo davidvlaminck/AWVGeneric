@@ -9,6 +9,7 @@ class KenmerkService:
     def __init__(self, requester):
         self.requester = requester
 
+    @staticmethod
     def get(self, asset: AssetDTO, kenmerk_uuid: str) -> dict:
         url = f'core/api/assets/{asset.uuid}/kenmerken/{kenmerk_uuid}'
         resp = self.requester.get(url=url)
@@ -17,6 +18,7 @@ class KenmerkService:
             raise ProcessLookupError(resp.content.decode())
         return resp.json()
 
+    @staticmethod
     def put(self, asset: AssetDTO, kenmerk_uuid: str, payload: dict) -> None:
         url = f'core/api/assets/{asset.uuid}/kenmerken/{kenmerk_uuid}'
         resp = self.requester.put(url=url, json=payload)
@@ -24,6 +26,7 @@ class KenmerkService:
             logging.error(resp)
             raise ProcessLookupError(resp.content.decode())
 
+    @staticmethod
     def get_kenmerktype_by_assettype_uuid(self, uuid: str) -> [AssetTypeKenmerkTypeDTO]:
         """
         Returns a list of kenmerktypes of an assettype
@@ -36,6 +39,7 @@ class KenmerkService:
         json_dict = self.requester.get(url).json()
         return [AssetTypeKenmerkTypeDTO.from_dict(item) for item in json_dict['data']]
 
+    @staticmethod
     def get_kenmerktype_by_naam(self, naam: str) -> KenmerkTypeDTO:
         query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              selection=SelectionDTO(

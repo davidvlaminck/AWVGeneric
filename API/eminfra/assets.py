@@ -10,6 +10,7 @@ class AssetService:
     def __init__(self, requester):
         self.requester = requester
 
+    @staticmethod
     def get_asset(self, asset_uuid: str) -> AssetDTO:
         """
         Get the AssetDTO object from an asset_uuid
@@ -39,7 +40,7 @@ class AssetService:
         # update asset eigenschappen naam, actief, toestand en commentaar
         if naam:
             json_body["naam"] = naam
-        if actief:
+        if actief is not None:
             json_body["actief"] = actief
         if toestand:
             json_body["toestand"] = toestand.value
@@ -82,10 +83,10 @@ class AssetService:
 
 
     def activeer_asset(self, asset: AssetDTO) -> dict:
-        return self._update_asset(asset=AssetDTO, actief=True)
+        return self._update_asset(asset=asset, actief=True)
 
     def deactiveer_asset(self, asset: AssetDTO) -> dict:
-        return self._update_asset(asset=AssetDTO, actief=False)
+        return self._update_asset(asset=asset, actief=False)
 
     def _search_assets_helper(self, query_dto: QueryDTO) -> Generator[AssetDTO]:
         query_dto.from_ = 0
@@ -117,6 +118,7 @@ class AssetService:
             )
         yield from self._search_assets_helper(query_dto)
 
+    @staticmethod
     def search_asset_by_uuid(self, asset_uuid: str) -> Generator[AssetDTO]:
         """
         Search active and inactive assets by uuid.
@@ -227,7 +229,7 @@ class AssetService:
 
         # Recursive case
         parents = [parent_asset]
-        next_parent = self.search_parent_asset(parent_asset.uuid, recursive=True, return_all_parents=True)
+        next_parent = self.search_parent_asset(parent_asset, recursive=True, return_all_parents=True)
 
         if next_parent:
             if isinstance(next_parent, list):
@@ -262,7 +264,7 @@ class AssetService:
             raise ProcessLookupError(response.content.decode("utf-8"))
         return response.json()
 
-    def create_asset(self, parentAsset: str, naam: str, assettype: AssettypeDTO,
+    def create_asset(self, parentAsset: AssetDTO, naam: str, assettype: AssettypeDTO,
                      parentAssetType: BoomstructuurAssetTypeEnum = BoomstructuurAssetTypeEnum.ASSET) -> dict | None:
         """
         Maak een nieuwe asset aan op een specifieke plaats in de boomstructuur van EM-Infra
@@ -316,7 +318,7 @@ class AssetService:
         :type expansions_fields: [str]
         :return: Generator
         """
-        body = {'size': size, 'fromCursor': None, 'filters': filter_dict}
+        body = {'size': size, 'fromCursor': None, 'filters': filter_dict, 'expansion': {"fields": []}}
         if expansions_fields:
             body['expansion']['fields'] = expansions_fields
         paging_cursor = None

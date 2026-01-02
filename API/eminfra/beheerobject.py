@@ -107,7 +107,7 @@ class BeheerobjectService:
             raise ProcessLookupError(response.content.decode("utf-8"))
         return response.json()
 
-    def remove_asset_from_parent(self, asset: AssetDTO, parentAsset: AssetDTO) -> None:
+    def remove_asset_from_parent(self, asset: AssetDTO, parentAsset: AssetDTO) -> dict:
         """
         Remove an asset from its parent.
         Wordt gebruikt om een asset uit een boomstructuur te halen, bijvoorbeeld bij OTL-assets.
@@ -116,7 +116,7 @@ class BeheerobjectService:
         :type asset: AssetDTO
         :param parentAsset: Parent asset.
         :type parentAsset: AssetDTO
-        :return: None
+        :return: dict
         """
         payload = {
             "name": "remove",
@@ -130,4 +130,5 @@ class BeheerobjectService:
             json=payload
         )
         if response.status_code != 202:
-            ProcessLookupError(f'Failed to remove parent from asset: {response.text}')
+            raise ProcessLookupError(f'Failed to remove parent from asset: {response.text}')
+        return response.json()

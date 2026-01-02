@@ -15,7 +15,7 @@ class RelatieService:
         json_dict = self.requester.get(url).json()
         yield from [RelatieTypeDTO.from_dict(item) for item in json_dict['data']]
 
-
+    @staticmethod
     def get_kenmerktype_and_relatietype_id(self, relatie: RelatieEnum) -> (str, str):
         """
         Returns kenmerktype_uuid and relatietype_uuid.

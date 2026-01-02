@@ -12,11 +12,11 @@ class BestekService:
         self.requester = requester
         self.BESTEKKOPPELING_UUID = 'ee2e627e-bb79-47aa-956a-ea167d20acbd'
 
-    def get_bestekkoppeling(self, asset: AssetDTO) -> [BestekKoppeling]:
+    def get_bestekkoppeling(self, asset: AssetDTO) -> list[BestekKoppeling]:
         """
         Ophalen van de bestekkoppelingen, gelinkt aan een asset
 
-        :param asset:
+        :param asset: Asset
         :type asset: AssetDTO
         :return: [Bestekkoppeling]
         """
@@ -28,6 +28,7 @@ class BestekService:
 
         return [BestekKoppeling.from_dict(item) for item in response.json()['data']]
 
+    @staticmethod
     def get_bestekref(self, eDelta_dossiernummer: str = None, eDelta_besteknummer: str = None) -> BestekRef | None:
         """
         Opzoeken van een BestekRef op basis van een dossiernummer of een besteknummer.
@@ -47,6 +48,7 @@ class BestekService:
             raise ValueError('At least one optional input parameter eDelta_dossiernummer of eDelta_besteknummer must '
                              'be provided')
 
+    @staticmethod
     def _get_bestekref_by_eDelta_dossiernummer(self, eDelta_dossiernummer: str) -> BestekRef | None:
         query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              selection=SelectionDTO(
@@ -66,6 +68,7 @@ class BestekService:
                 f'Expected one single bestek for {eDelta_dossiernummer}. Got {len(bestekrefs_list)} instead.')
         return bestekrefs_list[0]
 
+    @staticmethod
     def _get_bestekref_by_eDelta_besteknummer(self, eDelta_besteknummer: str) -> BestekRef | None:
         query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              selection=SelectionDTO(
@@ -86,27 +89,37 @@ class BestekService:
         return bestekrefs_list[0]
 
 
-    def change_bestekkoppelingen_by_asset_uuid(self, asset_uuid: str, bestekkoppelingen: [BestekKoppeling]) -> None:
+    def change_bestekkoppelingen_by_asset_uuid(self, asset: AssetDTO, bestekkoppelingen: [BestekKoppeling]) -> None:
+        """
+
+        :param asset: Asset
+        :type asset: AssetDTO
+        :param bestekkoppelingen: List of BestekKoppeling
+        :type bestekkoppelingen: [BestekKoppeling]
+        :return: None
+        :rtype:
+        """
         response = self.requester.put(
-            url=f'core/api/assets/{asset_uuid}/kenmerken/{self.BESTEKKOPPELING_UUID}/bestekken',
+            url=f'core/api/assets/{asset.uuid}/kenmerken/{self.BESTEKKOPPELING_UUID}/bestekken',
             data=json.dumps({'data': [item.asdict() for item in bestekkoppelingen]}))
         if response.status_code != 202:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-    def adjust_date_bestekkoppeling(self, asset_uuid: str, bestek_ref_uuid: str, start_datetime: datetime = None,
+    def adjust_date_bestekkoppeling(self, asset: AssetDTO, bestek_ref_uuid: str, start_datetime: datetime = None,
                                     end_datetime: datetime = None) -> dict | None:
         """
         Adjusts the startdate and/or the enddate of an existing bestekkoppeling.
 
-        :param asset_uuid: asset uuid
+        :param asset: Asset
+        :type asset: AssetDTO
         :param bestek_ref_uuid: bestekkoppeling uuid.
         :param start_datetime: start-date of the bestekkoppeling, datetime
         :param end_datetime: end-date of the bestekkoppeling, datetime
         :return: response of the API call, or None when nothing is updated.
         """
         validate_dates(start_datetime=start_datetime, end_datetime=end_datetime)
-        bestekkoppelingen = self.get_bestekkoppeling(asset_uuid)
+        bestekkoppelingen = self.get_bestekkoppeling(asset)
         if matching_koppeling := next(
                 (
                         k
@@ -119,20 +132,21 @@ class BestekService:
                 matching_koppeling.startDatum = format_datetime(start_datetime)
             if end_datetime:
                 matching_koppeling.eindDatum = format_datetime(end_datetime)
-        return self.change_bestekkoppelingen_by_asset_uuid(asset_uuid, bestekkoppelingen)
+        return self.change_bestekkoppelingen_by_asset_uuid(asset.uuid, bestekkoppelingen)
 
-    def end_bestekkoppeling(self, asset_uuid: str, bestek_ref_uuid: str,
+    def end_bestekkoppeling(self, asset: AssetDTO, bestek_ref_uuid: str,
                             end_datetime: datetime = datetime.now()) -> dict | None:
         """
         End a bestekkoppeling by setting an enddate. Defaults to the actual date of execution.
 
-        :param asset_uuid: asset uuid
+        :param asset: Asset
+        :type asset: AssetDTO
         :param bestek_ref_uuid: bestekkoppeling uuid.
         :param end_datetime: end-date of the bestek
         :return: response of the API call, or None when nothing is updated.
         """
         end_datetime = format_datetime(end_datetime)
-        bestekkoppelingen = self.get_bestekkoppeling(asset_uuid)
+        bestekkoppelingen = self.get_bestekkoppeling(asset)
         if matching_koppeling := next(
                 (
                         k
@@ -142,16 +156,18 @@ class BestekService:
                 None,
         ):
             matching_koppeling.eindDatum = end_datetime
-        return self.change_bestekkoppelingen_by_asset_uuid(asset_uuid, bestekkoppelingen)
+        return self.change_bestekkoppelingen_by_asset_uuid(asset.uuid, bestekkoppelingen)
 
-    def add_bestekkoppeling(self, asset_uuid: str, eDelta_besteknummer: str = None, eDelta_dossiernummer: str = None,
+    def add_bestekkoppeling(self, asset: AssetDTO, eDelta_besteknummer: str = None, eDelta_dossiernummer: str = None,
                             start_datetime: datetime = datetime.now(), end_datetime: datetime = None,
                             categorie: str = BestekCategorieEnum.WERKBESTEK, insert_index: int = 0) -> dict | None:
         """
         Add a new bestekkoppeling. Start date default the execution date. End date default open-ended.
-        The optional parameters "eDelta_besteknummer" and "eDelta_dossiernummer" are mutually exclusive, meaning that one of both optional parameters must be provided.
+        The optional parameters "eDelta_besteknummer" and "eDelta_dossiernummer" are mutually exclusive,
+         meaning that one of both optional parameters must be provided.
 
-        :param asset_uuid: asset uuid
+        :param asset: Asset
+        :type asset: AssetDTO
         :param eDelta_besteknummer: besteknummer
         :param eDelta_dossiernummer: dossiernummer
         :param start_datetime: start-date of the bestek. Default None > actual date.
@@ -173,7 +189,7 @@ class BestekService:
         if end_datetime:
             end_datetime = format_datetime(end_datetime)
 
-        bestekkoppelingen = self.get_bestekkoppeling(asset_uuid)
+        bestekkoppelingen = self.get_bestekkoppeling(asset)
 
         # Check if the new bestekkoppeling doesn't exist and append at the first index position, else do nothing
         if not (matching_koppeling := next(
@@ -189,9 +205,9 @@ class BestekService:
             # Insert the new bestekkoppeling at the first index position.
             bestekkoppelingen.insert(insert_index, new_bestekkoppeling)
 
-            return self.change_bestekkoppelingen_by_asset_uuid(asset_uuid, bestekkoppelingen)
+            return self.change_bestekkoppelingen_by_asset_uuid(asset.uuid, bestekkoppelingen)
 
-    def replace_bestekkoppeling(self, asset_uuid: str, eDelta_besteknummer_old: str = None,
+    def replace_bestekkoppeling(self, asset: AssetDTO, eDelta_besteknummer_old: str = None,
                                 eDelta_dossiernummer_old: str = None, eDelta_besteknummer_new: str = None,
                                 eDelta_dossiernummer_new: str = None, start_datetime: datetime = datetime.now(),
                                 end_datetime: datetime = None,
@@ -203,7 +219,8 @@ class BestekService:
         The optional parameters "eDelta_besteknummer[old|new]" and "eDelta_dossiernummer[old|new]" are mutually exclusive, meaning that one of both optional parameters must be provided.
         The optional parameter start_datetime is the enddate of the existing bestek and the start date of the new bestek. Default value is the actual date.
 
-        :param asset_uuid: asset uuid
+        :param asset: Asset
+        :type asset: AssetDTO
         :param eDelta_besteknummer_old: besteknummer existing
         :param eDelta_dossiernummer_old: dossiernummer existing
         :param eDelta_besteknummer_new: besteknummer new
@@ -222,13 +239,13 @@ class BestekService:
         else:
             bestekref = self.get_bestekref(eDelta_dossiernummer=eDelta_dossiernummer_old)
 
-        self.end_bestekkoppeling(asset_uuid=asset_uuid, bestek_ref_uuid=bestekref.uuid, end_datetime=start_datetime)
+        self.end_bestekkoppeling(asset=asset, bestek_ref_uuid=bestekref.uuid, end_datetime=start_datetime)
 
         # Add bestekkoppeling
         if (eDelta_besteknummer_new is None) == (
                 eDelta_dossiernummer_new is None):  # True if both are None or both are set
             raise ValueError("Exactly one of 'eDelta_besteknummer_new' or 'eDelta_dossiernummer_new' must be provided.")
         else:
-            self.add_bestekkoppeling(asset_uuid=asset_uuid, eDelta_besteknummer=eDelta_besteknummer_new,
+            self.add_bestekkoppeling(asset=asset, eDelta_besteknummer=eDelta_besteknummer_new,
                                      eDelta_dossiernummer=eDelta_dossiernummer_new, start_datetime=start_datetime,
                                      end_datetime=end_datetime, categorie=categorie)
