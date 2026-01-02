@@ -8,6 +8,17 @@ class AgentService:
         self.requester = requester
 
     def search_agent(self, naam: str, ovoCode: str = None, actief: bool = True) -> Generator[AgentDTO]:
+        """
+
+        :param naam: agent name
+        :type naam: str
+        :param ovoCode:
+        :type ovoCode: str
+        :param actief:
+        :type actief: bool
+        :return: Generator[AgentDTO]
+        :rtype:
+        """
         query_dto = QueryDTO(
             size=100,
             from_=0,

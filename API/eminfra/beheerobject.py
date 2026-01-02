@@ -10,7 +10,7 @@ class BeheerobjectService:
         url = f"core/api/beheerobjecten/{beheerobject_uuid}"
         json_dict = self.requester.get(url).json()
         return BeheerobjectDTO.from_dict(json_dict)
-    
+
     def search_beheerobjecten(self, naam: str, beheerobjecttype: BeheerobjectTypeDTO = None, actief: bool = None,
                               operator: OperatorEnum = OperatorEnum.CONTAINS) -> Generator[BeheerobjectDTO]:
         query_dto = QueryDTO(
@@ -26,7 +26,7 @@ class BeheerobjectService:
                     , terms=[TermDTO(property='type', operator=OperatorEnum.EQ, value=beheerobjecttype.uuid)])
             )
 
-        if actief or not actief:
+        if actief is not None:
             query_dto.selection.expressions.append(
                 ExpressionDTO(
                     logicalOp=LogicalOpEnum.AND
@@ -71,7 +71,7 @@ class BeheerobjectService:
         return response.json()
 
     def wijzig_boomstructuur(self, childAsset: AssetDTO, parentAsset: AssetDTO,
-                                parentType: BoomstructuurAssetTypeEnum = BoomstructuurAssetTypeEnum.ASSET) -> dict:
+                             parentType: BoomstructuurAssetTypeEnum = BoomstructuurAssetTypeEnum.ASSET) -> dict:
         """
         Assets verplaatsen in de boomstructuur met 1 parent en 1 child-asset.
 
@@ -93,12 +93,11 @@ class BeheerobjectService:
         if response.status_code != 202:
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-
     def update_beheerobject_status(self, beheerObject: BeheerobjectDTO, status: bool) -> dict:
         json_body = {
-            "naam":beheerObject.naam
-            ,"actief": status
-            ,"typeUuid": beheerObject.type.get("uuid")
+            "naam": beheerObject.naam,
+            "actief": status,
+            "typeUuid": beheerObject.type.get("uuid")
         }
         response = self.requester.put(
             url=f'core/api/beheerobjecten/{beheerObject.uuid}'
@@ -108,22 +107,24 @@ class BeheerobjectService:
             raise ProcessLookupError(response.content.decode("utf-8"))
         return response.json()
 
-    def remove_asset_from_parent(self, asset_uuid: str, parent_uuid: str):
-        """Removes an asset from its parent.
+    def remove_asset_from_parent(self, asset: AssetDTO, parentAsset: AssetDTO) -> None:
+        """
+        Remove an asset from its parent.
         Wordt gebruikt om een asset uit een boomstructuur te halen, bijvoorbeeld bij OTL-assets.
 
-        :param asset_uuid: The UUID of the asset to remove the parent from.
-        :type asset_uuid: str
-        :param parent_uuid: The UUID of the parent asset.
-        :type parent_uuid: str
+        :param asset: Asset to remove from a tree
+        :type asset: AssetDTO
+        :param parentAsset: Parent asset.
+        :type parentAsset: AssetDTO
+        :return: None
         """
         payload = {
             "name": "remove",
             "description": "Verwijderen uit boomstructuur van 1 asset",
             "async": False,
-            "uuids": [asset_uuid],
+            "uuids": [asset.uuid],
         }
-        url = f"core/api/beheerobjecten/{parent_uuid}/assets/ops/remove"
+        url = f"core/api/beheerobjecten/{parentAsset.uuid}/assets/ops/remove"
         response = self.requester.put(
             url=url,
             json=payload

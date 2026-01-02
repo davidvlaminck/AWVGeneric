@@ -6,12 +6,16 @@ class AssettypesService:
     def __init__(self, requester):
         self.requester = requester
 
+    def get_assettype(self, assettype_uuid: str) -> AssettypeDTO:
+        """
+        Get assettype by uuid
 
-    def get_assettype(self, assettype_id: str) -> AssettypeDTO:
+        :param assettype_uuid:
+        :type assettype_uuid: str
+        :return:
+        :rtype:
         """
-        Get assettype by assettype_id
-        """
-        url = f"core/api/assettypes/{assettype_id}"
+        url = f"core/api/assettypes/{assettype_uuid}"
         json_dict = self.requester.get(url).json()
         return AssettypeDTO.from_dict(json_dict)
 
@@ -19,7 +23,8 @@ class AssettypesService:
         """
         Search assettype by URI.
         One single Assettype is returned, based on an exact search of the URI.
-        :param uri:
+        :param uri: assettype URI
+        :type uri: str
         :return:
         """
         query_dto = QueryDTO(
