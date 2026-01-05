@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import TermDTO, QueryDTO, OperatorEnum, PagingModeEnum, ExpansionsDTO, SelectionDTO, \
+from API.eminfra.eminfra_client import EMInfraClient
+from API.eminfra.eminfra_domain import TermDTO, QueryDTO, OperatorEnum, PagingModeEnum, ExpansionsDTO, SelectionDTO, \
     ExpressionDTO, LogicalOpEnum
 from API.Enums import Environment, AuthType
 
@@ -25,6 +25,6 @@ if __name__ == '__main__':
                                         ]
                              )]))
 
-    generator_assets = eminfra_client.search_assets(query_dto=query_dto)
+    generator_assets = eminfra_client.assets.search_assets(query_dto=query_dto)
     generator_assets_list = list(generator_assets)
     print(f'Length of the list: {len(generator_assets_list)}')

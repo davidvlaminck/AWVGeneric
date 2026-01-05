@@ -1,22 +1,17 @@
 import logging
 
-from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import QueryDTO, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum, PagingModeEnum, \
+from API.eminfra.eminfra_client import EMInfraClient
+from API.eminfra.eminfra_domain import QueryDTO, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum, PagingModeEnum, \
     ExpansionsDTO, LocatieKenmerk
 from API.Enums import AuthType, Environment
 import pandas as pd
-from pathlib import Path
 
 from Generic.ExcelModifier import ExcelModifier
+from UseCases.utils import load_settings
 
 print(""""
         Opvissen van alle assets met een bepaalde toezichter, diens locatie en de provincie waarbinnen ze zijn gelegen.
       """)
-
-def load_settings():
-    """Load API settings from JSON"""
-    settings_path = Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
-    return settings_path
 
 def build_lgc_query(toezichter_uuid: str = '07f9e78f-e341-4324-8c57-d9d2b46932f1') -> QueryDTO:
     """"""

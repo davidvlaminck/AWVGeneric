@@ -4,8 +4,8 @@ import pandas as pd
 from pathlib import Path
 
 from UseCases.utils import load_settings
-from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import QueryDTO, PagingModeEnum, SelectionDTO, OperatorEnum, TermDTO, ExpressionDTO, \
+from API.eminfra.eminfra_client import EMInfraClient
+from API.eminfra.eminfra_domain import QueryDTO, PagingModeEnum, SelectionDTO, OperatorEnum, TermDTO, ExpressionDTO, \
     construct_naampad, ExpansionsDTO
 from API.Enums import AuthType, Environment
 
@@ -29,7 +29,7 @@ if __name__ == '__main__':
         query_dto.selection.expressions.append(expression)
 
         logging.info("Search assets")
-        df_assets = eminfra_client.search_assets(query_dto=query_dto, actief=True)
+        df_assets = eminfra_client.assets.search_assets(query_dto=query_dto, actief=True)
         rows = []
         for asset in iter(df_assets):
             row = {

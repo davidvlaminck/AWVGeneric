@@ -13,6 +13,22 @@ class BestekService:
         self.requester = requester
         self.BESTEKKOPPELING_UUID = 'ee2e627e-bb79-47aa-956a-ea167d20acbd'
 
+    def get_bestekkoppeling_by_uuid(self, asset_uuid: str) -> list[BestekKoppeling]:
+        """
+        Ophalen van de bestekkoppelingen, gelinkt aan een asset
+
+        :param asset_uuid: Asset uuid
+        :type asset: str
+        :return: [Bestekkoppeling]
+        """
+        response = self.requester.get(
+            url=f'core/api/installaties/{asset_uuid}/kenmerken/{self.BESTEKKOPPELING_UUID}/bestekken')
+        if response.status_code != 200:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+
+        return [BestekKoppeling.from_dict(item) for item in response.json()['data']]
+
     def get_bestekkoppeling(self, asset: AssetDTO) -> list[BestekKoppeling]:
         """
         Ophalen van de bestekkoppelingen, gelinkt aan een asset
@@ -21,13 +37,7 @@ class BestekService:
         :type asset: AssetDTO
         :return: [Bestekkoppeling]
         """
-        response = self.requester.get(
-            url=f'core/api/installaties/{asset.uuid}/kenmerken/{self.BESTEKKOPPELING_UUID}/bestekken')
-        if response.status_code != 200:
-            logging.error(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
-
-        return [BestekKoppeling.from_dict(item) for item in response.json()['data']]
+        return self.get_bestekkoppeling_by_uuid(asset_uuid=asset.uuid)
 
     @staticmethod
     def get_bestekref(self, eDelta_dossiernummer: str = None, eDelta_besteknummer: str = None) -> BestekRef | None:

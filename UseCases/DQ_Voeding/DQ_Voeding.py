@@ -1,8 +1,8 @@
 import logging
 import pandas as pd
 
-from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import RelatieEnum, AssetDTO
+from API.eminfra.eminfra_client import EMInfraClient
+from API.eminfra.eminfra_domain import RelatieEnum, AssetDTO
 from API.Enums import AuthType, Environment
 
 from UseCases.utils import load_settings, configure_logger, create_relatie_if_missing

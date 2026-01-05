@@ -1,5 +1,5 @@
-from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import DocumentCategorieEnum, ProvincieEnum
+from API.eminfra.eminfra_client import EMInfraClient
+from API.eminfra.eminfra_domain import DocumentCategorieEnum, ProvincieEnum
 from API.Enums import AuthType, Environment
 from functions import download_documents
 

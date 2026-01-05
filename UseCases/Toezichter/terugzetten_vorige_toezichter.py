@@ -1,8 +1,8 @@
 import json
 from itertools import chain
 
-from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import TermDTO, QueryDTO, ExpressionDTO, SelectionDTO, OperatorEnum, PagingModeEnum, \
+from API.eminfra.eminfra_client import EMInfraClient
+from API.eminfra.eminfra_domain import TermDTO, QueryDTO, ExpressionDTO, SelectionDTO, OperatorEnum, PagingModeEnum, \
     LogicalOpEnum, ApplicationEnum
 from API.Enums import AuthType, Environment
 import pandas as pd

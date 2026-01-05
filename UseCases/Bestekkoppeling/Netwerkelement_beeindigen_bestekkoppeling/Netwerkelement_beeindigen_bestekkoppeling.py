@@ -3,9 +3,8 @@ from datetime import datetime
 
 import pandas as pd
 
-from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum, \
-    LogicalOpEnum, BestekCategorieEnum, BestekKoppelingStatusEnum
+from API.eminfra.eminfra_client import EMInfraClient
+from API.eminfra.eminfra_domain import BestekCategorieEnum, BestekKoppelingStatusEnum
 from API.Enums import AuthType, Environment
 from UseCases.utils import configure_logger, load_settings
 from utils.date_helpers import format_datetime
@@ -23,15 +22,14 @@ if __name__ == '__main__':
 
     logging.info("Get all assets of assettype Netwerkelement.")
     search_query = build_query_search_assettype(assettype_uuid=ASSETTYPE_UUID_NETWERKELEMENT)
-    generator = eminfra_client.search_assets(query_dto=search_query, actief=True)
-    bestekRef_swarco_2020_17 = eminfra_client.get_bestekref_by_eDelta_dossiernummer(
-        eDelta_dossiernummer='VWT/NET/2020/017')
+    generator = eminfra_client.assets.search_assets(query_dto=search_query, actief=True)
+    bestekRef_swarco_2020_17 = eminfra_client.bestekken.get_bestekref(eDelta_dossiernummer='VWT/NET/2020/017')
 
     assets_updated = []
     for counter, asset in enumerate(generator, start=1):
         logging.debug(f'Processing ({counter}) asset: {asset.uuid}; naam: {asset.naam}; assettype: {asset.type.uri}')
 
-        bestekkoppelingen = eminfra_client.get_bestekkoppelingen_by_asset_uuid(asset_uuid=asset.uuid)
+        bestekkoppelingen = eminfra_client.bestekken.get_bestekkoppeling(asset=asset)
         actieve_bestekken = [k for k in bestekkoppelingen if k.status == BestekKoppelingStatusEnum.ACTIEF]
         actieve_bestekken_set = {
             b.bestekRef.eDeltaDossiernummer for b in actieve_bestekken
@@ -55,7 +53,7 @@ if __name__ == '__main__':
                 , "Einde koppeling": matching_bestekkoppeling.eindDatum
                 , "eminfra_link": f'https://apps.mow.vlaanderen.be/eminfra/assets/{asset.uuid}'
             })
-            eminfra_client.change_bestekkoppelingen_by_asset_uuid(asset.uuid, bestekkoppelingen)
+            eminfra_client.bestekken.change_bestekkoppelingen_by_asset_uuid(asset=asset, bestekkoppelingen=bestekkoppelingen)
         else:
             logging.debug('Ga verder met het volgende Netwerkelement,'
                           'geen overeenkomstige bestekkoppeling of minstens 2 actieve werkbestekken.')

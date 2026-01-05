@@ -7,7 +7,7 @@ from typing import Optional
 import pandas as pd
 import geopandas as gpd
 
-from API.EMInfraClient import EMInfraClient
+from API.eminfra.eminfra_client import EMInfraClient
 from API.Enums import AuthType, Environment
 from pathlib import Path
 

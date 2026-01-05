@@ -6,8 +6,8 @@ from otlmow_model.OtlmowModel.Classes.Onderdeel.HoortBij import HoortBij
 import pandas as pd
 from pathlib import Path
 
-from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import TermDTO, QueryDTO, OperatorEnum, PagingModeEnum, ExpansionsDTO, SelectionDTO, \
+from API.eminfra.eminfra_client import EMInfraClient
+from API.eminfra.eminfra_domain import TermDTO, QueryDTO, OperatorEnum, PagingModeEnum, ExpansionsDTO, SelectionDTO, \
     ExpressionDTO, LogicalOpEnum
 from API.Enums import Environment, AuthType
 

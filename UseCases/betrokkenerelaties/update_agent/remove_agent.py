@@ -1,6 +1,6 @@
 import logging
 
-from API.EMInfraClient import EMInfraClient
+from API.eminfra.eminfra_client import EMInfraClient
 from API.Enums import AuthType, Environment
 
 from UseCases.utils import load_settings, build_query_search_betrokkenerelaties, build_query_search_assets

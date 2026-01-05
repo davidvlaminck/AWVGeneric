@@ -1,7 +1,7 @@
 import base64
 
-from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import AssetDTO, LocatieKenmerk
+from API.eminfra.eminfra_client import EMInfraClient
+from API.eminfra.eminfra_domain import AssetDTO, LocatieKenmerk
 from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path

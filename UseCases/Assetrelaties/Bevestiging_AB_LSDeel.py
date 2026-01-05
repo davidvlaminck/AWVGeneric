@@ -1,6 +1,6 @@
 import logging
-from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import RelatieEnum
+from API.eminfra.eminfra_client import EMInfraClient
+from API.eminfra.eminfra_domain import RelatieEnum
 from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path

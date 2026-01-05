@@ -1,8 +1,8 @@
 import os
 import pandas as pd
 
-from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import QueryDTO, PagingModeEnum, ExpansionsDTO, SelectionDTO, ExpressionDTO, OperatorEnum, \
+from API.eminfra.eminfra_client import EMInfraClient
+from API.eminfra.eminfra_domain import QueryDTO, PagingModeEnum, ExpansionsDTO, SelectionDTO, ExpressionDTO, OperatorEnum, \
     TermDTO, AssetDTO
 from API.Enums import AuthType, Environment
 

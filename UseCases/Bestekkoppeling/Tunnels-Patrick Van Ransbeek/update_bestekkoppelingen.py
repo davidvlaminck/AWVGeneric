@@ -6,8 +6,8 @@ from pathlib import Path
 
 from UseCases.utils import load_settings
 from utils.date_helpers import format_datetime
-from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import BestekKoppelingStatusEnum, BestekCategorieEnum, BestekKoppeling
+from API.eminfra.eminfra_client import EMInfraClient
+from API.eminfra.eminfra_domain import BestekKoppelingStatusEnum, BestekCategorieEnum, BestekKoppeling
 from API.Enums import AuthType, Environment
 
 BESTANDSNAMEN = [

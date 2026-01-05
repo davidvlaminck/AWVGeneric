@@ -1,14 +1,9 @@
 from itertools import batched
 
 import pandas as pd
-from prettytable import PrettyTable
 
-from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum, \
-    LogicalOpEnum, ExpansionsDTO, construct_naampad
+from API.eminfra.eminfra_client import EMInfraClient
 from API.Enums import AuthType, Environment
-
-# requires prettytable, requests, pyjwt
 
 def map_toestand(toestand_uri: str) -> str:
     """

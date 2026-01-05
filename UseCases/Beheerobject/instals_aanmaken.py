@@ -2,7 +2,7 @@ import logging
 
 import pandas as pd
 
-from API.EMInfraClient import EMInfraClient
+from API.eminfra.eminfra_client import EMInfraClient
 from API.Enums import AuthType, Environment
 from UseCases.utils import load_settings
 
@@ -18,7 +18,7 @@ if __name__ == '__main__':
 
     rows = []
     for beheerobject_naam in beheerobjecten_aan_te_maken:
-        generator_beheerobjecten = eminfra_client.search_beheerobjecten(naam=beheerobject_naam, actief=True)
+        generator_beheerobjecten = eminfra_client.beheerobject.search_beheerobjecten(naam=beheerobject_naam, actief=True)
         if beheerobject := next(generator_beheerobjecten, None):
             logging.info(f'Beheerobject {beheerobject.uuid} met naam {beheerobject.naam} bestaat al.')
             row = {
@@ -28,7 +28,7 @@ if __name__ == '__main__':
             rows.append(row)
             continue
 
-        response = eminfra_client.create_beheerobject(naam=beheerobject_naam)
+        response = eminfra_client.beheerobject.create_beheerobject(naam=beheerobject_naam)
         logging.info(f'Beheerobject aangemaakt met als uuid: {response.get("uuid")}')
 
     output_excel_path = 'nieuwe_beheerobjecten.xlsx'

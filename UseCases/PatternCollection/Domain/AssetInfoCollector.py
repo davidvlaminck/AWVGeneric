@@ -2,7 +2,7 @@ import itertools
 import re
 from typing import Generator
 
-from API.EMInfraClient import EMInfraClient
+from API.eminfra.eminfra_client import EMInfraClient
 from API.EMSONClient import EMSONClient
 from Exceptions.AssetsMissingError import AssetsMissingError
 from Exceptions.ObjectAlreadyExistsError import ObjectAlreadyExistsError

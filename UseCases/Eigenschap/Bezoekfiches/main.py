@@ -3,9 +3,8 @@ from openpyxl import load_workbook
 
 import pandas as pd
 
-from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import Graph, AssetDTO, QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, OperatorEnum, \
-    TermDTO
+from API.eminfra.eminfra_client import EMInfraClient
+from API.eminfra.eminfra_domain import Graph, AssetDTO, RelatieEnum
 from API.Enums import AuthType, Environment
 
 from UseCases.utils import load_settings, read_rsa_report
@@ -53,9 +52,9 @@ if __name__ == '__main__':
     df_assets = pd.read_excel('Export masten C1383.xlsx', sheet_name='Sheet0', header=0, usecols=['id'])
 
     _, relatietype_beheeractie = eminfra_client.get_kenmerktype_and_relatietype_id(
-        relatie_uri='https://bz.data.wegenenverkeer.be/ns/onderdeel#HeeftBeheeractie')
+        relatie=RelatieEnum.HEEFTBEHEERACTIE)
     _, relatietype_bezoekt = eminfra_client.get_kenmerktype_and_relatietype_id(
-        relatie_uri='https://bz.data.wegenenverkeer.be/ns/onderdeel#Bezoekt')
+        relatie=RelatieEnum.BEZOEKT)
     relatieTypes = [relatietype_bezoekt, relatietype_beheeractie]
 
     rows = []

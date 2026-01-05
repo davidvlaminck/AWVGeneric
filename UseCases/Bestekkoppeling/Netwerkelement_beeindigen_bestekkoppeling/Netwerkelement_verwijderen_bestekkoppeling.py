@@ -3,8 +3,8 @@ from datetime import datetime
 
 import pandas as pd
 
-from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import BestekCategorieEnum, BestekKoppelingStatusEnum
+from API.eminfra.eminfra_client import EMInfraClient
+from API.eminfra.eminfra_domain import BestekCategorieEnum, BestekKoppelingStatusEnum
 from API.Enums import AuthType, Environment
 from UseCases.utils import configure_logger, load_settings
 from utils.query_dto_helpers import build_query_search_assettype

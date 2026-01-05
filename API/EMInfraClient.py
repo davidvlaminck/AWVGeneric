@@ -8,8 +8,8 @@ from datetime import datetime, timedelta
 
 from pathlib import Path
 
-from API.EMInfraDomain import (OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO, PagingModeEnum, QueryDTO, BestekRef, \
-    BestekKoppeling, FeedPage, AssettypeDTO, AssetDTO, BetrokkenerelatieDTO, AgentDTO, \
+from API.eminfra.eminfra_domain import (OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO, PagingModeEnum, QueryDTO,
+    BestekRef, BestekKoppeling, FeedPage, AssettypeDTO, AssetDTO, BetrokkenerelatieDTO, AgentDTO, \
     PostitDTO, BestekCategorieEnum, BestekKoppelingStatusEnum, AssetDocumentDTO, LocatieKenmerk, \
     LogicalOpEnum, ToezichterKenmerk, IdentiteitKenmerk, AssetTypeKenmerkTypeDTO, KenmerkTypeDTO, \
     AssetTypeKenmerkTypeAddDTO, ResourceRefDTO, Eigenschap, Event, EventType, EventContext, ExpansionsDTO, \
