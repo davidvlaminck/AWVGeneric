@@ -54,12 +54,12 @@ class EigenschapService:
 
         return [Eigenschap.from_dict(item) for item in response.json()['data']]
 
-    def update_eigenschap(self, asset: AssetDTO, eigenschap: EigenschapValueDTO | EigenschapValueUpdateDTO) -> None:
+    def update_eigenschap_by_uuid(self, asset_uuid: str, eigenschap: EigenschapValueDTO | EigenschapValueUpdateDTO) -> None:
         """
         Updates an eigenschap value on an asset, handling both DTO types.
 
-        :param asset: Asset
-        :type asset: AssetDTO
+        :param asset_uuid: Asset uuid
+        :type asset_uuid: str
         :param eigenschap
         :type eigenschap: EigenschapValueDTO | EigenschapValueUpdateDTO
         """
@@ -75,29 +75,40 @@ class EigenschapService:
         if hasattr(eigenschap, "kenmerkType") and hasattr(eigenschap.kenmerkType, "uuid"):
             kenmerk_uuid = eigenschap.kenmerkType.uuid
         else:
-            kenmerk_eigenschap = KenmerkService.get_kenmerken(assetId=asset.uuid, naam=KenmerkTypeEnum.EIGENSCHAPPEN)
+            kenmerk_eigenschap = KenmerkService.get_kenmerken(asset_uuid=asset_uuid, naam=KenmerkTypeEnum.EIGENSCHAPPEN)
             kenmerk_uuid = kenmerk_eigenschap.type.get("uuid", None)
 
-        response = self.requester.patch(url=f'core/api/assets/{asset.uuid}/kenmerken/{kenmerk_uuid}/eigenschapwaarden',
+        response = self.requester.patch(url=f'core/api/assets/{asset_uuid}/kenmerken/{kenmerk_uuid}/eigenschapwaarden',
                                         json=request_body)
         if response.status_code != 202:
             logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-    def list_eigenschap(self, kenmerktypeId: str) -> [Eigenschap]:
-        url = f"core/api/kenmerktypes/{kenmerktypeId}/eigenschappen"
+    def update_eigenschap(self, asset: AssetDTO, eigenschap: EigenschapValueDTO | EigenschapValueUpdateDTO) -> None:
+        """
+        Updates an eigenschap value on an asset, handling both DTO types.
+
+        :param asset: Asset
+        :type asset: AssetDTO
+        :param eigenschap
+        :type eigenschap: EigenschapValueDTO | EigenschapValueUpdateDTO
+        """
+        return self.update_eigenschap_by_uuid(asset_uuid=asset.uuid, eigenschap=eigenschap)
+
+    def list_eigenschap(self, kenmerktype_id: str) -> [Eigenschap]:
+        url = f"core/api/kenmerktypes/{kenmerktype_id}/eigenschappen"
         json_dict = self.requester.get(url).json()
         return [Eigenschap.from_dict(item) for item in json_dict['data']]
 
 
-    def get_eigenschappen(self, assetId: str, eigenschap_naam: str = None) -> list[EigenschapValueDTO]:
+    def get_eigenschappen(self, asset_uuid: str, eigenschap_naam: str = None) -> list[EigenschapValueDTO]:
         # ophalen kenmerk_uuid
-        kenmerken = KenmerkService.get_kenmerken(self, assetId=assetId)
+        kenmerken = KenmerkService.get_kenmerken(asset_uuid=asset_uuid)
         kenmerk_uuid = \
             [kenmerk.type.get('uuid') for kenmerk in kenmerken if kenmerk.type.get('naam').startswith('Eigenschappen')][0]
 
         # ophalen alle eigenschapwaarden
-        url = f'core/api/assets/{assetId}/kenmerken/{kenmerk_uuid}/eigenschapwaarden'
+        url = f'core/api/assets/{asset_uuid}/kenmerken/{kenmerk_uuid}/eigenschapwaarden'
         json_dict = self.requester.get(url).json()
         eigenschappen = [EigenschapValueDTO.from_dict(item) for item in json_dict['data']]
 
@@ -107,9 +118,8 @@ class EigenschapService:
         return eigenschappen
 
 
-
-    def search_eigenschapwaarden(self, assetId: str) -> [EigenschapValueDTO]:
-        url = f'core/api/assets/{assetId}/kenmerken/cef6a3c0-fd1b-48c3-8ee0-f723e55dd02b/eigenschapwaarden'
+    def search_eigenschapwaarden(self, asset_uuid: str) -> [EigenschapValueDTO]:
+        url = f'core/api/assets/{asset_uuid}/kenmerken/cef6a3c0-fd1b-48c3-8ee0-f723e55dd02b/eigenschapwaarden'
         response = self.requester.post(url=url)
         if response.status_code != 200:
             logging.error(response)
@@ -117,8 +127,8 @@ class EigenschapService:
 
         return [EigenschapValueDTO.from_dict(item) for item in response.json()['data']]
 
-    def get_eigenschapwaarden(self, assetId: str, eigenschap_naam: str = None) -> list[EigenschapValueDTO]:
-        url = f'core/api/assets/{assetId}/kenmerken/753c1268-68c2-4e67-a6cc-62c0622b576b/eigenschapwaarden'
+    def get_eigenschapwaarden(self, asset_uuid: str, eigenschap_naam: str = None) -> list[EigenschapValueDTO]:
+        url = f'core/api/assets/{asset_uuid}/kenmerken/753c1268-68c2-4e67-a6cc-62c0622b576b/eigenschapwaarden'
         json_dict = self.requester.get(url).json()
         eigenschap_value_list = [EigenschapValueDTO.from_dict(item) for item in json_dict['data']]
         if eigenschap_naam:

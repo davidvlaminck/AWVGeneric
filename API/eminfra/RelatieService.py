@@ -5,16 +5,17 @@ from API.eminfra.EMInfraDomain import (AssetDTO, RelatieTypeDTO, RelatieEnum, As
                                        LogicalOpEnum)
 from API.eminfra.AssetService import AssetService
 
+
 class RelatieService:
     def __init__(self, requester):
         self.requester = requester
 
-    def search_relaties(self, assetId: str, kenmerkTypeId: str, relatieTypeId: str) -> Generator[RelatieTypeDTO]:
-        url = f"core/api/assets/{assetId}/kenmerken/{kenmerkTypeId}/assets-via/{relatieTypeId}"
+    def search_relaties_generator(self, asset_uuid: str, kenmerktype_id: str, relatietype_id: str) -> Generator[
+        RelatieTypeDTO]:
+        url = f"core/api/assets/{asset_uuid}/kenmerken/{kenmerktype_id}/assets-via/{relatietype_id}"
         json_dict = self.requester.get(url).json()
         yield from [RelatieTypeDTO.from_dict(item) for item in json_dict['data']]
 
-    @staticmethod
     def get_kenmerktype_and_relatietype_id(self, relatie: RelatieEnum) -> (str, str):
         """
         Returns kenmerktype_uuid and relatietype_uuid.
@@ -126,44 +127,27 @@ class RelatieService:
         }
         return relaties_dict[relatie.value]
 
-
-    def add_relatie(self, bronAsset: AssetDTO, doelAsset: AssetDTO, relatie: RelatieEnum) -> AssetRelatieDTO:
+    def create_assetrelatie(self, bron_asset: AssetDTO, doel_asset: AssetDTO, relatie: RelatieEnum) -> AssetRelatieDTO:
         """
-        ! duplicate of create_assetrelatie()?
-        Add relatie
+        Maak een assetrelatie op basis van een bron- en een doel-asset
 
-        :param bronAsset:
-        :param doelAsset:
-        :param relatie:
-        :return: AssetRelatieDTO
-        """
-        kenmerkTypeId, relatieTypeId = self.get_kenmerktype_and_relatietype_id(relatie=relatie)
-        _type = doelAsset._type
-        if _type == 'installatie':
-            relatie_type = 'installaties-via'
-        else:
-            raise ValueError(f'Type of the "doel_assetId" {doelAsset.uuid} can not be determined')
-
-        json_body = {"uuid": doelAsset.uuid}
-        url = f'core/api/assets/{bronAsset.uuid}/kenmerken/{kenmerkTypeId}/{relatie_type}/{relatieTypeId}'
-        response = self.requester.post(url=url, json=json_body)
-        if response.status_code != 202:
-            raise ProcessLookupError(response.content.decode("utf-8"))
-        return AssetRelatieDTO.from_dict(response.json())
-
-    def create_assetrelatie(self, bronAsset: AssetDTO, doelAsset: AssetDTO, relatie: RelatieEnum) -> AssetRelatieDTO:
-        """
-        ! duplicate of add_assetrelatie()?
+        :param bron_asset: Bron Asset
+        :type bron_asset: AssetDTO
+        :param doel_asset: Doel Asset
+        :type doel_asset: AssetDTO
+        :param relatie: Relatie type
+        :type relatie: RelatieEnum
+        :return AssetRelatieDTO
         """
         _, relatietype_id = self.get_kenmerktype_and_relatietype_id(relatie=relatie)
         json_body = {
             "bronAsset": {
-                "uuid": f"{bronAsset.uuid}",
-                "_type": f"{bronAsset._type}"
+                "uuid": f"{bron_asset.uuid}",
+                "_type": f"{bron_asset._type}"
             },
             "doelAsset": {
-                "uuid": f"{doelAsset.uuid}",
-                "_type": f"{doelAsset._type}"
+                "uuid": f"{doel_asset.uuid}",
+                "_type": f"{doel_asset._type}"
             },
             "relatieType": {
                 "uuid": f"{relatietype_id}"
@@ -175,36 +159,43 @@ class RelatieService:
             raise ProcessLookupError(response.content.decode("utf-8"))
         return self.get_assetrelatie(response.json().get("uuid"))
 
-    def get_assetrelatie(self, id: str) -> AssetRelatieDTO:
+    def get_assetrelatie(self, assetrelatie_uuid: str) -> AssetRelatieDTO:
         """
         Get AssetRelatieDTO object from assetrelatie_uuid (id)
-        :param id: asssetrelatie_uuid
+
+        :param assetrelatie_uuid: Asssetrelatie UUID
+        :type assetrelatie_uuid: str
         :return: AssetRelatieDTO
         """
-        url = f'core/api/assetrelaties/{id}'
+        url = f'core/api/assetrelaties/{assetrelatie_uuid}'
         response = self.requester.get(url=url)
         if response.status_code != 200:
             raise ProcessLookupError(response.content.decode("utf-8"))
         return AssetRelatieDTO.from_dict(response.json())
 
-    def search_assetrelaties(self, bronAsset: AssetDTO, doelAsset: AssetDTO, relatie: RelatieEnum = None) -> [AssetRelatieDTO]:
+    def search_assetrelaties(self, bron_asset_uuid: str, doel_asset_uuid: str, relatie: RelatieEnum = None) -> [
+        AssetRelatieDTO]:
         """
         Search assetrelaties between two assets
 
-        :param bronAsset:
-        :param doelAsset:
+        :param bron_asset_uuid:
+        :param doel_asset_uuid:
         :param relatie: RelatieEnum Relatietype
         """
         query_dto = QueryDTO(
             size=100, from_=0, pagingMode=PagingModeEnum.OFFSET,
             selection=SelectionDTO(
                 expressions=[
-                    ExpressionDTO(terms=[TermDTO(property='bronAsset', operator=OperatorEnum.EQ, value=bronAsset.uuid)]),
-                    ExpressionDTO(terms=[TermDTO(property='doelAsset', operator=OperatorEnum.EQ, value=doelAsset.uuid)], logicalOp=LogicalOpEnum.AND)
+                    ExpressionDTO(
+                        terms=[TermDTO(property='bronAsset', operator=OperatorEnum.EQ, value=bron_asset_uuid)]),
+                    ExpressionDTO(terms=[TermDTO(property='doelAsset', operator=OperatorEnum.EQ, value=doel_asset_uuid)],
+                                  logicalOp=LogicalOpEnum.AND)
                 ]))
         if relatie:
             _, relatietype_uuid = self.get_kenmerktype_and_relatietype_id(relatie=relatie)
-            expression = ExpressionDTO(terms=[TermDTO(property='type', operator=OperatorEnum.EQ, value=relatietype_uuid)], logicalOp=LogicalOpEnum.AND)
+            expression = ExpressionDTO(
+                terms=[TermDTO(property='type', operator=OperatorEnum.EQ, value=relatietype_uuid)],
+                logicalOp=LogicalOpEnum.AND)
             query_dto.selection.expressions.append(expression)
         url = 'core/api/assetrelaties/search'
         response = self.requester.post(url=url, data=query_dto.json())
@@ -212,71 +203,68 @@ class RelatieService:
             raise ProcessLookupError(response.content.decode("utf-8"))
         return [AssetRelatieDTO.from_dict(item) for item in response.json()['data']]
 
-    def search_assetrelaties_OTL(self, bronAsset: AssetDTO = None, doelAsset: AssetDTO = None) -> dict:
-        if bronAsset is None and doelAsset is None:
+    def search_assetrelatie_otl(self, bron_asset_uuid: str = None, doel_asset_uuid: str = None) -> dict:
+        if bron_asset_uuid is None and doel_asset_uuid is None:
             raise ValueError('At least one optional parameter "bronAsset" or "doelAsset" must be provided.')
         json_body = {"filters": {}}
-        if bronAsset:
-            json_body["filters"]["bronAsset"] = bronAsset.uuid
-        if doelAsset:
-            json_body["filters"]["doelAsset"] = doelAsset.uuid
+        if bron_asset_uuid:
+            json_body["filters"]["bronAsset"] = bron_asset_uuid
+        if doel_asset_uuid:
+            json_body["filters"]["doelAsset"] = doel_asset_uuid
         url = 'core/api/otl/assetrelaties/search'
         response = self.requester.post(url=url, json=json_body)
         if response.status_code != 200:
             raise ProcessLookupError(response.content.decode("utf-8"))
         return response.json().get("@graph")
 
-    def search_assets_via_relatie(self, asset: AssetDTO, relatie: RelatieEnum) -> [AssetDTO]:
+    def search_assets_via_relatie(self, asset_uuid: str, relatie: RelatieEnum) -> [AssetDTO]:
         """
         Returns a list of assets via the relatie.
 
-        :param asset: bron asset
+        :param asset_uuid: bron asset
         :param relatie: relatieTypeEnum
         :return:
         """
-        kenmerkType_uuid, relatieType_uuid = self.get_kenmerktype_and_relatietype_id(relatie=relatie)
-        url = f'core/api/assets/{asset.uuid}/kenmerken/{kenmerkType_uuid}/assets-via/{relatieType_uuid}'
+        kenmerktype_id, relatietype_id = self.get_kenmerktype_and_relatietype_id(relatie=relatie)
+        url = f'core/api/assets/{asset_uuid}/kenmerken/{kenmerktype_id}/assets-via/{relatietype_id}'
         resp = self.requester.get(url=url)
         if resp.status_code != 200:
             raise ProcessLookupError(resp.content.decode())
         return [AssetDTO.from_dict(item) for item in resp.json()['data']]
 
-    def remove_relatie(self, bronAsset: AssetDTO, doelAsset: AssetDTO, relatie: RelatieEnum) -> None:
+    def remove_relatie(self, bron_asset_uuid: str, doel_asset_uuid: str, relatie: RelatieEnum) -> None:
         """
         Loskoppelen van een relatie tussen een bron en een doel-asset.
 
-        :param bronAsset: bron asset
-        :param doelAsset: doel asset
+        :param bron_asset_uuid: bron asset
+        :param doel_asset_uuid: doel asset
         :param relatie: relatieTypeEnum
         :return: None
         """
-        kenmerkType_uuid, relatieType_uuid = self.get_kenmerktype_and_relatietype_id(relatie=relatie)
-        url = f'core/api/assets/{bronAsset.uuid}/kenmerken/{kenmerkType_uuid}/assets-via/{relatieType_uuid}/ops/remove'
+        kenmerktype_id, relatietype_id = self.get_kenmerktype_and_relatietype_id(relatie=relatie)
+        url = f'core/api/assets/{bron_asset_uuid.uuid}/kenmerken/{kenmerktype_id}/assets-via/{relatietype_id}/ops/remove'
         request_body = {
-          "name":"remove",
-          "description":"Relatie loskoppelen van 1 asset",
-          "async":False,
-          "uuids": [f"{doelAsset.uuid}"]
+            "name": "remove",
+            "description": "Relatie loskoppelen van 1 asset",
+            "async": False,
+            "uuids": [f"{doel_asset_uuid}"]
         }
         resp = self.requester.put(url=url, json=request_body)
         if resp.status_code != 202:
             raise ProcessLookupError(resp.content.decode())
 
-    def zoek_verweven_asset(self, bronAsset: AssetDTO) -> AssetDTO | None:
+    def zoek_verweven_asset(self, bron_asset_uuid: str) -> AssetDTO | None:
         """
         Zoek de OTL-asset op basis van een Legacy-asset die verbonden zijn via een Gemigreerd-relatie.
         Returns None indien de Gemigreerd-relatie ontbreekt.
 
-        :param bronAsset: uuid van de bron asset (Legacy)
+        :param bron_asset_uuid: uuid van de bron asset (Legacy)
         :return:
         """
-        relaties = self.search_assetrelaties_OTL(bronAsset=bronAsset)
+        relaties = self.search_assetrelatie_otl(bron_asset_uuid=bron_asset_uuid)
         relatie_gemigreerd = next(
             (r for r in relaties if r.get('@type') == 'https://lgc.data.wegenenverkeer.be/ns/onderdeel#GemigreerdNaar'),
             None)
         asset_uuid_gemigreerd = relatie_gemigreerd.get('RelatieObject.doelAssetId').get(
             'DtcIdentificator.identificator')[:36]
-        return next(
-            AssetService.search_asset_by_uuid(self, asset_uuid=asset_uuid_gemigreerd),
-            None,
-        )
+        return AssetService.get_asset_by_uuid(self, asset_uuid=asset_uuid_gemigreerd)

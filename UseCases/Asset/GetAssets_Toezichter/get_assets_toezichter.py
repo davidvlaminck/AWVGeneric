@@ -64,7 +64,7 @@ if __name__ == '__main__':
 
     ## Legacy assets
     for asset in lgc_assets_generator:
-        locatie_kenmerk = eminfra_client.locatie_service.get_locatie_by_asset_uuid(asset_uuid=asset.uuid)
+        locatie_kenmerk = eminfra_client.locatie_service.get_locatie_by_uuid(asset_uuid=asset.uuid)
         provincie, gemeente = parse_provincie_gemeente(locatiekenmerk=locatie_kenmerk)
 
         beheerobject = eminfra_client.asset_service.search_parent_asset(asset_uuid=asset.uuid, return_all_parents=False,
@@ -91,7 +91,7 @@ if __name__ == '__main__':
 
     ## OTL assets
     for asset in otl_assets_generator:
-        locatie_kenmerk = eminfra_client.locatie_service.get_locatie_by_asset_uuid(asset_uuid=asset.uuid)
+        locatie_kenmerk = eminfra_client.locatie_service.get_locatie_by_uuid(asset_uuid=asset.uuid)
         provincie, gemeente = parse_provincie_gemeente(locatiekenmerk=locatie_kenmerk)
 
         # Prepare row data (this can be a list or a dictionary)

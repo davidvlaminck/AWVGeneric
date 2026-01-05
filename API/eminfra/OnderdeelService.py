@@ -5,10 +5,10 @@ class OnderdeelService:
     def __init__(self, requester):
         self.requester = requester
 
-    def create_onderdeel(self, naam: str, typeUuid: str) -> dict | None:
+    def create_onderdeel(self, naam: str, type_uuid: str) -> dict | None:
         json_body = {
             "naam": naam,
-            "typeUuid": typeUuid
+            "typeUuid": type_uuid
         }
         url = 'core/api/onderdelen'
         response = self.requester.post(url, json=json_body)

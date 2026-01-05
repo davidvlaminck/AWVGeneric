@@ -8,21 +8,16 @@ class SchadebeheerderService:
         self.requester = requester
         self.SCHADEBEHEERDER_UUID = 'd911dc02-f214-4f64-9c46-720dbdeb0d02'
 
-    def get_schadebeheerder(self, asset: AssetDTO = None, name: str = None) -> [SchadebeheerderKenmerk] | None:
-        if asset:
-            return self._get_schadebeheerder_by_uuid(asset=asset)
-        elif name:
-            return self._get_schadebeheerder_by_name(name=name)
-        else:
-            raise ValueError('At least one optional parameter asset_uuid or name is mandatory')
+    def get_schadebeheerder(self, asset: AssetDTO = None) -> SchadebeheerderKenmerk | None:
+        return self.get_schadebeheerder_by_uuid(asset_uuid=asset.uuid)
 
-    def _get_schadebeheerder_by_uuid(self, asset: AssetDTO) -> SchadebeheerderKenmerk | None:
-        data = KenmerkService.get(self, asset.uuid, self.SCHADEBEHEERDER_UUID)
+    def get_schadebeheerder_by_uuid(self, asset_uuid: str) -> SchadebeheerderKenmerk | None:
+        data = KenmerkService.get(self, asset_uuid, self.SCHADEBEHEERDER_UUID)
         if sb := data.get("schadeBeheerder"):
             return [SchadebeheerderKenmerk.from_dict(sb)]
         return None
 
-    def _get_schadebeheerder_by_name(self, name: str) -> SchadebeheerderKenmerk | None:
+    def get_schadebeheerder_by_name(self, name: str) -> [SchadebeheerderKenmerk] | None:
         query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              selection=SelectionDTO(
                                  expressions=[
@@ -38,6 +33,18 @@ class SchadebeheerderService:
 
         return [SchadebeheerderKenmerk.from_dict(item) for item in response.json()['data']]
 
+    def add_schadebeheerder_by_uuid(self, asset_uuid: str, schadebeheerder: SchadebeheerderKenmerk) -> None:
+        """
+        Toevoegen van een schadebeheerder aan een asset.
+        :param asset_uuid: Asset UUID
+        :type asset_uuid: str
+        :param schadebeheerder
+        :type schadebeheerder: SchadebeheerderKenmerk
+        :return: None
+        """
+        payload = {"schadeBeheerder": {"uuid": schadebeheerder.uuid}}
+        KenmerkService.put(self, asset_uuid, self.SCHADEBEHEERDER_UUID, payload)
+
     def add_schadebeheerder(self, asset: AssetDTO, schadebeheerder: SchadebeheerderKenmerk) -> None:
         """
         Toevoegen van een schadebeheerder aan een asset.
@@ -47,5 +54,4 @@ class SchadebeheerderService:
         :type schadebeheerder: SchadebeheerderKenmerk
         :return: None
         """
-        payload = {"schadeBeheerder": {"uuid": schadebeheerder.uuid}}
-        KenmerkService.put(self, asset, self.SCHADEBEHEERDER_UUID, payload)
+        return self.add_schadebeheerder_by_uuid(asset_uuid=asset.uuid, schadebeheerder=schadebeheerder)

@@ -48,11 +48,9 @@ if __name__ == '__main__':
 
         # Query asset
         relatieTypeId = '3ff9bf1c-d852-442e-a044-6200fe064b20'
-        bestaande_relaties = eminfra_client.relatie_service.search_relaties(
-            assetId=asset.get("uuid_PT-verwerkingseenheid")
-            , kenmerkTypeId=kenmerk_bevestiging.type.get("uuid")
-            , relatieTypeId=relatieTypeId
-        )
+        bestaande_relaties = eminfra_client.relatie_service.search_relaties_generator(
+            asset_uuid=asset.get("uuid_PT-verwerkingseenheid"), kenmerktype_id=kenmerk_bevestiging.type.get("uuid"),
+            relatietype_id=relatieTypeId)
 
         # Query asset-relaties. Als de relatie al bestaat, continue
         if next(bestaande_relaties, None):

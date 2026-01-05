@@ -10,20 +10,24 @@ class ToezichterService:
         self.requester = requester
         self.TOEZICHTER_UUID = 'f0166ba2-757c-4cf3-bf71-2e4fdff43fa3'
 
-    def get_toezichter(self, asset: AssetDTO) -> ToezichterKenmerk:
+    def get_toezichter_by_uuid(self, asset_uuid: str) -> ToezichterKenmerk:
         response = self.requester.get(
-            url=f'core/api/assets/{asset.uuid}/kenmerken/{self.TOEZICHTER_UUID}')
+            url=f'core/api/assets/{asset_uuid}/kenmerken/{self.TOEZICHTER_UUID}')
         if response.status_code != 200:
             raise ProcessLookupError(response.content.decode("utf-8"))
         return ToezichterKenmerk.from_dict(response.json())
 
-    def add_toezichter(self, asset: AssetDTO, toezichtgroep_uuid: str, toezichter_uuid: str) -> None:
+    def get_toezichter(self, asset: AssetDTO) -> ToezichterKenmerk:
+        return self.get_toezichter_by_uuid(asset_uuid=asset.uuid)
+
+    def add_toezichter(self, asset_uuid: str, toezichtgroep_uuid: str, toezichter_uuid: str) -> None:
         """
-        Both toezichter and toezichtsgroep must be updated simultaneously.
+        Both toezichter and toezichtsgroep are mandatory.
         Updating only one of both (toezichter/toezichtsgroep), purges the other.
-        :param asset:
-        :param toezichtgroep_uuid:
-        :param toezichter_uuid:
+
+        :param asset_uuid: Asset uuid
+        :param toezichtgroep_uuid: Toezichtsgroep uuid
+        :param toezichter_uuid: Toezichter uuid
         :return:
         """
         payload = {}
@@ -36,7 +40,7 @@ class ToezichterService:
                 "uuid": toezichtgroep_uuid
             }
         response = self.requester.put(
-            url=f'core/api/assets/{asset.uuid}/kenmerken/{self.TOEZICHTER_UUID}'
+            url=f'core/api/assets/{asset_uuid}/kenmerken/{self.TOEZICHTER_UUID}'
             , json=payload
         )
         if response.status_code != 202:
@@ -49,9 +53,9 @@ class ToezichterService:
             raise ProcessLookupError(response.content.decode("utf-8"))
         return IdentiteitKenmerk.from_dict(response.json())
 
-    def get_toezichtgroep(self, toezichtGroep_uuid: str) -> ToezichtgroepDTO:
+    def get_toezichtgroep(self, toezichtgroep_uuid: str) -> ToezichtgroepDTO:
         response = self.requester.get(
-            url=f'identiteit/api/toezichtgroepen/{toezichtGroep_uuid}')
+            url=f'identiteit/api/toezichtgroepen/{toezichtgroep_uuid}')
         if response.status_code != 200:
             raise ProcessLookupError(response.content.decode("utf-8"))
         return ToezichtgroepDTO.from_dict(response.json())

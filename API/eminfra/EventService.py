@@ -10,12 +10,12 @@ class EventService:
     def __init__(self, requester):
         self.requester = requester
 
-    def get_all_eventtypes(self) -> Generator[EventType]:
+    def get_all_eventtypes_generator(self) -> Generator[EventType]:
         url = "core/api/events/eventtypes"
         json_dict = self.requester.get(url).json()
         yield from [EventType.from_dict(item) for item in json_dict['data']]
 
-    def search_eventcontexts(self, omschrijving: str) -> Generator[EventContext]:
+    def search_eventcontexts_generator(self, omschrijving: str) -> Generator[EventContext]:
         """
         Search all events linked to a specific context. For example aanlevering DA-2025-00001
         """
@@ -39,7 +39,7 @@ class EventService:
             if query_dto.from_ >= dto_list_total:
                 break
 
-    def search_events(self, asset: AssetDTO = None, created_after: datetime = None, created_before: datetime = None,
+    def search_events_by_uuid_generator(self, asset_uuid: str, created_after: datetime = None, created_before: datetime = None,
                       created_by: IdentiteitKenmerk = None, event_type: EventType = None,
                       event_context: EventContext = None) -> Generator[Event]:
         """
@@ -49,8 +49,8 @@ class EventService:
         Additional postprocessing filtering outside the function is required to narrow down the events to
          a more restricted time range.
 
-        :param asset: Asset
-        :type asset: AssetDTO
+        :param asset_uuid: Asset uuid
+        :type asset_uuid: str
         :param created_after: date after which the asset was edited
         :param created_before: date before the asset was edited
         :param created_by: person who created the asset
@@ -58,15 +58,15 @@ class EventService:
         :param event_context: context of the event
         :return: A generator yielding Event objects.
         """
-        if all(p is None for p in (asset.uuid, created_after, created_before, created_by, event_type, event_context)):
+        if all(p is None for p in (asset_uuid, created_after, created_before, created_by, event_type, event_context)):
             raise ValueError("At least one parameter must be provided.")
 
         query_dto = QueryDTO(size=100, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              selection=SelectionDTO(expressions=[]))
 
-        if asset.uuid:
+        if asset_uuid:
             expression = ExpressionDTO(
-                terms=[TermDTO(property='objectId', operator=OperatorEnum.EQ, value=f'{asset.uuid}')],
+                terms=[TermDTO(property='objectId', operator=OperatorEnum.EQ, value=f'{asset_uuid}')],
                 logicalOp=LogicalOpEnum.AND)
             query_dto.selection.expressions.append(expression)
 
@@ -113,3 +113,26 @@ class EventService:
             query_dto.from_ = json_dict['from'] + query_dto.size
             if query_dto.from_ >= dto_list_total:
                 break
+
+    def search_events_generator(self, asset: AssetDTO = None, created_after: datetime = None, created_before: datetime = None,
+                      created_by: IdentiteitKenmerk = None, event_type: EventType = None,
+                      event_context: EventContext = None) -> Generator[Event]:
+        """
+        Search the history of em-infra, called events
+        Parameters created_before and created_after have type datetime, but the API only takes into account the datum,
+         and not the hours.
+        Additional postprocessing filtering outside the function is required to narrow down the events to
+         a more restricted time range.
+
+        :param asset: Asset
+        :type asset: AssetDTO
+        :param created_after: date after which the asset was edited
+        :param created_before: date before the asset was edited
+        :param created_by: person who created the asset
+        :param event_type: type of event
+        :param event_context: context of the event
+        :return: A generator yielding Event objects.
+        """
+        return self.search_events_by_uuid_generator(asset_uuid=asset.uuid, created_after=created_after,
+                                                    created_before=created_before, created_by=created_by,
+                                                    event_type=event_type, event_context=event_context)
