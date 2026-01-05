@@ -128,7 +128,7 @@ class AssetService:
     def deactiveer_asset(self, asset: AssetDTO) -> dict:
         return self._update_asset(asset=asset, actief=False)
 
-    def _search_assets_helper_gen(self, query_dto: QueryDTO) -> Generator[AssetDTO]:
+    def _search_assets_helper_generator(self, query_dto: QueryDTO) -> Generator[AssetDTO]:
         query_dto.from_ = 0
         if query_dto.size is None:
             query_dto.size = 100
@@ -142,7 +142,7 @@ class AssetService:
             if query_dto.from_ >= dto_list_total:
                 break
 
-    def search_assets_gen(self, query_dto: QueryDTO, actief: bool = None) -> Generator[AssetDTO]:
+    def search_assets_generator(self, query_dto: QueryDTO, actief: bool = None) -> Generator[AssetDTO]:
         """
         Search assets using a query.
         Status actief default None. Set status actief (boolean) to filter active or inactive assets.
@@ -156,9 +156,9 @@ class AssetService:
                            ]
                     , logicalOp=LogicalOpEnum.AND)
             )
-        yield from self._search_assets_helper_gen(query_dto)
+        yield from self._search_assets_helper_generator(query_dto)
 
-    def search_asset_by_name_gen(self, asset_name: str, exact_search: bool = True) -> Generator[AssetDTO]:
+    def search_asset_by_name_generator(self, asset_name: str, exact_search: bool = True) -> Generator[AssetDTO]:
         """
         Search active and inactive assets by name.
         Exact_search (default True) searches for an exact match operator EQUALS,
@@ -178,9 +178,9 @@ class AssetService:
                                      terms=[
                                          TermDTO(property='naam', operator=operator, value=asset_name)
                                      ])]))
-        yield from self._search_assets_helper_gen(query_dto)
+        yield from self._search_assets_helper_generator(query_dto)
 
-    def search_child_assets_by_uuid_gen(self, asset_uuid: str, recursive: bool = False) -> Generator[AssetDTO] | None:
+    def search_child_assets_by_uuid_generator(self, asset_uuid: str, recursive: bool = False) -> Generator[AssetDTO] | None:
         """
         Zoek actieve child-assets in een boomstructuur uit EM-infra.
 
@@ -205,13 +205,13 @@ class AssetService:
                 yield asset  # yield the current asset
                 # If recursive, call recursively for each asset's uuid
                 if recursive:
-                    yield from self.search_child_assets_gen(asset=asset, recursive=True)
+                    yield from self.search_child_assets_generator(asset=asset, recursive=True)
             dto_list_total = json_dict['totalCount']
             query_dto.from_ = json_dict['from'] + query_dto.size
             if query_dto.from_ >= dto_list_total:
                 break
 
-    def search_child_assets_gen(self, asset: AssetDTO, recursive: bool = False) -> Generator[AssetDTO] | None:
+    def search_child_assets_generator(self, asset: AssetDTO, recursive: bool = False) -> Generator[AssetDTO] | None:
         """
         Zoek actieve child-assets in een boomstructuur uit EM-infra.
         
@@ -221,7 +221,7 @@ class AssetService:
         :type recursive: bool
         :return: Generator[AssetDTO]
         """
-        return self.search_child_assets_by_uuid_gen(asset_uuid=asset.uuid, recursive=recursive)
+        return self.search_child_assets_by_uuid_generator(asset_uuid=asset.uuid, recursive=recursive)
 
     def search_parent_asset_by_uuid(self, asset_uuid: str, recursive: bool = False,
                             return_all_parents: bool = False) -> AssetDTO | list[AssetDTO] | None:

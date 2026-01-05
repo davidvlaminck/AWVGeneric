@@ -40,7 +40,7 @@ if __name__ == '__main__':
     ##########################################
     # WW0402 uuid: 0014b499-2bdb-448a-b3a1-fd20595701dc
     myAsset = eminfra_client.asset_service.get_asset_by_uuid(asset_uuid='0014b499-2bdb-448a-b3a1-fd20595701dc')
-    generator_beheerobjecten = eminfra_client.asset_service.search_child_assets_gen(asset=myAsset, recursive=True)
+    generator_beheerobjecten = eminfra_client.asset_service.search_child_assets_generator(asset=myAsset, recursive=True)
 
     ##########################################
     # Zoek naar de parent-asset
@@ -82,4 +82,4 @@ if __name__ == '__main__':
     # Zoeken van een beheerobject. Op basis van verschillende criteria met een QueryDTO.
     ##########################################
     # beheerobject_type = 'baa8570b-15cf-4512-a309-efd63af32f39'
-    generator_beheerobjecten = eminfra_client.beheerobject_service.search_beheerobjecten_gen(naam='JE')
+    generator_beheerobjecten = eminfra_client.beheerobject_service.search_beheerobjecten_generator(naam='JE')

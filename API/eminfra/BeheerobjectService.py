@@ -12,7 +12,7 @@ class BeheerobjectService:
         json_dict = self.requester.get(url).json()
         return BeheerobjectDTO.from_dict(json_dict)
 
-    def search_beheerobjecten_gen(self, naam: str, beheerobjecttype: BeheerobjectTypeDTO = None, actief: bool = None,
+    def search_beheerobjecten_generator(self, naam: str, beheerobjecttype: BeheerobjectTypeDTO = None, actief: bool = None,
                               operator: OperatorEnum = OperatorEnum.CONTAINS) -> Generator[BeheerobjectDTO]:
         query_dto = QueryDTO(
             size=100, from_=0, pagingMode=PagingModeEnum.OFFSET,

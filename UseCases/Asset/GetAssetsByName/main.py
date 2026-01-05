@@ -25,6 +25,6 @@ if __name__ == '__main__':
                                         ]
                              )]))
 
-    generator_assets = eminfra_client.assets.search_assets_gen(query_dto=query_dto)
+    generator_assets = eminfra_client.assets.search_assets_generator(query_dto=query_dto)
     generator_assets_list = list(generator_assets)
     print(f'Length of the list: {len(generator_assets_list)}')

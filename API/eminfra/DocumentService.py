@@ -37,7 +37,7 @@ class DocumentService:
             f.write(file.content)
             return directory / file_name
 
-    def get_documents_by_uuid_gen(self, asset_uuid: str, size: int = 10) -> Generator[AssetDocumentDTO]:
+    def get_documents_by_uuid_generator(self, asset_uuid: str, size: int = 10) -> Generator[AssetDocumentDTO]:
         """
         Retrieves all AssetDocumentDTO associated with an asset
 
@@ -58,7 +58,7 @@ class DocumentService:
             if _from >= dto_list_total:
                 break
 
-    def get_documents_gen(self, asset: AssetDTO, size: int = 10) -> Generator[AssetDocumentDTO]:
+    def get_documents_generator(self, asset: AssetDTO, size: int = 10) -> Generator[AssetDocumentDTO]:
         """
         Retrieves all AssetDocumentDTO associated with an asset
         :param asset:
@@ -68,4 +68,4 @@ class DocumentService:
         :return: Generator[AssetDocumentDTO]
         :rtype:
         """
-        return self.get_documents_by_uuid_gen(asset_uuid=asset.uuid, size=size)
+        return self.get_documents_by_uuid_generator(asset_uuid=asset.uuid, size=size)

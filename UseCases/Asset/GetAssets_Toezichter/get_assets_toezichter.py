@@ -53,8 +53,8 @@ if __name__ == '__main__':
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
     file_path = 'installaties_toezichter_DaveGeudens.xlsx'
 
-    lgc_assets_generator = eminfra_client.asset_service.search_assets_gen(query_dto=build_lgc_query())
-    otl_assets_generator = eminfra_client.asset_service.search_assets_gen(query_dto=build_otl_query())
+    lgc_assets_generator = eminfra_client.asset_service.search_assets_generator(query_dto=build_lgc_query())
+    otl_assets_generator = eminfra_client.asset_service.search_assets_generator(query_dto=build_otl_query())
 
     print('Downloading...')
 

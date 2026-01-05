@@ -100,7 +100,6 @@ class EigenschapService:
         json_dict = self.requester.get(url).json()
         return [Eigenschap.from_dict(item) for item in json_dict['data']]
 
-
     def get_eigenschappen(self, asset_uuid: str, eigenschap_naam: str = None) -> list[EigenschapValueDTO]:
         # ophalen kenmerk_uuid
         kenmerken = KenmerkService.get_kenmerken(asset_uuid=asset_uuid)

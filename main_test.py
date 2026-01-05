@@ -18,7 +18,7 @@ if __name__ == '__main__':
                                  terms=[TermDTO(property='type',
                                                 operator=OperatorEnum.EQ,
                                                 value='a7eadedf-b5cf-491b-8b89-ccced9a37004')])]))
-    asset = list(AssetService.search_assets_gen(query_dto, ))
+    asset = list(AssetService.search_assets_generator(query_dto, ))
     print(asset)
 
     # bestekken = eminfra_client.get_bestekkoppelingen_by_asset_uuid('030a47c0-bf19-434a-aa19-e33377c82f79')

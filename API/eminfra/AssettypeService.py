@@ -45,7 +45,7 @@ class AssettypeService:
             raise ValueError(f'Exactly one Assettype should be returned when searching for uri: "{uri}" Check URI.')
         return assettypes[0]
 
-    def get_all_assettypes_gen(self, size: int = 100) -> Generator[AssettypeDTO]:
+    def get_all_assettypes_generator(self, size: int = 100) -> Generator[AssettypeDTO]:
         from_ = 0
         while True:
             url = f"core/api/assettypes?from={from_}&size={size}"
@@ -57,12 +57,12 @@ class AssettypeService:
                 break
 
     def get_all_assettypes(self, size: int = 100) -> list[AssettypeDTO]:
-        return list(self.get_all_assettypes_gen(size=size))
+        return list(self.get_all_assettypes_generator(size=size))
 
-    def get_all_legacy_assettypes_gen(self, size: int = 100) -> Generator[AssettypeDTO]:
-        yield from [assettype_dto for assettype_dto in self.get_all_assettypes_gen(size)
+    def get_all_legacy_assettypes_generator(self, size: int = 100) -> Generator[AssettypeDTO]:
+        yield from [assettype_dto for assettype_dto in self.get_all_assettypes_generator(size)
                     if assettype_dto.korteUri.startswith('lgc:')]
 
-    def get_all_otl_assettypes_gen(self, size: int = 100) -> Generator[AssettypeDTO]:
-        yield from [assettype_dto for assettype_dto in self.get_all_assettypes_gen(size)
+    def get_all_otl_assettypes_generator(self, size: int = 100) -> Generator[AssettypeDTO]:
+        yield from [assettype_dto for assettype_dto in self.get_all_assettypes_generator(size)
                     if ':' not in assettype_dto.korteUri]
