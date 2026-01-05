@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from API.eminfra.eminfra_client import EMInfraClient
-from API.eminfra.eminfra_domain import TermDTO, QueryDTO, OperatorEnum, PagingModeEnum, ExpansionsDTO, SelectionDTO, \
+from API.eminfra.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraDomain import TermDTO, QueryDTO, OperatorEnum, PagingModeEnum, ExpansionsDTO, SelectionDTO, \
     ExpressionDTO, LogicalOpEnum
 from API.Enums import Environment, AuthType
 

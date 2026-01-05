@@ -1,6 +1,6 @@
-from API.eminfra.eminfra_domain import (SchadebeheerderKenmerk, QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO,
-                               TermDTO, OperatorEnum, AssetDTO)
-from API.eminfra.kenmerken import KenmerkService
+from API.eminfra.EMInfraDomain import (SchadebeheerderKenmerk, QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO,
+                                       TermDTO, OperatorEnum, AssetDTO)
+from API.eminfra.KenmerkService import KenmerkService
 
 
 class SchadebeheerderService:

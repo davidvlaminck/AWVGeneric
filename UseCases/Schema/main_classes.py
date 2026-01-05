@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from API.eminfra.eminfra_client import EMInfraClient
+from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import Environment, AuthType
 
 if __name__ == '__main__':

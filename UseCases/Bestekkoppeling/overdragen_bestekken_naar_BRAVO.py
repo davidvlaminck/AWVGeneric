@@ -5,8 +5,8 @@ from datetime import datetime
 
 from pathlib import Path
 
-from API.eminfra.eminfra_client import EMInfraClient
-from API.eminfra.eminfra_domain import BestekKoppelingStatusEnum
+from API.eminfra.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraDomain import BestekKoppelingStatusEnum
 from API.Enums import AuthType, Environment
 
 

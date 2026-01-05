@@ -2,9 +2,9 @@ import json
 import logging
 from datetime import datetime
 
-from API.eminfra.eminfra_domain import (BestekKoppeling, BestekRef, PagingModeEnum, SelectionDTO, OperatorEnum,
-                                        ExpressionDTO, TermDTO, QueryDTO, BestekCategorieEnum,
-                                        BestekKoppelingStatusEnum, AssetDTO)
+from API.eminfra.EMInfraDomain import (BestekKoppeling, BestekRef, PagingModeEnum, SelectionDTO, OperatorEnum,
+                                       ExpressionDTO, TermDTO, QueryDTO, BestekCategorieEnum,
+                                       BestekKoppelingStatusEnum, AssetDTO)
 from utils.date_helpers import validate_dates, format_datetime
 
 

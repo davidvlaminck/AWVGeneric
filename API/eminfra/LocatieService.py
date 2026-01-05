@@ -1,7 +1,7 @@
 import json
 import logging
 
-from API.eminfra.eminfra_domain import LocatieKenmerk, AssetDTO
+from API.eminfra.EMInfraDomain import LocatieKenmerk, AssetDTO
 from API.eminfra.wkt_validator import is_valid_wkt
 
 

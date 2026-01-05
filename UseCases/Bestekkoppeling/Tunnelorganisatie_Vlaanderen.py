@@ -7,8 +7,8 @@ from pathlib import Path
 
 from Generic.ExcelModifier import ExcelModifier
 from utils.date_helpers import format_datetime
-from API.eminfra.eminfra_client import EMInfraClient
-from API.eminfra.eminfra_domain import QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum, \
+from API.eminfra.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraDomain import QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum, \
     BestekKoppelingStatusEnum, BestekCategorieEnum, BestekKoppeling, ApplicationEnum
 from API.Enums import AuthType, Environment
 

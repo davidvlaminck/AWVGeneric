@@ -1,6 +1,6 @@
 from typing import Generator
-from API.eminfra.eminfra_domain import (QueryDTO, ExpressionDTO, TermDTO, OperatorEnum, LogicalOpEnum, SelectionDTO,
-                               PagingModeEnum, AgentDTO)
+from API.eminfra.EMInfraDomain import (QueryDTO, ExpressionDTO, TermDTO, OperatorEnum, LogicalOpEnum, SelectionDTO,
+                                       PagingModeEnum, AgentDTO)
 
 
 class AgentService:

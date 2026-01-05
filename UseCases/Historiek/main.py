@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from API.eminfra.eminfra_client import EMInfraClient
+from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 
 if __name__ == '__main__':

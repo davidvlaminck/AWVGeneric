@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 
-from API.eminfra.eminfra_domain import BoomstructuurAssetTypeEnum, RelatieEnum
+from API.eminfra.EMInfraDomain import BoomstructuurAssetTypeEnum, RelatieEnum
 
 
 class AssetType(Enum):

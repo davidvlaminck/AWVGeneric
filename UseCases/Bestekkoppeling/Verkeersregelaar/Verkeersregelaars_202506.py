@@ -3,8 +3,8 @@ import datetime
 from dateutil.relativedelta import relativedelta
 import logging
 from utils.date_helpers import format_datetime
-from API.eminfra.eminfra_client import EMInfraClient
-from API.eminfra.eminfra_domain import BestekKoppeling, BestekCategorieEnum, AssetDTO, BestekKoppelingStatusEnum
+from API.eminfra.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraDomain import BestekKoppeling, BestekCategorieEnum, AssetDTO, BestekKoppelingStatusEnum
 from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path

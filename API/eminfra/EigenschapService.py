@@ -1,10 +1,10 @@
 import logging
 from typing import Generator
 
-from API.eminfra.eminfra_domain import (Eigenschap, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, QueryDTO,
-                                        OperatorEnum, LogicalOpEnum, EigenschapValueDTO, EigenschapValueUpdateDTO,
-                                        KenmerkTypeEnum, AssetDTO)
-from API.eminfra.kenmerken import KenmerkService
+from API.eminfra.EMInfraDomain import (Eigenschap, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, QueryDTO,
+                                       OperatorEnum, LogicalOpEnum, EigenschapValueDTO, EigenschapValueUpdateDTO,
+                                       KenmerkTypeEnum, AssetDTO)
+from API.eminfra.KenmerkService import KenmerkService
 
 class EigenschapService:
     def __init__(self, requester):

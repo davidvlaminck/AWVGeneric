@@ -1,4 +1,4 @@
-from API.eminfra.eminfra_client import EMInfraClient
+from API.eminfra.EMInfraClient import EMInfraClient
 from API.EMSONClient import EMSONClient
 from API.Enums import AuthType, Environment
 import pandas as pd

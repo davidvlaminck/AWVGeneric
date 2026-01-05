@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from API.eminfra.eminfra_client import EMInfraClient
-from API.eminfra.eminfra_domain import RelatieEnum
+from API.eminfra.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraDomain import RelatieEnum
 from API.Enums import AuthType, Environment
 
 from UseCases.utils import load_settings, read_rsa_report, configure_logger

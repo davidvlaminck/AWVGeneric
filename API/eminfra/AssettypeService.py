@@ -1,8 +1,8 @@
-from API.eminfra.eminfra_domain import (AssettypeDTO, Generator, QueryDTO, PagingModeEnum, SelectionDTO, TermDTO,
-                                        ExpressionDTO, OperatorEnum)
+from API.eminfra.EMInfraDomain import (AssettypeDTO, Generator, QueryDTO, PagingModeEnum, SelectionDTO, TermDTO,
+                                       ExpressionDTO, OperatorEnum)
 
 
-class AssettypesService:
+class AssettypeService:
     def __init__(self, requester):
         self.requester = requester
 

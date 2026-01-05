@@ -8,15 +8,15 @@ from datetime import datetime, timedelta
 
 from pathlib import Path
 
-from API.eminfra.eminfra_domain import (OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO, PagingModeEnum, QueryDTO,
-    BestekRef, BestekKoppeling, FeedPage, AssettypeDTO, AssetDTO, BetrokkenerelatieDTO, AgentDTO, \
-    PostitDTO, BestekCategorieEnum, BestekKoppelingStatusEnum, AssetDocumentDTO, LocatieKenmerk, \
-    LogicalOpEnum, ToezichterKenmerk, IdentiteitKenmerk, AssetTypeKenmerkTypeDTO, KenmerkTypeDTO, \
-    AssetTypeKenmerkTypeAddDTO, ResourceRefDTO, Eigenschap, Event, EventType, EventContext, ExpansionsDTO, \
-    RelatieTypeDTO, KenmerkType, EigenschapValueDTO, BeheerobjectDTO, ToezichtgroepTypeEnum, \
-    ToezichtgroepDTO, BaseDataclass, BeheerobjectTypeDTO, BoomstructuurAssetTypeEnum, KenmerkTypeEnum, \
-    AssetDTOToestand, EigenschapValueUpdateDTO, GeometryNiveau, GeometryBron, GeometryNauwkeurigheid, \
-    GeometrieKenmerk, SchadebeheerderKenmerk, AssetRelatieDTO, RelatieEnum, Graph)
+from API.eminfra.EMInfraDomain import (OperatorEnum, TermDTO, ExpressionDTO, SelectionDTO, PagingModeEnum, QueryDTO,
+                                       BestekRef, BestekKoppeling, FeedPage, AssettypeDTO, AssetDTO, BetrokkenerelatieDTO, AgentDTO, \
+                                       PostitDTO, BestekCategorieEnum, BestekKoppelingStatusEnum, AssetDocumentDTO, LocatieKenmerk, \
+                                       LogicalOpEnum, ToezichterKenmerk, IdentiteitKenmerk, AssetTypeKenmerkTypeDTO, KenmerkTypeDTO, \
+                                       AssetTypeKenmerkTypeAddDTO, ResourceRefDTO, Eigenschap, Event, EventType, EventContext, ExpansionsDTO, \
+                                       RelatieTypeDTO, KenmerkType, EigenschapValueDTO, BeheerobjectDTO, ToezichtgroepTypeEnum, \
+                                       ToezichtgroepDTO, BaseDataclass, BeheerobjectTypeDTO, BoomstructuurAssetTypeEnum, KenmerkTypeEnum, \
+                                       AssetDTOToestand, EigenschapValueUpdateDTO, GeometryNiveau, GeometryBron, GeometryNauwkeurigheid, \
+                                       GeometrieKenmerk, SchadebeheerderKenmerk, AssetRelatieDTO, RelatieEnum, Graph)
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 from utils.date_helpers import validate_dates, format_datetime

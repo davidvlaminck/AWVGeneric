@@ -4,10 +4,10 @@ from typing import Any
 import pandas as pd
 from pathlib import Path
 
-from API.eminfra.eminfra_client import EMInfraClient
-from API.eminfra.eminfra_domain import (AssetDTO, QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO,
-                                        OperatorEnum, AgentDTO, LogicalOpEnum, ExpansionsDTO, RelatieEnum,
-                                        AssetRelatieDTO)
+from API.eminfra.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraDomain import (AssetDTO, QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO,
+                                       OperatorEnum, AgentDTO, LogicalOpEnum, ExpansionsDTO, RelatieEnum,
+                                       AssetRelatieDTO)
 from collections.abc import Generator
 from otlmow_model.OtlmowModel.Classes.ImplementatieElement.RelatieObject import RelatieObject
 from otlmow_model.OtlmowModel.Helpers.RelationCreator import create_betrokkenerelation

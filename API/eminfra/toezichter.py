@@ -1,8 +1,8 @@
 from typing import Generator
 
-from API.eminfra.eminfra_domain import (AssetDTO, ToezichterKenmerk, IdentiteitKenmerk, ToezichtgroepDTO, QueryDTO,
-                                        SelectionDTO, PagingModeEnum, ExpressionDTO, TermDTO, OperatorEnum,
-                                        LogicalOpEnum, BetrokkenerelatieDTO, ToezichtgroepTypeEnum)
+from API.eminfra.EMInfraDomain import (AssetDTO, ToezichterKenmerk, IdentiteitKenmerk, ToezichtgroepDTO, QueryDTO,
+                                       SelectionDTO, PagingModeEnum, ExpressionDTO, TermDTO, OperatorEnum,
+                                       LogicalOpEnum, BetrokkenerelatieDTO, ToezichtgroepTypeEnum)
 
 
 class ToezichterService:

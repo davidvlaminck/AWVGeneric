@@ -4,8 +4,8 @@ import pandas as pd
 from pathlib import Path
 
 from UseCases.utils import load_settings
-from API.eminfra.eminfra_client import EMInfraClient
-from API.eminfra.eminfra_domain import QueryDTO, PagingModeEnum, SelectionDTO, OperatorEnum, TermDTO, ExpressionDTO, \
+from API.eminfra.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraDomain import QueryDTO, PagingModeEnum, SelectionDTO, OperatorEnum, TermDTO, ExpressionDTO, \
     construct_naampad, ExpansionsDTO
 from API.Enums import AuthType, Environment
 

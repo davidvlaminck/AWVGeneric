@@ -1,8 +1,8 @@
 import base64
 import logging
 
-from API.eminfra.eminfra_client import EMInfraClient
-from API.eminfra.eminfra_domain import LocatieKenmerk
+from API.eminfra.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraDomain import LocatieKenmerk
 from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path

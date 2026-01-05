@@ -1,4 +1,4 @@
-from API.eminfra.eminfra_domain import AssetDTOToestand, RelatieEnum
+from API.eminfra.EMInfraDomain import AssetDTOToestand, RelatieEnum
 
 
 def map_status(nieuwe_status: str) -> AssetDTOToestand:

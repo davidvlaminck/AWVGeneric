@@ -2,7 +2,7 @@ import logging
 
 import pandas as pd
 
-from API.eminfra.eminfra_client import EMInfraClient
+from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 
 from UseCases.utils import load_settings, configure_logger

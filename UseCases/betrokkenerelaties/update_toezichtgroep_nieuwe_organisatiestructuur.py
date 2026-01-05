@@ -1,7 +1,7 @@
 from collections.abc import Generator
-from API.eminfra.eminfra_client import EMInfraClient
-from API.eminfra.eminfra_domain import (AssetDTO, QueryDTO, PagingModeEnum, ExpressionDTO, SelectionDTO, TermDTO,
-                                        OperatorEnum, AgentDTO, ExpansionsDTO)
+from API.eminfra.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraDomain import (AssetDTO, QueryDTO, PagingModeEnum, ExpressionDTO, SelectionDTO, TermDTO,
+                                       OperatorEnum, AgentDTO, ExpansionsDTO)
 from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path

@@ -1,6 +1,6 @@
-from API.eminfra.eminfra_domain import (BeheerobjectDTO, BeheerobjectTypeDTO, OperatorEnum, Generator, PagingModeEnum,
-                                        QueryDTO, SelectionDTO, ExpressionDTO, TermDTO, LogicalOpEnum, AssetDTO,
-                                        BoomstructuurAssetTypeEnum)
+from API.eminfra.EMInfraDomain import (BeheerobjectDTO, BeheerobjectTypeDTO, OperatorEnum, Generator, PagingModeEnum,
+                                       QueryDTO, SelectionDTO, ExpressionDTO, TermDTO, LogicalOpEnum, AssetDTO,
+                                       BoomstructuurAssetTypeEnum)
 
 
 class BeheerobjectService:

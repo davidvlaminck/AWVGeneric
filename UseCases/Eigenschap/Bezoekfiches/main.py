@@ -3,8 +3,8 @@ from openpyxl import load_workbook
 
 import pandas as pd
 
-from API.eminfra.eminfra_client import EMInfraClient
-from API.eminfra.eminfra_domain import Graph, AssetDTO, RelatieEnum
+from API.eminfra.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraDomain import Graph, AssetDTO, RelatieEnum
 from API.Enums import AuthType, Environment
 
 from UseCases.utils import load_settings, read_rsa_report

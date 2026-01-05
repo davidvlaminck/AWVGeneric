@@ -5,7 +5,7 @@ from datetime import datetime
 import pandas as pd
 from pathlib import Path
 
-from API.eminfra.eminfra_client import EMInfraClient
+from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 
 start_datetime = datetime(2025, 1, 1)

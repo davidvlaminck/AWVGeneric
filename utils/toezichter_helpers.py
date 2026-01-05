@@ -1,5 +1,5 @@
-from API.eminfra.eminfra_client import EMInfraClient
-from API.eminfra.eminfra_domain import AssetDTO
+from API.eminfra.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraDomain import AssetDTO
 
 
 def get_toezichter_naam(eminfra_client: EMInfraClient, asset: AssetDTO) -> str | None:

@@ -2,7 +2,7 @@ import json
 from dataclasses import dataclass
 from enum import Enum
 
-from API.eminfra.eminfra_domain import TermDTO, BaseDataclass
+from API.eminfra.EMInfraDomain import TermDTO, BaseDataclass
 
 
 class TestEnum(Enum):

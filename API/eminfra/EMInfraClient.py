@@ -1,22 +1,22 @@
 from pathlib import Path
 
-from API.eminfra.agents import AgentService
-from API.eminfra.assets import AssetService
-from API.eminfra.assettypes import AssettypesService
-from API.eminfra.beheerobject import BeheerobjectService
-from API.eminfra.bestekken import BestekService
-from API.eminfra.documenten import DocumentService
-from API.eminfra.eigenschappen import EigenschapService
-from API.eminfra.events import EventService
-from API.eminfra.feed import FeedService
-from API.eminfra.geometrie import GeometrieService
-from API.eminfra.graph import GraphService
-from API.eminfra.kenmerken import KenmerkService
-from API.eminfra.locatie import LocatieService
-from API.eminfra.onderdeel import OnderdeelService
-from API.eminfra.postits import PostitService
-from API.eminfra.relaties import RelatieService
-from API.eminfra.schadebeheerder import SchadebeheerderService
+from API.eminfra.AgentService import AgentService
+from API.eminfra.AssetService import AssetService
+from API.eminfra.AssettypeService import AssettypeService
+from API.eminfra.BeheerobjectService import BeheerobjectService
+from API.eminfra.BestekService import BestekService
+from API.eminfra.DocumentService import DocumentService
+from API.eminfra.EigenschapService import EigenschapService
+from API.eminfra.EventService import EventService
+from API.eminfra.FeedService import FeedService
+from API.eminfra.GeometrieService import GeometrieService
+from API.eminfra.GraphService import GraphService
+from API.eminfra.KenmerkService import KenmerkService
+from API.eminfra.LocatieService import LocatieService
+from API.eminfra.OnderdeelService import OnderdeelService
+from API.eminfra.PostitService import PostitService
+from API.eminfra.RelatieService import RelatieService
+from API.eminfra.SchadebeheerderService import SchadebeheerderService
 from API.eminfra.toezichter import ToezichterService
 
 from API.Enums import AuthType, Environment
@@ -32,7 +32,7 @@ class EMInfraClient:
         # Sub-services
         self.agents = AgentService(self.requester)
         self.assets = AssetService(self.requester)
-        self.assettypes = AssettypesService(self.requester)
+        self.assettypes = AssettypeService(self.requester)
         self.beheerobject = BeheerobjectService(self.requester)
         self.bestekken = BestekService(self.requester)
         self.documenten = DocumentService(self.requester)

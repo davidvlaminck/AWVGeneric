@@ -1,7 +1,7 @@
 import logging
 
-from API.eminfra.eminfra_client import EMInfraClient
-from API.eminfra.eminfra_domain import QueryDTO, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum, PagingModeEnum, \
+from API.eminfra.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraDomain import QueryDTO, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum, PagingModeEnum, \
     ExpansionsDTO, LocatieKenmerk
 from API.Enums import AuthType, Environment
 import pandas as pd

@@ -3,10 +3,10 @@ import logging
 from datetime import datetime
 import re
 
-from API.eminfra.eminfra_domain import OperatorEnum, BoomstructuurAssetTypeEnum, \
+from API.eminfra.EMInfraDomain import OperatorEnum, BoomstructuurAssetTypeEnum, \
     AssetDTOToestand, QueryDTO, PagingModeEnum, ExpansionsDTO, SelectionDTO, TermDTO, ExpressionDTO, LogicalOpEnum, \
     AssetDTO, EigenschapValueUpdateDTO, RelatieEnum
-from API.eminfra.eminfra_client import EMInfraClient
+from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path

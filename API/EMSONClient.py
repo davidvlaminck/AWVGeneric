@@ -2,7 +2,7 @@ from collections.abc import Generator
 from dataclasses import dataclass
 from pathlib import Path
 
-from API.eminfra.eminfra_domain import BaseDataclass
+from API.eminfra.EMInfraDomain import BaseDataclass
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 

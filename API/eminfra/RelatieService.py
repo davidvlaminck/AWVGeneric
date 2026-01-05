@@ -1,9 +1,9 @@
 from typing import Generator
 
-from API.eminfra.eminfra_domain import (AssetDTO, RelatieTypeDTO, RelatieEnum, AssetRelatieDTO, QueryDTO,
-                                        PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum,
-                                        LogicalOpEnum)
-from API.eminfra.assets import AssetService
+from API.eminfra.EMInfraDomain import (AssetDTO, RelatieTypeDTO, RelatieEnum, AssetRelatieDTO, QueryDTO,
+                                       PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum,
+                                       LogicalOpEnum)
+from API.eminfra.AssetService import AssetService
 
 class RelatieService:
     def __init__(self, requester):

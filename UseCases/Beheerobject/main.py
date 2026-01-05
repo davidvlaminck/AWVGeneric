@@ -1,5 +1,5 @@
-from API.eminfra.eminfra_client import EMInfraClient
-from API.eminfra.eminfra_domain import BoomstructuurAssetTypeEnum
+from API.eminfra.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraDomain import BoomstructuurAssetTypeEnum
 from API.Enums import AuthType, Environment
 from pathlib import Path
 

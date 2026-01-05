@@ -1,4 +1,4 @@
-from API.eminfra.eminfra_domain import FeedPage
+from API.eminfra.EMInfraDomain import FeedPage
 
 
 class FeedService:

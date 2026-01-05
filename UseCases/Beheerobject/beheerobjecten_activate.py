@@ -1,7 +1,7 @@
 import logging
 
-from API.eminfra.eminfra_client import EMInfraClient
-from API.eminfra.eminfra_domain import OperatorEnum
+from API.eminfra.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraDomain import OperatorEnum
 from API.Enums import AuthType, Environment
 
 from UseCases.utils import load_settings

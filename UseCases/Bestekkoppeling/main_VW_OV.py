@@ -1,7 +1,7 @@
 from datetime import datetime
 
-from API.eminfra.eminfra_client import EMInfraClient
-from API.eminfra.eminfra_domain import QueryDTO, ExpansionsDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, \
+from API.eminfra.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraDomain import QueryDTO, ExpansionsDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, \
     OperatorEnum, LogicalOpEnum
 from API.Enums import AuthType, Environment
 

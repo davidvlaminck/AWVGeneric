@@ -1,6 +1,6 @@
 from datetime import datetime
-from API.eminfra.eminfra_domain import KenmerkTypeEnum
-from API.eminfra.eminfra_client import EMInfraClient
+from API.eminfra.EMInfraDomain import KenmerkTypeEnum
+from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path

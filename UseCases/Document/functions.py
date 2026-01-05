@@ -5,7 +5,7 @@ from datetime import datetime
 import pandas as pd
 import re
 
-from API.eminfra.eminfra_domain import DocumentCategorieEnum, QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, \
+from API.eminfra.EMInfraDomain import DocumentCategorieEnum, QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, \
     OperatorEnum, ExpansionsDTO, construct_naampad, LogicalOpEnum, ApplicationEnum, ProvincieEnum
 from API.Enums import Environment
 from pathlib import Path
