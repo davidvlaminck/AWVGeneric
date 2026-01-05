@@ -15,7 +15,7 @@ from Generic.ExcelModifier import ExcelModifier
 
 def build_betrokkenerelatie(source: AssetDTO, agent_naam :str, rol: str) -> RelatieObject | None:
     generator_agents = eminfra_client.get_objects_from_oslo_search_endpoint(
-        url_part='agents'
+        url_part='agents_service'
         , filter_dict={"naam": agent_naam})
     agents = list(generator_agents)
     if len(agents) != 1:
@@ -234,7 +234,7 @@ if __name__ == '__main__':
     # read the complete mapping file (json) in a pandas dataframe
     df_mapping_agents = pd.read_json('mapping_agents.json')
 
-    # loop over de "agents" die fungeren als toezichtsgroep
+    # loop over de "agents_service" die fungeren als toezichtsgroep
     for _, agents_map in df_mapping_agents.iterrows():
         agent_bestaand = next(eminfra_client.search_agent(naam=agents_map.toezichtsgroep_existing), None)
         agent_nieuw = next(eminfra_client.search_agent(naam=agents_map.toezichtsgroep_new), None)

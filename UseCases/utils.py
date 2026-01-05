@@ -108,7 +108,7 @@ def get_bestaande_betrokkenerelaties(client: EMInfraClient, asset: AssetDTO, rol
 
 def build_betrokkenerelatie(client: EMInfraClient, source: AssetDTO, agent_naam :str, rol: str) -> RelatieObject | None:
     generator_agents = client.get_objects_from_oslo_search_endpoint(
-        url_part='agents'
+        url_part='agents_service'
         , filter_dict={"naam": agent_naam})
     agents = list(generator_agents)
     if len(agents) != 1:

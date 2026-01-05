@@ -38,7 +38,7 @@ if __name__ == '__main__':
     for batch in batched(df['id'].tolist()[10000:], 100):
         filter_dict = {'uuid': batch}
 
-        for asset in eminfra_client.get_assets_by_filter(filter=filter_dict):
+        for asset in eminfra_client.asset_service.get_assets_by_filter(filter=filter_dict):
             toestand = map_toestand(asset['AIMToestand.toestand'])
             # get naam from df
             uuid = asset['@id'][39:75]
@@ -57,4 +57,4 @@ if __name__ == '__main__':
                 naam = 'VLUCHTK.M.POS'
             commentaar = asset['AIMObject.notitie']
             isActief = asset['AIMDBStatus.isActief']
-            eminfra_client.update_asset(uuid=uuid, naam=naam, toestand=toestand, commentaar=commentaar, actief=isActief)
+            eminfra_client.asset_service.update_asset(uuid=uuid, naam=naam, toestand=toestand, commentaar=commentaar, actief=isActief)

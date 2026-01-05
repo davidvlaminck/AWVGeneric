@@ -23,13 +23,13 @@ if __name__ == '__main__':
     logging.info("Get all assets of assettype Netwerkelement.")
     search_query = build_query_search_assettype(assettype_uuid=ASSETTYPE_UUID_NETWERKELEMENT)
     generator = eminfra_client.assets.search_assets(query_dto=search_query, actief=True)
-    bestekRef_swarco_2020_17 = eminfra_client.bestekken.get_bestekref(eDelta_dossiernummer='VWT/NET/2020/017')
+    bestekRef_swarco_2020_17 = eminfra_client.bestek_service.get_bestekref(eDelta_dossiernummer='VWT/NET/2020/017')
 
     assets_updated = []
     for counter, asset in enumerate(generator, start=1):
         logging.debug(f'Processing ({counter}) asset: {asset.uuid}; naam: {asset.naam}; assettype: {asset.type.uri}')
 
-        bestekkoppelingen = eminfra_client.bestekken.get_bestekkoppeling(asset=asset)
+        bestekkoppelingen = eminfra_client.bestek_service.get_bestekkoppeling(asset=asset)
         actieve_bestekken = [k for k in bestekkoppelingen if k.status == BestekKoppelingStatusEnum.ACTIEF]
         actieve_bestekken_set = {
             b.bestekRef.eDeltaDossiernummer for b in actieve_bestekken
@@ -53,7 +53,7 @@ if __name__ == '__main__':
                 , "Einde koppeling": matching_bestekkoppeling.eindDatum
                 , "eminfra_link": f'https://apps.mow.vlaanderen.be/eminfra/assets/{asset.uuid}'
             })
-            eminfra_client.bestekken.change_bestekkoppelingen_by_asset_uuid(asset=asset, bestekkoppelingen=bestekkoppelingen)
+            eminfra_client.bestek_service.change_bestekkoppelingen_by_asset_uuid(asset=asset, bestekkoppelingen=bestekkoppelingen)
         else:
             logging.debug('Ga verder met het volgende Netwerkelement,'
                           'geen overeenkomstige bestekkoppeling of minstens 2 actieve werkbestekken.')

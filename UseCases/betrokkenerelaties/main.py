@@ -38,7 +38,7 @@ if __name__ == '__main__':
         #################################################################################
         ####  Get agent from the LGC-asset
         #################################################################################
-        generator_agents = eminfra_client.get_objects_from_oslo_search_endpoint(size=1, url_part='agents', filter_dict={"naam": lgc_toezichthouder_full_name})
+        generator_agents = eminfra_client.get_objects_from_oslo_search_endpoint(size=1, url_part='agents_service', filter_dict={"naam": lgc_toezichthouder_full_name})
         agents = list(generator_agents)
         if len(agents) != 1:
             print(f'Agent {lgc_toezichthouder_full_name} was not found or returned multiple results.')

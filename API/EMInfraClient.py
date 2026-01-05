@@ -1191,7 +1191,7 @@ class EMInfraClient:
                 ExpressionDTO(terms=[TermDTO(property='actief', operator=OperatorEnum.EQ, value=actief)]
                               , logicalOp=LogicalOpEnum.AND)
             )
-        url = "core/api/agents/search"
+        url = "core/api/agents_service/search"
         while True:
             json_dict = self.requester.post(url, data=query_dto.json()).json()
             yield from [AgentDTO.from_dict(item) for item in json_dict['data']]

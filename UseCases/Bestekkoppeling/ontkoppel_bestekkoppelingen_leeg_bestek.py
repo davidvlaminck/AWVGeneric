@@ -23,7 +23,7 @@ if __name__ == '__main__':
         print(f'Asset uuid: {asset_uuid}')
 
         myAsset = eminfra_client.assets.get_asset(asset_uuid=asset_uuid)
-        bestekkoppelingen = eminfra_client.bestekken.get_bestekkoppeling(asset=myAsset)
+        bestekkoppelingen = eminfra_client.bestek_service.get_bestekkoppeling(asset=myAsset)
 
         # Hoeveel bestekkoppelingen zijn er aanwezig? Meer dan 1.
         if len(bestekkoppelingen) <= 1:

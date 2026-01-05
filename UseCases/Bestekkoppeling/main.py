@@ -24,16 +24,16 @@ if __name__ == '__main__':
     dummyAsset = eminfra_client.assets.get_asset(asset_uuid=asset_uuid)
 
     # get_bestekkoppelingen_by_asset_uuid
-    bestekkoppelingen = eminfra_client.bestekken.get_bestekkoppeling(asset=dummyAsset)
+    bestekkoppelingen = eminfra_client.bestek_service.get_bestekkoppeling(asset=dummyAsset)
 
     # get_bestekref_by_eDelta_dossiernummer
-    bestekref1 = eminfra_client.bestekken.get_bestekref(eDelta_dossiernummer=eDelta_dossiernummer)
+    bestekref1 = eminfra_client.bestek_service.get_bestekref(eDelta_dossiernummer=eDelta_dossiernummer)
 
     # get_bestekref_by_eDelta_besteknummer (new)
-    bestekref2 = eminfra_client.bestekken.get_bestekref(eDelta_besteknummer=eDelta_besteknummer)
+    bestekref2 = eminfra_client.bestek_service.get_bestekref(eDelta_besteknummer=eDelta_besteknummer)
 
     # change_bestekkoppelingen_by_asset_uuid (new)
-    eminfra_client.bestekken.change_bestekkoppelingen_by_asset_uuid(asset_uuid=asset_uuid, bestekkoppelingen=bestekkoppelingen)
+    eminfra_client.bestek_service.change_bestekkoppelingen_by_asset_uuid(asset_uuid=asset_uuid, bestekkoppelingen=bestekkoppelingen)
 
     # adjust_date_bestekkoppeling (new). Schuif de stardatum (optioneel) en einddatum (optioneel) op.
     eminfra_client.adjust_date_bestekkoppeling(asset_uuid=asset_uuid, bestek_ref_uuid=bestekref1.uuid,
