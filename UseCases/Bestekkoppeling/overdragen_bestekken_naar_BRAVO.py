@@ -25,7 +25,7 @@ def collect_child_assets(asset_uuid, eminfra_client, all_assets=None, all_uuids=
     if all_uuids is None:
         all_uuids = []
 
-    child_assets = eminfra_client.search_child_assets(asset_uuid=asset_uuid)
+    child_assets = eminfra_client.search_child_assets_gen()
 
     for child_asset in child_assets:
         all_assets.append(child_asset)

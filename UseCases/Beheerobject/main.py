@@ -39,14 +39,14 @@ if __name__ == '__main__':
     # Oplijsten assets in de boomstructuur van een beheerobject
     ##########################################
     # WW0402 uuid: 0014b499-2bdb-448a-b3a1-fd20595701dc
-    myAsset = eminfra_client.asset_service.get_asset(asset_uuid='0014b499-2bdb-448a-b3a1-fd20595701dc')
-    generator_beheerobjecten = eminfra_client.asset_service.search_child_assets(asset=myAsset, recursive=True)
+    myAsset = eminfra_client.asset_service.get_asset_by_uuid(asset_uuid='0014b499-2bdb-448a-b3a1-fd20595701dc')
+    generator_beheerobjecten = eminfra_client.asset_service.search_child_assets_gen(asset=myAsset, recursive=True)
 
     ##########################################
     # Zoek naar de parent-asset
     ##########################################
     # Diepgeneste LS asset uuid: 1fd580ca-9881-4325-8a8c-0d6c279ba607
-    myParentAsset = eminfra_client.assets.get_asset(asset_uuid='1fd580ca-9881-4325-8a8c-0d6c279ba607')
+    myParentAsset = eminfra_client.assets.get_asset_by_uuid(asset_uuid='1fd580ca-9881-4325-8a8c-0d6c279ba607')
     parent = eminfra_client.assets.search_parent_asset(asset=myParentAsset)
     top_parent = eminfra_client.assets.search_parent_asset(asset=myParentAsset, recursive=True)
     all_parents = eminfra_client.assets.search_parent_asset(asset=myParentAsset, recursive=True, return_all_parents=True)
@@ -55,7 +55,7 @@ if __name__ == '__main__':
     # Alle assets tesamen (de-)activeren
     ##########################################
     for item in generator_beheerobjecten:
-        eminfra_client.asset_service.deactiveer_asset(asset=item)
+        eminfra_client.asset_service.deactiveer_asset_by_uuid(asset_uuid=item)
         eminfra_client.asset_service.activeer_asset(asset=item)
 
     ##########################################
@@ -65,8 +65,12 @@ if __name__ == '__main__':
     parentAsset = next(eminfra_client.assets.search_asset_by_uuid(asset_uuid='201e5db4-7a3e-40e0-bba3-4947c5c4f725'), None)
     childAsset = next(eminfra_client.assets.search_asset_by_uuid(asset_uuid='28cd12a8-03ee-4d6c-8c4a-40ec3ae1b10b'), None)
     installatie = eminfra_client.assets.search_parent_asset(asset_uuid='28cd12a8-03ee-4d6c-8c4a-40ec3ae1b10b', recursive=True, return_all_parents=False)
-    eminfra_client.beheerobject_service.wijzig_boomstructuur(childAsset=childAsset, parentAsset=parentAsset, parentType=BoomstructuurAssetTypeEnum.ASSET)
-    eminfra_client.beheerobject_service.wijzig_boomstructuur(childAsset=childAsset, parentAsset=installatie, parentType=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
+    eminfra_client.beheerobject_service.wijzig_boomstructuur_by_uuid(child_asset_uuid=childAsset,
+                                                                     parent_asset_uuid=parentAsset,
+                                                                     parentType=BoomstructuurAssetTypeEnum.ASSET)
+    eminfra_client.beheerobject_service.wijzig_boomstructuur_by_uuid(child_asset_uuid=childAsset,
+                                                                     parent_asset_uuid=installatie,
+                                                                     parentType=BoomstructuurAssetTypeEnum.BEHEEROBJECT)
 
     ##########################################
     # Wijzigen beheerobject
@@ -78,4 +82,4 @@ if __name__ == '__main__':
     # Zoeken van een beheerobject. Op basis van verschillende criteria met een QueryDTO.
     ##########################################
     # beheerobject_type = 'baa8570b-15cf-4512-a309-efd63af32f39'
-    generator_beheerobjecten = eminfra_client.beheerobject_service.search_beheerobjecten(naam='JE')
+    generator_beheerobjecten = eminfra_client.beheerobject_service.search_beheerobjecten_gen(naam='JE')

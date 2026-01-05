@@ -10,6 +10,21 @@ class LocatieService:
         self.requester = requester
         self.LOCATIE_UUID = '80052ed4-2f91-400c-8cba-57624653db11'
 
+    def get_locatie_by_asset_uuid(self, asset_uuid: str) -> LocatieKenmerk:
+        """
+        Get LocatieKenmerk from an asset.
+        :param asset_uuid:
+        :type asset_uuid: str
+        :return: LocatieKenmerk
+        :rtype:
+        """
+        response = self.requester.get(
+            url=f'core/api/assets/{asset_uuid}/kenmerken/{self.LOCATIE_UUID}')
+        if response.status_code != 200:
+            logging.error(response)
+            raise ProcessLookupError(response.content.decode("utf-8"))
+        return LocatieKenmerk.from_dict(response.json())
+
     def get_locatie(self, asset: AssetDTO) -> LocatieKenmerk:
         """
         Get LocatieKenmerk from an asset.
@@ -18,12 +33,7 @@ class LocatieService:
         :return: LocatieKenmerk
         :rtype:
         """
-        response = self.requester.get(
-            url=f'core/api/assets/{asset.uuid}/kenmerken/{self.LOCATIE_UUID}')
-        if response.status_code != 200:
-            logging.error(response)
-            raise ProcessLookupError(response.content.decode("utf-8"))
-        return LocatieKenmerk.from_dict(response.json())
+        return self.get_locatie_by_asset_uuid(asset_uuid=asset.uuid)
 
     def update_locatie(self, bronAsset: AssetDTO, doelAsset: AssetDTO = None, wkt_geometry: str = None) -> None:
         """

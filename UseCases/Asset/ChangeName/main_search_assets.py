@@ -38,7 +38,7 @@ if __name__ == '__main__':
     for batch in batched(df['id'].tolist()[10000:], 100):
         filter_dict = {'uuid': batch}
 
-        for asset in eminfra_client.asset_service.get_assets_by_filter(filter=filter_dict):
+        for asset in eminfra_client.asset_service.get_assets_by_filter_gen(filter=filter_dict):
             toestand = map_toestand(asset['AIMToestand.toestand'])
             # get naam from df
             uuid = asset['@id'][39:75]

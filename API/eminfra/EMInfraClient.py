@@ -17,7 +17,7 @@ from API.eminfra.OnderdeelService import OnderdeelService
 from API.eminfra.PostitService import PostitService
 from API.eminfra.RelatieService import RelatieService
 from API.eminfra.SchadebeheerderService import SchadebeheerderService
-from API.eminfra.toezichter import ToezichterService
+from API.eminfra.ToezichterService import ToezichterService
 
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory

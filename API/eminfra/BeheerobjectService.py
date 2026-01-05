@@ -12,7 +12,7 @@ class BeheerobjectService:
         json_dict = self.requester.get(url).json()
         return BeheerobjectDTO.from_dict(json_dict)
 
-    def search_beheerobjecten(self, naam: str, beheerobjecttype: BeheerobjectTypeDTO = None, actief: bool = None,
+    def search_beheerobjecten_gen(self, naam: str, beheerobjecttype: BeheerobjectTypeDTO = None, actief: bool = None,
                               operator: OperatorEnum = OperatorEnum.CONTAINS) -> Generator[BeheerobjectDTO]:
         query_dto = QueryDTO(
             size=100, from_=0, pagingMode=PagingModeEnum.OFFSET,
@@ -71,21 +71,21 @@ class BeheerobjectService:
             raise ProcessLookupError(response.content.decode("utf-8"))
         return response.json()
 
-    def wijzig_boomstructuur(self, childAsset: AssetDTO, parentAsset: AssetDTO,
+    def wijzig_boomstructuur_by_uuid(self, child_asset_uuid: str, parent_asset_uuid: str,
                              parentType: BoomstructuurAssetTypeEnum = BoomstructuurAssetTypeEnum.ASSET) -> dict:
         """
         Assets verplaatsen in de boomstructuur met 1 parent en 1 child-asset.
 
-        :param parentAsset:
-        :param childAsset:
+        :param child_asset_uuid:
+        :param parent_asset_uuid:
         :return:
         """
         json_body = {
             "name": "reorganize",
             "moveOperations":
-                [{"assetsUuids": [f'{childAsset.uuid}']
+                [{"assetsUuids": [f'{child_asset_uuid}']
                      , "targetType": parentType.value
-                     , "targetUuid": f'{parentAsset.uuid}'}]
+                     , "targetUuid": f'{parent_asset_uuid}'}]
         }
         response = self.requester.put(
             url='core/api/beheerobjecten/ops/reorganize'
@@ -93,6 +93,18 @@ class BeheerobjectService:
         )
         if response.status_code != 202:
             raise ProcessLookupError(response.content.decode("utf-8"))
+
+    def wijzig_boomstructuur(self, childAsset: AssetDTO, parentAsset: AssetDTO,
+                             parentType: BoomstructuurAssetTypeEnum = BoomstructuurAssetTypeEnum.ASSET) -> dict:
+        """
+        Assets verplaatsen in de boomstructuur met 1 parent en 1 child-asset.
+
+        :param childAsset:
+        :param parentAsset:
+        :return:
+        """
+        return self.wijzig_boomstructuur_by_uuid(child_asset_uuid=childAsset.uuid, parent_asset_uuid=parentAsset.uuid,
+                                                 parentType=parentType)
 
     def update_beheerobject_status(self, beheerObject: BeheerobjectDTO, status: bool) -> dict:
         json_body = {
@@ -108,24 +120,24 @@ class BeheerobjectService:
             raise ProcessLookupError(response.content.decode("utf-8"))
         return response.json()
 
-    def remove_asset_from_parent(self, asset: AssetDTO, parentAsset: AssetDTO) -> dict:
+    def remove_asset_from_parent_by_uuid(self, asset_uuid: str, parent_asset_uuid: str) -> dict:
         """
         Remove an asset from its parent.
         Wordt gebruikt om een asset uit een boomstructuur te halen, bijvoorbeeld bij OTL-assets.
 
-        :param asset: Asset to remove from a tree
-        :type asset: AssetDTO
-        :param parentAsset: Parent asset.
-        :type parentAsset: AssetDTO
+        :param asset_uuid: Asset uuid to remove from a tree
+        :type asset_uuid: str
+        :param parent_asset_uuid: Parent asset uuid
+        :type parent_asset_uuid: str
         :return: dict
         """
         payload = {
             "name": "remove",
             "description": "Verwijderen uit boomstructuur van 1 asset",
             "async": False,
-            "uuids": [asset.uuid],
+            "uuids": [asset_uuid],
         }
-        url = f"core/api/beheerobjecten/{parentAsset.uuid}/assets/ops/remove"
+        url = f"core/api/beheerobjecten/{parent_asset_uuid}/assets/ops/remove"
         response = self.requester.put(
             url=url,
             json=payload
@@ -133,3 +145,16 @@ class BeheerobjectService:
         if response.status_code != 202:
             raise ProcessLookupError(f'Failed to remove parent from asset: {response.text}')
         return response.json()
+
+    def remove_asset_from_parent(self, asset: AssetDTO, parent_asset: AssetDTO) -> dict:
+        """
+        Remove an asset from its parent.
+        Wordt gebruikt om een asset uit een boomstructuur te halen, bijvoorbeeld bij OTL-assets.
+
+        :param asset: Asset to remove from a tree
+        :type asset: AssetDTO
+        :param parent_asset: Parent asset.
+        :type parent_asset: AssetDTO
+        :return: dict
+        """
+        return self.remove_asset_from_parent_by_uuid(asset_uuid=asset.uuid, parent_asset_uuid=parent_asset.uuid)

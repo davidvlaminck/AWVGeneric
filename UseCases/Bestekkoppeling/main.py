@@ -21,7 +21,7 @@ if __name__ == '__main__':
     settings_path = Path(os.environ["OneDrive"]) / 'projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
     eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=settings_path)
 
-    dummyAsset = eminfra_client.assets.get_asset(asset_uuid=asset_uuid)
+    dummyAsset = eminfra_client.assets.get_asset_by_uuid(asset_uuid=asset_uuid)
 
     # get_bestekkoppelingen_by_asset_uuid
     bestekkoppelingen = eminfra_client.bestek_service.get_bestekkoppeling(asset=dummyAsset)
@@ -33,7 +33,8 @@ if __name__ == '__main__':
     bestekref2 = eminfra_client.bestek_service.get_bestekref(eDelta_besteknummer=eDelta_besteknummer)
 
     # change_bestekkoppelingen_by_asset_uuid (new)
-    eminfra_client.bestek_service.change_bestekkoppelingen_by_asset_uuid(asset_uuid=asset_uuid, bestekkoppelingen=bestekkoppelingen)
+    eminfra_client.bestek_service.change_bestekkoppelingen_by_uuid(asset_uuid=asset_uuid,
+                                                                   bestekkoppelingen=bestekkoppelingen)
 
     # adjust_date_bestekkoppeling (new). Schuif de stardatum (optioneel) en einddatum (optioneel) op.
     eminfra_client.adjust_date_bestekkoppeling(asset_uuid=asset_uuid, bestek_ref_uuid=bestekref1.uuid,

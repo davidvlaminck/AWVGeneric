@@ -276,7 +276,7 @@ class BypassProcessor:
     # Helper function for lookups
     def _search_parent_asset_by_uuid(self, uuid: str):
         if uuid:
-            return next(self.eminfra_client.search_asset_by_uuid(asset_uuid=uuid), None)
+            return self.eminfra_client.asset_service.get_asset_by_uuid(asset_uuid=uuid)
         return None
 
     def _search_parent_beheerobject_by_uuid(self, uuid: str):

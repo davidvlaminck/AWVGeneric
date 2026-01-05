@@ -29,7 +29,7 @@ if __name__ == '__main__':
         query_dto.selection.expressions.append(expression)
 
         logging.info("Search assets")
-        df_assets = eminfra_client.assets.search_assets(query_dto=query_dto, actief=True)
+        df_assets = eminfra_client.assets.search_assets_gen(query_dto=query_dto, actief=True)
         rows = []
         for asset in iter(df_assets):
             row = {
