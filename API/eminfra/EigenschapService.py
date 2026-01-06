@@ -5,6 +5,8 @@ from API.eminfra.EMInfraDomain import (Eigenschap, PagingModeEnum, SelectionDTO,
                                        OperatorEnum, LogicalOpEnum, EigenschapValueDTO, EigenschapValueUpdateDTO,
                                        KenmerkTypeEnum, AssetDTO)
 from API.eminfra.KenmerkService import KenmerkService
+from UseCases.Kenmerk.AddKenmerkOnAssettypeFromReport import kenmerktype
+
 
 class EigenschapService:
     def __init__(self, requester):
@@ -75,7 +77,8 @@ class EigenschapService:
         if hasattr(eigenschap, "kenmerkType") and hasattr(eigenschap.kenmerkType, "uuid"):
             kenmerk_uuid = eigenschap.kenmerkType.uuid
         else:
-            kenmerk_eigenschap = KenmerkService.get_kenmerken(asset_uuid=asset_uuid, naam=KenmerkTypeEnum.EIGENSCHAPPEN)
+            kenmerk_sercvice = KenmerkService(requester=self.requester)
+            kenmerk_eigenschap = kenmerk_sercvice.get_kenmerken_by_uuid(asset_uuid=asset_uuid, naam=KenmerkTypeEnum.EIGENSCHAPPEN)
             kenmerk_uuid = kenmerk_eigenschap.type.get("uuid", None)
 
         response = self.requester.patch(url=f'core/api/assets/{asset_uuid}/kenmerken/{kenmerk_uuid}/eigenschapwaarden',
@@ -102,7 +105,8 @@ class EigenschapService:
 
     def get_eigenschappen(self, asset_uuid: str, eigenschap_naam: str = None) -> list[EigenschapValueDTO]:
         # ophalen kenmerk_uuid
-        kenmerken = KenmerkService.get_kenmerken(asset_uuid=asset_uuid)
+        kenmerk_sercvice = KenmerkService(requester=self.requester)
+        kenmerken = kenmerk_sercvice.get_kenmerken_by_uuid(asset_uuid=asset_uuid)
         kenmerk_uuid = \
             [kenmerk.type.get('uuid') for kenmerk in kenmerken if kenmerk.type.get('naam').startswith('Eigenschappen')][0]
 
