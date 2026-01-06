@@ -25,8 +25,12 @@ def configure_logger(log_path: str = "logs.log"):
         filemode="w",
     )
 
-def read_rsa_report(filepath: Path, usecols: [str] = None) -> pd.DataFrame:
-    """Read RSA-report as input into a DataFrame."""
+def read_rsa_report(filepath: Path, usecols: list[str] = None) -> pd.DataFrame:
+    """
+    Read RSA-report as input into a DataFrame.
+
+    :return: pd.DataFrame
+    """
     if not Path.exists(filepath):
         raise FileNotFoundError(f'Filepath does not exists {filepath}.')
     if not usecols:
