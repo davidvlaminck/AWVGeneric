@@ -1,5 +1,5 @@
 import json
-from typing import Generator
+from collections.abc import Generator
 from API.eminfra.EMInfraDomain import (AssetDTO, AssetDTOToestand, QueryDTO, ExpressionDTO, TermDTO, OperatorEnum,
                                        LogicalOpEnum, ExpansionsDTO, SelectionDTO, PagingModeEnum, AssettypeDTO, RelatieEnum,
                                        BoomstructuurAssetTypeEnum)

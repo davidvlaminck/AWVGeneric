@@ -1,4 +1,4 @@
-from typing import Generator
+from collections.abc import Generator
 from datetime import datetime, timedelta
 
 from API.eminfra.EMInfraDomain import EventType, IdentiteitKenmerk, EventContext, Event, QueryDTO, \

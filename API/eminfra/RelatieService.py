@@ -1,4 +1,4 @@
-from typing import Generator
+from collections.abc import Generator
 
 from API.eminfra.EMInfraDomain import (AssetDTO, RelatieTypeDTO, RelatieEnum, AssetRelatieDTO, QueryDTO,
                                        PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum,
