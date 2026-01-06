@@ -92,7 +92,11 @@ class KenmerkService:
         :return: None
         :rtype:
         """
-        return self.update_kenmerk_by_uuid(asset_uuid=asset.uuid, kenmerk_uuid=kenmerk_uuid)
+        return self.update_kenmerk_by_uuid(
+            asset_uuid=asset.uuid,
+            kenmerk_uuid=kenmerk_uuid,
+            request_body=request_body,
+        )
 
     def get_kenmerken_by_uuid(self, asset_uuid: str, naam: KenmerkTypeEnum = None) -> list[KenmerkType] | KenmerkType | None:
         """
