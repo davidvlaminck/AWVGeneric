@@ -3,8 +3,8 @@ import logging
 from datetime import datetime
 import re
 
-from API.EMInfraDomain import OperatorEnum, AssetDTO
-from API.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraDomain import OperatorEnum, AssetDTO
+from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path

@@ -1,12 +1,7 @@
-import logging
-from collections.abc import Generator
-from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import AssetDTO
+from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path
-from otlmow_model.OtlmowModel.Classes.ImplementatieElement.RelatieObject import RelatieObject
-from otlmow_model.OtlmowModel.Helpers.RelationCreator import create_betrokkenerelation
 from otlmow_converter.OtlmowConverter import OtlmowConverter
 from UseCases.utils import load_settings
 from UseCases.utils import build_betrokkenerelatie, get_bestaande_betrokkenerelaties

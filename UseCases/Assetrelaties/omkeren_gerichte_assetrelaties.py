@@ -1,8 +1,8 @@
 import logging
 
-from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import (RelatieEnum, OperatorEnum, PagingModeEnum, SelectionDTO, QueryDTO, ExpressionDTO,
-                               TermDTO, LogicalOpEnum)
+from API.eminfra.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraDomain import (RelatieEnum, OperatorEnum, PagingModeEnum, SelectionDTO, QueryDTO, ExpressionDTO,
+                                       TermDTO, LogicalOpEnum)
 from API.Enums import AuthType, Environment
 
 from UseCases.utils import load_settings, configure_logger

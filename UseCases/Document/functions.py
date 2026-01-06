@@ -5,7 +5,7 @@ from datetime import datetime
 import pandas as pd
 import re
 
-from API.EMInfraDomain import DocumentCategorieEnum, QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, \
+from API.eminfra.EMInfraDomain import DocumentCategorieEnum, QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, \
     OperatorEnum, ExpansionsDTO, construct_naampad, LogicalOpEnum, ApplicationEnum, ProvincieEnum
 from API.Enums import Environment
 from pathlib import Path
@@ -17,7 +17,7 @@ def download_documents(eminfra_client, edelta_dossiernummer: str, document_categ
     Downloading documents from EM-Infra based on the criteria:
         edelta_dossiernummer, document_categorien, toezichter (optional), provincie (optional)
 
-    :param eminfra_client: EMInfraClient Client voor de authenticatie met EM-Infra
+    :param eminfra_client: eminfra Client voor de authenticatie met EM-Infra
     :param edelta_dossiernummer: str Dossiernummer
     :param document_categorie: [DocumentCategorieEnum] Lijst van Document categoriën
     :param toezichter: str Naam van de toezichter
@@ -112,7 +112,7 @@ def download_documents(eminfra_client, edelta_dossiernummer: str, document_categ
                 print(f"Processed {i} assets in {elapsed.total_seconds():.2f} seconds")
 
             # locatiekenmerk
-            locatiekenmerk = eminfra_client.get_kenmerk_locatie_by_asset_uuid(asset.uuid)
+            locatiekenmerk = eminfra_client.get_locatie(asset.uuid)
             if locatiekenmerk.locatie.get('adres'):  # Skip when locatiekenmerk.locatie is None
                 locatie_adres = locatiekenmerk.locatie.get('adres')
                 locatie_gemeente = locatie_adres.get('gemeente')

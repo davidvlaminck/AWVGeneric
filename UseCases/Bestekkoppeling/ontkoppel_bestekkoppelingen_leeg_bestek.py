@@ -1,10 +1,9 @@
 import os
 import pandas as pd
 
-from datetime import datetime
 from pathlib import Path
 
-from API.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 
 
@@ -23,7 +22,8 @@ if __name__ == '__main__':
         asset_uuid = asset.uuid
         print(f'Asset uuid: {asset_uuid}')
 
-        bestekkoppelingen = eminfra_client.get_bestekkoppelingen_by_asset_uuid(asset_uuid=asset_uuid)
+        myAsset = eminfra_client.assets.get_asset_by_uuid(asset_uuid=asset_uuid)
+        bestekkoppelingen = eminfra_client.bestek_service.get_bestekkoppeling(asset=myAsset)
 
         # Hoeveel bestekkoppelingen zijn er aanwezig? Meer dan 1.
         if len(bestekkoppelingen) <= 1:

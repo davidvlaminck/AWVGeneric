@@ -1,7 +1,7 @@
 from prettytable import PrettyTable
 
-from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum, \
+from API.eminfra.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraDomain import QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum, \
     LogicalOpEnum, ExpansionsDTO, construct_naampad
 from API.Enums import AuthType, Environment
 

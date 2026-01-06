@@ -3,10 +3,10 @@ import logging
 from datetime import datetime
 import re
 
-from API.EMInfraDomain import OperatorEnum, BoomstructuurAssetTypeEnum, \
+from API.eminfra.EMInfraDomain import OperatorEnum, BoomstructuurAssetTypeEnum, \
     AssetDTOToestand, QueryDTO, PagingModeEnum, ExpansionsDTO, SelectionDTO, TermDTO, ExpressionDTO, LogicalOpEnum, \
     AssetDTO, EigenschapValueUpdateDTO, RelatieEnum
-from API.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path
@@ -276,7 +276,7 @@ class BypassProcessor:
     # Helper function for lookups
     def _search_parent_asset_by_uuid(self, uuid: str):
         if uuid:
-            return next(self.eminfra_client.search_asset_by_uuid(asset_uuid=uuid), None)
+            return self.eminfra_client.asset_service.get_asset_by_uuid(asset_uuid=uuid)
         return None
 
     def _search_parent_beheerobject_by_uuid(self, uuid: str):

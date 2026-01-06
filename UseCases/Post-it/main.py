@@ -1,7 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 
-from API.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 
 

@@ -6,7 +6,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from API.AbstractRequester import AbstractRequester
-from API.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraClient import EMInfraClient
 from API.EMSONClient import EMSONClient
 from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory

@@ -38,8 +38,8 @@ if __name__ == '__main__':
                ('d', 'level', -1),
                ('e', 'level', 1)]
 
-    chosen_assets = syncer.em_infra_client.get_assets_by_filter(filter={
-        'typeUri': 'https://wegenenverkeer.data.vlaanderen.be/ns/installatie#MIVModule', 'naam' : 'MIV231'})
+    chosen_assets = syncer.em_infra_client.get_assets_by_filter_gen(filter={
+        'typeUri': 'https://wegenenverkeer.data.vlaanderen.be/ns/installatie#MIVModule', 'naam': 'MIV231'})
     l = (list(chosen_assets))
     asset_uuids = [x['@id'][39:75] for x in l]
     syncer.collect_info_given_asset_uuids(asset_uuids=asset_uuids,

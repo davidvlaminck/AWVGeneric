@@ -1,7 +1,7 @@
 import logging
 import json
 
-from API.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 import pandas as pd
 
@@ -16,7 +16,7 @@ def map_agent(name):
 
 if __name__ == '__main__':
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s', filemode="w")
-    logging.info('Update (vervang) heeftbetrokkenerelatie van bepaalde agents met de waarde van een mapping dictionary')
+    logging.info('Update (vervang) heeftbetrokkenerelatie van bepaalde agents_service met de waarde van een mapping dictionary')
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
 
     filepath = '[RSA] Asset (OTL) heeft een inactieve toezichter.xlsx'

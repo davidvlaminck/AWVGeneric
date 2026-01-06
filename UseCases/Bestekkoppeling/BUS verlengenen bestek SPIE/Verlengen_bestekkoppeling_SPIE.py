@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import QueryDTO, BestekCategorieEnum, BestekKoppelingStatusEnum, BestekRef
+from API.eminfra.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraDomain import QueryDTO, BestekCategorieEnum, BestekKoppelingStatusEnum, BestekRef
 from API.Enums import AuthType, Environment
 from UseCases.utils import configure_logger, load_settings
 from utils.date_helpers import format_datetime

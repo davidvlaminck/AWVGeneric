@@ -1,6 +1,6 @@
 from datetime import datetime
-from API.EMInfraDomain import KenmerkTypeEnum
-from API.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraDomain import KenmerkTypeEnum
+from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path
@@ -42,17 +42,15 @@ if __name__ == '__main__':
     bevestiging_relaties = []
     for idx, asset in df_assets.iterrows():
         # Get kenmerken
-        kenmerken = eminfra_client.get_kenmerken(assetId=asset.get("uuid_PT-verwerkingseenheid"))
-        kenmerk_bevestiging = eminfra_client.get_kenmerken(assetId=asset.get("uuid_PT-verwerkingseenheid"),
-                                                           naam=KenmerkTypeEnum.BEVESTIGD_AAN)
+        kenmerken = eminfra_client.kenmerk_service.get_kenmerken(assetId=asset.get("uuid_PT-verwerkingseenheid"))
+        kenmerk_bevestiging = eminfra_client.kenmerk_service.get_kenmerken(assetId=asset.get("uuid_PT-verwerkingseenheid"),
+                                                                           naam=KenmerkTypeEnum.BEVESTIGD_AAN)
 
         # Query asset
         relatieTypeId = '3ff9bf1c-d852-442e-a044-6200fe064b20'
-        bestaande_relaties = eminfra_client.search_relaties(
-            assetId=asset.get("uuid_PT-verwerkingseenheid")
-            , kenmerkTypeId=kenmerk_bevestiging.type.get("uuid")
-            , relatieTypeId=relatieTypeId
-        )
+        bestaande_relaties = eminfra_client.relatie_service.search_relaties_generator(
+            asset_uuid=asset.get("uuid_PT-verwerkingseenheid"), kenmerktype_id=kenmerk_bevestiging.type.get("uuid"),
+            relatietype_id=relatieTypeId)
 
         # Query asset-relaties. Als de relatie al bestaat, continue
         if next(bestaande_relaties, None):

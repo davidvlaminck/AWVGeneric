@@ -4,11 +4,11 @@ from typing import Any
 import pandas as pd
 from pathlib import Path
 
-from API.EMInfraDomain import AssetDTO, QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum, \
-    AgentDTO, LogicalOpEnum, ExpansionsDTO, RelatieEnum, AssetRelatieDTO
+from API.eminfra.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraDomain import (AssetDTO, QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO,
+                                       OperatorEnum, AgentDTO, LogicalOpEnum, ExpansionsDTO, RelatieEnum,
+                                       AssetRelatieDTO)
 from collections.abc import Generator
-from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import AssetDTO
 from otlmow_model.OtlmowModel.Classes.ImplementatieElement.RelatieObject import RelatieObject
 from otlmow_model.OtlmowModel.Helpers.RelationCreator import create_betrokkenerelation
 
@@ -108,7 +108,7 @@ def get_bestaande_betrokkenerelaties(client: EMInfraClient, asset: AssetDTO, rol
 
 def build_betrokkenerelatie(client: EMInfraClient, source: AssetDTO, agent_naam :str, rol: str) -> RelatieObject | None:
     generator_agents = client.get_objects_from_oslo_search_endpoint(
-        url_part='agents'
+        url_part='agents_service'
         , filter_dict={"naam": agent_naam})
     agents = list(generator_agents)
     if len(agents) != 1:

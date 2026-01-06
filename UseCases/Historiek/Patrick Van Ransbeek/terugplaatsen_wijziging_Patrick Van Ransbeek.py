@@ -4,7 +4,7 @@ from openpyxl import load_workbook
 
 import pandas as pd
 
-from API.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 
 from UseCases.utils import load_settings

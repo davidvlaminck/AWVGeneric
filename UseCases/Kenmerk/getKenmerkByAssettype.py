@@ -35,7 +35,7 @@ if __name__ == '__main__':
         writer.writeheader()
 
         for assettype_uuid in assettypes:
-            kenmerktypes = rest_client.get_kenmerken_by_assettype_uuid(assettype_uuid=assettype_uuid)
+            kenmerktypes = rest_client.get_kenmerktype_by_uuid()
             eig_kenmerk = find_eig_kenmerk(kenmerktypes)
             eigenschappen = rest_client.get_eigenschappen_by_kenmerk_uuid(kenmerk_uuid=eig_kenmerk['kenmerkType']['uuid'])
             for e in eigenschappen:

@@ -2,7 +2,7 @@ import logging
 
 from more_itertools import batched
 
-from API.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraClient import EMInfraClient
 from API.EMSONClient import EMSONClient
 from API.Enums import AuthType, Environment
 from UseCases.PatternCollection.Domain.AssetInfoCollector import AssetInfoCollector

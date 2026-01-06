@@ -5,8 +5,8 @@ from datetime import datetime
 
 from pathlib import Path
 
-from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import BestekKoppelingStatusEnum
+from API.eminfra.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraDomain import BestekKoppelingStatusEnum
 from API.Enums import AuthType, Environment
 
 
@@ -25,7 +25,7 @@ def collect_child_assets(asset_uuid, eminfra_client, all_assets=None, all_uuids=
     if all_uuids is None:
         all_uuids = []
 
-    child_assets = eminfra_client.search_child_assets(asset_uuid=asset_uuid)
+    child_assets = eminfra_client.search_child_assets_generator()
 
     for child_asset in child_assets:
         all_assets.append(child_asset)

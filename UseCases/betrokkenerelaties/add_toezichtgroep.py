@@ -1,6 +1,5 @@
 import logging
-from API.EMInfraClient import EMInfraClient
-from API.EMInfraDomain import AssetDTO
+from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path

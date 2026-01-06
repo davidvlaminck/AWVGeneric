@@ -1,4 +1,4 @@
-from API.EMInfraDomain import ExpressionDTO, TermDTO, QueryDTO, PagingModeEnum, SelectionDTO, OperatorEnum, \
+from API.eminfra.EMInfraDomain import ExpressionDTO, TermDTO, QueryDTO, PagingModeEnum, SelectionDTO, OperatorEnum, \
     LogicalOpEnum
 from utils.date_helpers import format_datetime
 

@@ -37,7 +37,7 @@ if __name__ == '__main__':
                ('r1', 'type_of', ['onderdeel#Bevestiging']),
                ('r2', 'type_of', ['onderdeel#Sturing'])
                ]
-    chosen_assets = syncer.em_infra_client.get_assets_by_filter(filter=filter_dict)
+    chosen_assets = syncer.em_infra_client.get_assets_by_filter_gen(filter=filter_dict)
 
     syncer.collect_info_given_asset_uuids(asset_uuids=[x['@id'][39:75] for x in chosen_assets],
                                           asset_info_collector=syncer.collector, pattern=pattern)

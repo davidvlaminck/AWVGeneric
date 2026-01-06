@@ -3,7 +3,7 @@ from datetime import datetime
 import pandas as pd
 from pathlib import Path
 
-from API.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 
 
@@ -13,9 +13,9 @@ if __name__ == '__main__':
     settings_path = Path.home() / 'OneDrive - Nordend' / 'projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
     eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=settings_path)
 
-    generator_agents = eminfra_client.search_agent(naam='John Cleese')
+    generator_agents = eminfra_client.agent_service.search_agent(naam='John Cleese')
     agents = list(generator_agents) # convert generator to a list
-    print(f"Found a total of:\t{len(agents)} agents.")
+    print(f"Found a total of:\t{len(agents)} agents_service.")
 
     # Convert the list to a dictionary
     agents_dict = {

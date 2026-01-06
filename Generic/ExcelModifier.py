@@ -4,7 +4,7 @@ from openpyxl import load_workbook
 from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
 
-from API.EMInfraDomain import ApplicationEnum
+from API.eminfra.EMInfraDomain import ApplicationEnum
 from API.Enums import Environment
 
 
