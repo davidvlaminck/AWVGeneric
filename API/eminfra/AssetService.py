@@ -306,7 +306,7 @@ class AssetService:
         :type relatie: RelatieEnum
         :return: dict
         """
-        kenmerkTypeId, relatieTypeId = RelatieService.get_kenmerktype_and_relatietype_id(relatie=relatie)
+        kenmerkTypeId, relatieTypeId = RelatieService.get_kenmerktype_and_relatietype_id(relatie)
         url = f'core/api/assets/{asset_uuid}/kenmerken/{kenmerkTypeId}/assets-via/{relatieTypeId}/nieuw'
         request_body = {"naam": naam, "typeUuid": assettype.uuid}
         response = self.requester.post(url=url, json=request_body)
