@@ -5,7 +5,6 @@ from API.eminfra.EMInfraDomain import (Eigenschap, PagingModeEnum, SelectionDTO,
                                        OperatorEnum, LogicalOpEnum, EigenschapValueDTO, EigenschapValueUpdateDTO,
                                        KenmerkTypeEnum, AssetDTO)
 from API.eminfra.KenmerkService import KenmerkService
-from UseCases.Kenmerk.AddKenmerkOnAssettypeFromReport import kenmerktype
 
 
 class EigenschapService:
@@ -25,7 +24,7 @@ class EigenschapService:
             if from_ >= dto_list_total:
                 break
 
-    def search_eigenschappen(self, eigenschap_naam: str, uri: str = None) -> [Eigenschap]:
+    def search_eigenschappen(self, eigenschap_naam: str, uri: str = None) -> list[Eigenschap]:
         """
         Search Eigenschap with "eigenschap_naam" (mandatory) and "uri" (optional) parameters.
         The optional parameter "uri" results in one single list item Eigenschap.
@@ -98,7 +97,7 @@ class EigenschapService:
         """
         return self.update_eigenschap_by_uuid(asset_uuid=asset.uuid, eigenschap=eigenschap)
 
-    def list_eigenschap(self, kenmerktype_id: str) -> [Eigenschap]:
+    def list_eigenschap(self, kenmerktype_id: str) -> list[Eigenschap]:
         url = f"core/api/kenmerktypes/{kenmerktype_id}/eigenschappen"
         json_dict = self.requester.get(url).json()
         return [Eigenschap.from_dict(item) for item in json_dict['data']]
@@ -121,7 +120,7 @@ class EigenschapService:
         return eigenschappen
 
 
-    def search_eigenschapwaarden(self, asset_uuid: str) -> [EigenschapValueDTO]:
+    def search_eigenschapwaarden(self, asset_uuid: str) -> list[EigenschapValueDTO]:
         url = f'core/api/assets/{asset_uuid}/kenmerken/cef6a3c0-fd1b-48c3-8ee0-f723e55dd02b/eigenschapwaarden'
         response = self.requester.post(url=url)
         if response.status_code != 200:
