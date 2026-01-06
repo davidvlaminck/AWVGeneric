@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Generator
 
 from API.eminfra.EMInfraDomain import (PostitDTO, QueryDTO, PagingModeEnum, SelectionDTO, OperatorEnum,
-                                       LogicalOpEnum, AssetDTO)
+                                       LogicalOpEnum)
 from utils.date_helpers import validate_dates, format_datetime
 from utils.query_dto_helpers import add_expression
 
