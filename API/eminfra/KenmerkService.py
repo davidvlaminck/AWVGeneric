@@ -54,7 +54,6 @@ class KenmerkService:
         return next(KenmerkTypeDTO.from_dict(item) for item in response.json()['data'])
 
     def add_kenmerk_to_assettype(self, assettype_uuid: str, kenmerktype_uuid: str) -> None:
-
         add_dto = AssetTypeKenmerkTypeAddDTO(kenmerkType=ResourceRefDTO(uuid=kenmerktype_uuid))
         response = self.requester.post(f'core/api/assettypes/{assettype_uuid}/kenmerktypes', data=add_dto.json())
         if response.status_code != 202:
@@ -92,11 +91,7 @@ class KenmerkService:
         :return: None
         :rtype:
         """
-        return self.update_kenmerk_by_uuid(
-            asset_uuid=asset.uuid,
-            kenmerk_uuid=kenmerk_uuid,
-            request_body=request_body,
-        )
+        return self.update_kenmerk_by_uuid(asset_uuid=asset.uuid, kenmerk_uuid=kenmerk_uuid, request_body=request_body)
 
     def get_kenmerken_by_uuid(self, asset_uuid: str, naam: KenmerkTypeEnum = None) -> list[KenmerkType] | KenmerkType | None:
         """
