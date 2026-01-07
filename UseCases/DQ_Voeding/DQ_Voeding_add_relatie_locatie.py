@@ -62,7 +62,7 @@ def process_relatie_locatie(client: EMInfraClient, df: pd.DataFrame, assettype: 
     :param relatie: Relatie
     :type relatie: RelatieEnum
     :param set_afgeleide_locatie: Leid de locatie af via de relatie
-    :type relatie: bool
+    :type set_afgeleide_locatie: bool
     :return: None
     """
     for _, df_row in df.iterrows():
