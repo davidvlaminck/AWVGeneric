@@ -1,5 +1,5 @@
 import logging
-from typing import Generator
+from collections.abc import Generator
 
 from API.eminfra.EMInfraDomain import (Eigenschap, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, QueryDTO,
                                        OperatorEnum, LogicalOpEnum, EigenschapValueDTO, EigenschapValueUpdateDTO,

@@ -93,7 +93,8 @@ class KenmerkService:
         """
         return self.update_kenmerk_by_uuid(asset_uuid=asset.uuid, kenmerk_uuid=kenmerk_uuid, request_body=request_body)
 
-    def get_kenmerken_by_uuid(self, asset_uuid: str, naam: KenmerkTypeEnum = None) -> list[KenmerkType] | KenmerkType | None:
+    def get_kenmerken_by_uuid(self, asset_uuid: str, naam: KenmerkTypeEnum = None) \
+            -> list[KenmerkType] | KenmerkType | None:
         """
         Oplijsten van een specifiek of alle kenmerken van een asset
 
@@ -114,12 +115,13 @@ class KenmerkService:
             all_kenmerken = [item for item in all_kenmerken if item.type.get("naam").startswith(naam.value)][0]
         return all_kenmerken
 
-    def get_kenmerken(self, asset: AssetDTO, naam: KenmerkTypeEnum = None) -> list[KenmerkType] | KenmerkType:
+    def get_kenmerken(self, asset: AssetDTO, naam: KenmerkTypeEnum = None) \
+            -> list[KenmerkType] | KenmerkType | None:
         """
         Oplijsten van een specifiek of alle kenmerken van een asset
 
-        :param asset_uuid: Asset uuid
-        :type asset_uuid: str
+        :param asset: Asset
+        :type asset: AssetDTO
         :param naam: Kenmerk naam. Optioneel.
         :type naam: KenmerkTypeEnum
         :return: [KenmerkType]
@@ -127,5 +129,5 @@ class KenmerkService:
         """
         return self.get_kenmerken_by_uuid(asset_uuid=asset.uuid, naam=naam)
 
-    def get_kenmerk_hoortbij_by_uuid(self, asset_uuid: str) -> [KenmerkType] | None:
+    def get_kenmerk_hoortbij_by_uuid(self, asset_uuid: str) -> list[KenmerkType] | KenmerkType | None:
         return self.get_kenmerken_by_uuid(asset_uuid=asset_uuid, naam=KenmerkTypeEnum.HEEFTBIJHORENDEASSETS)

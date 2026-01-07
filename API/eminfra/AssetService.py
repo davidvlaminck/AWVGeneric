@@ -1,9 +1,9 @@
 import json
-from typing import Generator
+from collections.abc import Generator
 from API.eminfra.EMInfraDomain import (AssetDTO, AssetDTOToestand, QueryDTO, ExpressionDTO, TermDTO, OperatorEnum,
-                                       LogicalOpEnum, ExpansionsDTO, SelectionDTO, PagingModeEnum, AssettypeDTO, RelatieEnum,
-                                       BoomstructuurAssetTypeEnum)
-from API.eminfra.RelatieService import RelatieService
+                                       LogicalOpEnum, ExpansionsDTO, SelectionDTO, PagingModeEnum, AssettypeDTO,
+                                       RelatieEnum, BoomstructuurAssetTypeEnum)
+from API.eminfra.Generic import get_kenmerktype_and_relatietype_id
 
 
 class AssetService:
@@ -46,15 +46,15 @@ class AssetService:
         if commentaar:
             json_body["commentaar"] = commentaar
         response = self.requester.put(
-            url=f'core/api/assets/{asset.uuid}'
-            , json=json_body
+            url=f'core/api/assets/{asset.uuid}',
+            json=json_body
         )
         if response.status_code != 202:
             raise ProcessLookupError(response.content.decode("utf-8"))
         return response.json()
 
-    def update_asset_by_uuid(self, asset_uuid: str, naam: str = None, actief: bool = None, toestand: AssetDTOToestand = None,
-                     commentaar: str = None) -> dict:
+    def update_asset_by_uuid(self, asset_uuid: str, naam: str = None, actief: bool = None,
+                             toestand: AssetDTOToestand = None, commentaar: str = None) -> dict:
         asset = self.get_asset_by_uuid(asset_uuid=asset_uuid)
         return self._update_asset(asset=asset, naam=naam, actief=actief, toestand=toestand, commentaar=commentaar)
 
@@ -62,7 +62,8 @@ class AssetService:
                      commentaar: str = None) -> dict:
         return self._update_asset(asset=asset, naam=naam, actief=actief, toestand=toestand, commentaar=commentaar)
 
-    def update_toestand_by_uuid(self, asset_uuid: str, toestand: AssetDTOToestand = AssetDTOToestand.IN_ONTWERP) -> dict:
+    def update_toestand_by_uuid(self, asset_uuid: str, toestand: AssetDTOToestand = AssetDTOToestand.IN_ONTWERP) \
+            -> dict:
         """
         Update toestand of an asset.
 
@@ -92,7 +93,7 @@ class AssetService:
         Update commentaar of an asset.
 
         :param asset_uuid: Asset uuid
-        :type asset: str
+        :type asset_uuid: str
         :param commentaar: nieuwe commentaar
         :type commentaar: str
         :return:
@@ -153,8 +154,7 @@ class AssetService:
                     terms=[TermDTO(property='actief',
                                    operator=OperatorEnum.EQ,
                                    value=actief)
-                           ]
-                    , logicalOp=LogicalOpEnum.AND)
+                           ], logicalOp=LogicalOpEnum.AND)
             )
         yield from self._search_assets_helper_generator(query_dto)
 
@@ -180,7 +180,8 @@ class AssetService:
                                      ])]))
         yield from self._search_assets_helper_generator(query_dto)
 
-    def search_child_assets_by_uuid_generator(self, asset_uuid: str, recursive: bool = False) -> Generator[AssetDTO] | None:
+    def search_child_assets_by_uuid_generator(self, asset_uuid: str, recursive: bool = False) \
+            -> Generator[AssetDTO] | None:
         """
         Zoek actieve child-assets in een boomstructuur uit EM-infra.
 
@@ -224,7 +225,7 @@ class AssetService:
         return self.search_child_assets_by_uuid_generator(asset_uuid=asset.uuid, recursive=recursive)
 
     def search_parent_asset_by_uuid(self, asset_uuid: str, recursive: bool = False,
-                            return_all_parents: bool = False) -> AssetDTO | list[AssetDTO] | None:
+                                    return_all_parents: bool = False) -> AssetDTO | list[AssetDTO] | None:
         """
         Search for the parent asset(s) of a given asset UUID.
 
@@ -237,12 +238,11 @@ class AssetService:
         :return: AssetDTO | list[AssetDTO] | None
         """
         query_dto = QueryDTO(size=1, from_=0, pagingMode=PagingModeEnum.OFFSET,
-                             expansions=ExpansionsDTO(fields=['parent']), selection=SelectionDTO(
-                            expressions=[ExpressionDTO( terms=[
-                                    TermDTO(property='id', operator=OperatorEnum.EQ, value=asset_uuid)
-                                ])
-                            ])
-                        )
+                             expansions=ExpansionsDTO(fields=['parent']),
+                             selection=SelectionDTO(expressions=[ExpressionDTO(terms=[
+                                 TermDTO(property='id', operator=OperatorEnum.EQ, value=asset_uuid)
+                             ])
+                             ]))
         url = "core/api/assets/search"
         json_dict = self.requester.post(url, data=query_dto.json()).json()
 
@@ -263,18 +263,15 @@ class AssetService:
 
         # Recursive case
         parents = [parent_asset]
-        next_parent = self.search_parent_asset(parent_asset, recursive=True, return_all_parents=True)
-
-        if next_parent:
+        if next_parent := self.search_parent_asset(
+                parent_asset, recursive=True, return_all_parents=True
+        ):
             if isinstance(next_parent, list):
                 parents.extend(next_parent)
             else:
                 parents.append(next_parent)
 
-        if return_all_parents:
-            return parents
-        else:
-            return parents[-1]  # Return only the last parent (the top-most one)
+        return parents if return_all_parents else parents[-1]
 
     def search_parent_asset(self, asset: AssetDTO, recursive: bool = False,
                             return_all_parents: bool = False) -> AssetDTO | list[AssetDTO] | None:
@@ -292,7 +289,8 @@ class AssetService:
         return self.search_parent_asset_by_uuid(asset_uuid=asset.uuid, recursive=recursive,
                                                 return_all_parents=return_all_parents)
 
-    def create_asset_by_uuid_and_relatie(self, asset_uuid: str, naam: str, assettype: AssettypeDTO, relatie: RelatieEnum) -> dict:
+    def create_asset_by_uuid_and_relatie(self, asset_uuid: str, naam: str, assettype: AssettypeDTO,
+                                         relatie: RelatieEnum) -> dict:
         """
         Maakt zowel een nieuwe asset en tevens een relatie aan vanuit een bestaande asset.
 
@@ -306,16 +304,16 @@ class AssetService:
         :type relatie: RelatieEnum
         :return: dict
         """
-        kenmerkTypeId, relatieTypeId = RelatieService.get_kenmerktype_and_relatietype_id(relatie)
-        url = f'core/api/assets/{asset_uuid}/kenmerken/{kenmerkTypeId}/assets-via/{relatieTypeId}/nieuw'
+        kenmerktype_id, relatietype_id = get_kenmerktype_and_relatietype_id(relatie)
+        url = f'core/api/assets/{asset_uuid}/kenmerken/{kenmerktype_id}/assets-via/{relatietype_id}/nieuw'
         request_body = {"naam": naam, "typeUuid": assettype.uuid}
         response = self.requester.post(url=url, json=request_body)
         if response.status_code != 202:
             raise ProcessLookupError(response.content.decode("utf-8"))
         return response.json()
 
-
-    def create_asset_and_relatie(self, asset: AssetDTO, naam: str, assettype: AssettypeDTO, relatie: RelatieEnum) -> dict:
+    def create_asset_and_relatie(self, asset: AssetDTO, naam: str, assettype: AssettypeDTO, relatie: RelatieEnum) \
+            -> dict:
         """
         Maakt zowel een nieuwe asset en tevens een relatie aan vanuit een bestaande asset.
 
@@ -329,11 +327,12 @@ class AssetService:
         :type relatie: RelatieEnum
         :return: dict
         """
-        return self.create_asset_by_uuid_and_relatie(asset_uuid=asset.uuid, naam=naam, assettype=assettype, relatie=relatie)
-
+        return self.create_asset_by_uuid_and_relatie(asset_uuid=asset.uuid, naam=naam, assettype=assettype,
+                                                     relatie=relatie)
 
     def create_asset_by_uuid(self, parent_asset_uuid: str, naam: str, assettype: AssettypeDTO,
-                     parent_assettype: BoomstructuurAssetTypeEnum = BoomstructuurAssetTypeEnum.ASSET) -> dict | None:
+                             parent_assettype: BoomstructuurAssetTypeEnum = BoomstructuurAssetTypeEnum.ASSET) \
+            -> dict | None:
         """
         Maak een nieuwe asset aan op een specifieke plaats in de boomstructuur van EM-Infra
 
@@ -391,8 +390,8 @@ class AssetService:
         yield from self.get_objects_from_oslo_search_endpoint_gen(url_part='assets', filter_dict=filter, size=size)
 
     def get_objects_from_oslo_search_endpoint_gen(self, url_part: str,
-                                              filter_dict: dict = '{}', size: int = 100,
-                                              expansions_fields: [str] = None) -> Generator:
+                                                  filter_dict: dict = '{}', size: int = 100,
+                                                  expansions_fields: [str] = None) -> Generator:
         """Returns Generator objects for each OSLO endpoint
 
         :param url_part: keyword to complete the url

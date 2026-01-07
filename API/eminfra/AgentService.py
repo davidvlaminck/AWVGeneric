@@ -1,4 +1,4 @@
-from typing import Generator
+from collections.abc import Generator
 from API.eminfra.EMInfraDomain import (QueryDTO, ExpressionDTO, TermDTO, OperatorEnum, LogicalOpEnum, SelectionDTO,
                                        PagingModeEnum, AgentDTO)
 
@@ -7,13 +7,13 @@ class AgentService:
     def __init__(self, requester):
         self.requester = requester
 
-    def search_agent(self, naam: str, ovoCode: str = None, actief: bool = True) -> Generator[AgentDTO]:
+    def search_agent(self, naam: str, ovocode: str = None, actief: bool = True) -> Generator[AgentDTO]:
         """
 
         :param naam: agent name
         :type naam: str
-        :param ovoCode:
-        :type ovoCode: str
+        :param ovocode:
+        :type ovocode: str
         :param actief:
         :type actief: bool
         :return: Generator[AgentDTO]
@@ -30,9 +30,9 @@ class AgentService:
                 ]
             )
         )
-        if ovoCode:
+        if ovocode:
             query_dto.selection.expressions.append(
-                ExpressionDTO(terms=[TermDTO(property='ovoCode', operator=OperatorEnum.EQ, value=ovoCode)]
+                ExpressionDTO(terms=[TermDTO(property='ovoCode', operator=OperatorEnum.EQ, value=ovocode)]
                               , logicalOp=LogicalOpEnum.AND)
             )
         if actief is not None:

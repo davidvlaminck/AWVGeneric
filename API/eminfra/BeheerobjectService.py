@@ -1,7 +1,7 @@
-from API.eminfra.EMInfraDomain import (BeheerobjectDTO, BeheerobjectTypeDTO, OperatorEnum, Generator, PagingModeEnum,
+from collections.abc import Generator
+from API.eminfra.EMInfraDomain import (BeheerobjectDTO, BeheerobjectTypeDTO, OperatorEnum, PagingModeEnum,
                                        QueryDTO, SelectionDTO, ExpressionDTO, TermDTO, LogicalOpEnum, AssetDTO,
                                        BoomstructuurAssetTypeEnum)
-
 
 class BeheerobjectService:
     def __init__(self, requester):

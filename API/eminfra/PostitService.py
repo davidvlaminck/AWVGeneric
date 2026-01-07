@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import Generator
+from collections.abc import Generator
 
 from API.eminfra.EMInfraDomain import (PostitDTO, QueryDTO, PagingModeEnum, SelectionDTO, OperatorEnum,
                                        LogicalOpEnum)

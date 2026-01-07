@@ -17,7 +17,7 @@ class SchadebeheerderService:
             return [SchadebeheerderKenmerk.from_dict(sb)]
         return None
 
-    def get_schadebeheerder_by_name(self, name: str) -> [SchadebeheerderKenmerk] | None:
+    def get_schadebeheerder_by_name(self, name: str) -> [SchadebeheerderKenmerk]:
         query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              selection=SelectionDTO(
                                  expressions=[
