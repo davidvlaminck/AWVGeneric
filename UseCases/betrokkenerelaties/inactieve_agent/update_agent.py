@@ -34,7 +34,7 @@ if __name__ == '__main__':
         logging.debug(f"Update agent: '{agent_current.naam}' to '{agent_new.naam}'.")
 
         logging.info('Zoek een specifieke betrokkenerelatie, deactiveer deze en voeg een nieuwe toe met dezelfde rol.')
-        query_betrokkenerelaties = build_query_search_betrokkenerelaties(bronAsset=asset)
+        query_betrokkenerelaties = build_query_search_betrokkenerelaties(bron_asset=asset)
         betrokkenerelaties = list(eminfra_client.search_betrokkenerelaties(query_dto=query_betrokkenerelaties))
 
         for betrokkenerelatie in betrokkenerelaties:

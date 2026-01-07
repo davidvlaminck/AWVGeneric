@@ -21,7 +21,7 @@ if __name__ == '__main__':
 
     for asset in iter(assets):
         logging.info(f'Zoek de betrokkenerelatie bij asset: {asset.uuid}.')
-        query_betrokkenerelatie = build_query_search_betrokkenerelaties(bronAsset=asset, agent=agent)
+        query_betrokkenerelatie = build_query_search_betrokkenerelaties(bron_asset=asset, agent=agent)
         if betrokkenerelatie := next(
             eminfra_client.search_betrokkenerelaties(
                 query_dto=query_betrokkenerelatie
