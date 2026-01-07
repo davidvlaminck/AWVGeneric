@@ -1,4 +1,5 @@
-from API.eminfra.EMInfraDomain import (AssettypeDTO, Generator, QueryDTO, PagingModeEnum, SelectionDTO, TermDTO,
+from collections.abc import Generator
+from API.eminfra.EMInfraDomain import (AssettypeDTO, QueryDTO, PagingModeEnum, SelectionDTO, TermDTO,
                                        ExpressionDTO, OperatorEnum)
 
 
