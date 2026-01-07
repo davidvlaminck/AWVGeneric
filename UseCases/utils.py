@@ -147,23 +147,20 @@ def create_relatie_if_missing(client: EMInfraClient, bron_asset: AssetDTO, doel_
     """
     logging.info(f'Create relatie {relatie.value} between {bron_asset.type.korteUri} ({bron_asset.uuid}) and '
                  f'{doel_asset.type.korteUri} ({doel_asset.uuid}).')
-    _, relatie_type_uuid = get_kenmerktype_and_relatietype_id(
-        relatie=relatie)
+    _, relatie_type_uuid = get_kenmerktype_and_relatietype_id(relatie=relatie)
     if relatie == RelatieEnum.BEVESTIGING:  # bidirectionele relaties
         relaties = client.relatie_service.search_assetrelaties(
-            type=relatie_type_uuid, bronAsset=bron_asset, doelAsset=doel_asset)
+            bron_asset_uuid=bron_asset.uuid, doel_asset_uuid=doel_asset.uuid, relatie=relatie)
         relaties += client.relatie_service.search_assetrelaties(
-            type=relatie_type_uuid, bronAsset=doel_asset, doelAsset=bron_asset)
+            bron_asset_uuid=doel_asset.uuid, doel_asset_uuid=bron_asset.uuid, relatie=relatie)
     else:
         relaties = client.relatie_service.search_assetrelaties(
-            type=relatie_type_uuid, bronAsset=bron_asset, doelAsset=doel_asset)
+            bron_asset_uuid=bron_asset.uuid, doel_asset_uuid=doel_asset.uuid, relatie=relatie)
     if len(relaties) > 1:
         raise ValueError(f'Found {len(relaties)}, expected 1')
     elif len(relaties) == 0:
         relatie = client.relatie_service.create_assetrelatie(
-            bronAsset=bron_asset,
-            doelAsset=doel_asset,
-            relatie=relatie)
+            bron_asset=bron_asset, doel_asset=doel_asset, relatie=relatie)
     elif len(relaties) == 1:
         relatie = relaties[0]
     else:
