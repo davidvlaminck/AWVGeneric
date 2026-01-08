@@ -39,7 +39,7 @@ def filter_assets(assets: list[AssetDTO], assettype: AssettypeDTO) -> [AssetDTO]
 
 
 def process_relatie_locatie(client: EMInfraClient, df: pd.DataFrame, assettype: AssettypeDTO,
-                            relatie: RelatieEnum, set_afgeleide_locatie: bool = True) -> None:
+                            relatie: RelatieEnum, doel_asset_is_parent: bool = True, set_afgeleide_locatie: bool = True) -> None:
     """
     Process a dataframe with assets.
 
@@ -49,6 +49,8 @@ def process_relatie_locatie(client: EMInfraClient, df: pd.DataFrame, assettype: 
     Voor iedere asset uit het dataframe worden alle assets uit die boomstructuur opgelijst.
     Vervolgens wordt gezocht naar het enige, unieke assettype uit die boomstructuur.
     Indien de relatie nog onbestaand is, wordt deze gelegd.
+    De relatie wordt gezocht met de rechtstreekse parent (doel_asset_is_parent=True),
+     of met elke asset uit de boomstructuur (doel_asset_is_parent=False).
     Zodra de relatie ligt, wordt de locatie afgeleid op basis van de locatie.
 
     Voorbeeld: LSDeel is Bevestigd aan een Kast. Vervolgens wordt de locatie afgeleid via de Bevestiging-relatie.
@@ -61,6 +63,8 @@ def process_relatie_locatie(client: EMInfraClient, df: pd.DataFrame, assettype: 
     :type assettype: AssettypeDTO
     :param relatie: Relatie
     :type relatie: RelatieEnum
+    :param doel_asset_is_parent: De doel asset waarnaar de relatie wordt gelegd is de rechtstreekse parent van de asset
+    :type doel_asset_is_parent: bool
     :param set_afgeleide_locatie: Leid de locatie af via de relatie
     :type set_afgeleide_locatie: bool
     :return: None
@@ -68,17 +72,20 @@ def process_relatie_locatie(client: EMInfraClient, df: pd.DataFrame, assettype: 
     for _, df_row in df.iterrows():
         asset_uuid = df_row["uuid"]
         asset = client.asset_service.get_asset_by_uuid(asset_uuid=asset_uuid)
-        parent_asset = client.asset_service.search_parent_asset(asset=asset, recursive=True, return_all_parents=False)
-        child_assets = list(client.asset_service.search_child_assets_generator(asset=parent_asset, recursive=True))
-        doel_assets = filter_assets(assets=child_assets, assettype=assettype)
+        logging.debug(f"Processing asset. assettype: {asset.type.korteUri}; uuid: {asset.uuid};"
+                      f" relatie: {relatie.value}; set_afgeleide_locatie: {set_afgeleide_locatie}")
+        if doel_asset_is_parent:
+            parent_asset = client.asset_service.search_parent_asset(asset=asset, recursive=False, return_all_parents=False)
+            doel_assets = [parent_asset]
+        else:
+            parent_asset = client.asset_service.search_parent_asset(asset=asset, recursive=True, return_all_parents=False)
+            doel_assets = list(client.asset_service.search_child_assets_generator(asset=parent_asset, recursive=True))
+        doel_assets = filter_assets(assets=doel_assets, assettype=assettype)
         if len(doel_assets) == 1:
             doel_asset = doel_assets[0]
             _ = create_relatie_if_missing(client=client, bron_asset=asset, doel_asset=doel_asset, relatie=relatie)
             if set_afgeleide_locatie:
                 client.locatie_service.update_locatie(bron_asset=asset, doel_asset=doel_asset)
-        # todo remove after development.
-        logging.debug("Only for debugging purposes.")
-        break
 
 
 if __name__ == '__main__':
@@ -95,7 +102,10 @@ if __name__ == '__main__':
     df_assets_voeding = read_rsa_report(filepath=input_filepath,
                                         usecols=['uuid', 'assettype', 'toestand', 'naampad', 'naam',
                                                  'opmerkingen (blijvend)'])
+    logging.debug('Filter assets op toestand: "in-gebruik", "in-ontwerp", "gepland"')
     df_assets_voeding = df_assets_voeding[df_assets_voeding["toestand"].isin(['in-gebruik', 'in-ontwerp', 'gepland'])]
+    logging.debug('Filter assets met een naampad')
+    df_assets_voeding = df_assets_voeding.dropna(subset=['naampad'])
 
     df_assets_ls = df_assets_voeding[df_assets_voeding["assettype"] == 'LS']
     df_assets_lsdeel = df_assets_voeding[df_assets_voeding["assettype"] == 'LSDeel']
@@ -110,23 +120,23 @@ if __name__ == '__main__':
     assettype_lsdeel = eminfra_client.assettype_service.get_assettype(assettype_uuid=ASSETTYPE_UUID_LSDEEL)
     assettype_hsdeel = eminfra_client.assettype_service.get_assettype(assettype_uuid=ASSETTYPE_UUID_HSDEEL)
 
-    # process_relatie_locatie(eminfra_client=eminfra_client, df=df_assets_ls, assettype=assettype_kast,
-    #                         relatie=RelatieEnum.BEVESTIGING, set_afgeleide_locatie=True)
-    # process_relatie_locatie(eminfra_client=eminfra_client, df=df_assets_lsdeel, assettype=assettype_kast,
-    #                         relatie=RelatieEnum.BEVESTIGING, set_afgeleide_locatie=True)
-    # process_relatie_locatie(eminfra_client=eminfra_client, df=df_assets_ls, assettype=assettype_lsdeel,
-    #                         relatie=RelatieEnum.VOEDT, set_afgeleide_locatie=False)
+    process_relatie_locatie(client=eminfra_client, df=df_assets_ls, assettype=assettype_kast,
+                            relatie=RelatieEnum.BEVESTIGING, doel_asset_is_parent=True, set_afgeleide_locatie=True)
+    process_relatie_locatie(client=eminfra_client, df=df_assets_lsdeel, assettype=assettype_kast,
+                            relatie=RelatieEnum.BEVESTIGING, doel_asset_is_parent=True, set_afgeleide_locatie=True)
+    process_relatie_locatie(client=eminfra_client, df=df_assets_ls, assettype=assettype_lsdeel,
+                            relatie=RelatieEnum.VOEDT, doel_asset_is_parent=False, set_afgeleide_locatie=False)
 
     process_relatie_locatie(client=eminfra_client, df=df_assets_hs, assettype=assettype_hscabine,
-                            relatie=RelatieEnum.BEVESTIGING, set_afgeleide_locatie=True)
+                            relatie=RelatieEnum.BEVESTIGING, doel_asset_is_parent=True, set_afgeleide_locatie=True)
     process_relatie_locatie(client=eminfra_client, df=df_assets_hsdeel, assettype=assettype_hscabine,
-                            relatie=RelatieEnum.BEVESTIGING, set_afgeleide_locatie=True)
+                            relatie=RelatieEnum.BEVESTIGING, doel_asset_is_parent=True, set_afgeleide_locatie=True)
     process_relatie_locatie(client=eminfra_client, df=df_assets_hs, assettype=assettype_hsdeel,
-                            relatie=RelatieEnum.VOEDT, set_afgeleide_locatie=False)
+                            relatie=RelatieEnum.VOEDT, doel_asset_is_parent=False, set_afgeleide_locatie=False)
     process_relatie_locatie(client=eminfra_client, df=df_assets_hsdeel, assettype=assettype_lsdeel,
-                            relatie=RelatieEnum.VOEDT, set_afgeleide_locatie=False)
+                            relatie=RelatieEnum.VOEDT, doel_asset_is_parent=False, set_afgeleide_locatie=False)
 
     process_relatie_locatie(client=eminfra_client, df=df_assets_segc, assettype=assettype_lsdeel,
-                            relatie=RelatieEnum.BEVESTIGING, set_afgeleide_locatie=True)
+                            relatie=RelatieEnum.BEVESTIGING, doel_asset_is_parent=False, set_afgeleide_locatie=True)
     process_relatie_locatie(client=eminfra_client, df=df_assets_ab, assettype=assettype_lsdeel,
-                            relatie=RelatieEnum.BEVESTIGING, set_afgeleide_locatie=True)
+                            relatie=RelatieEnum.BEVESTIGING, doel_asset_is_parent=False, set_afgeleide_locatie=True)
