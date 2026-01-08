@@ -145,8 +145,7 @@ def create_relatie_if_missing(client: EMInfraClient, bron_asset: AssetDTO, doel_
     :param relatie:
     :return:
     """
-    logging.info(f'Create relatie {relatie.value} between {bron_asset.type.korteUri} ({bron_asset.uuid}) and '
-                 f'{doel_asset.type.korteUri} ({doel_asset.uuid}).')
+    logging.info(f'Create relatie {relatie.value} between ({bron_asset.uuid}) and ({doel_asset.uuid}).')
     _, relatie_type_uuid = get_kenmerktype_and_relatietype_id(relatie=relatie)
     if relatie == RelatieEnum.BEVESTIGING:  # bidirectionele relaties
         relaties = client.relatie_service.search_assetrelaties(
