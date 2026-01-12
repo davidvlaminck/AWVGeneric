@@ -11,7 +11,7 @@ from UseCases.utils import configure_logger, load_settings
 from utils.date_helpers import format_datetime
 
 EINDDATUM = datetime(year=2027, month=1, day=5, hour=0, minute=0)
-OUTPUT_EXCEL_PATH = 'Verlengen_bestekkoppeling_eminfra_zone30.xlsx'
+OUTPUT_EXCEL_PATH = Path('Verlengen_bestekkoppeling_eminfra_zone30.xlsx')
 EDELTA_BESTEKNUMMER = 'MDM/19A03'
 
 
