@@ -2,8 +2,9 @@ import json
 from collections.abc import Generator
 from API.eminfra.EMInfraDomain import (AssetDTO, AssetDTOToestand, QueryDTO, ExpressionDTO, TermDTO, OperatorEnum,
                                        LogicalOpEnum, ExpansionsDTO, SelectionDTO, PagingModeEnum, AssettypeDTO,
-                                       RelatieEnum, BoomstructuurAssetTypeEnum)
+                                       RelatieEnum, BoomstructuurAssetTypeEnum, BeheerobjectDTO)
 from API.eminfra.Generic import get_kenmerktype_and_relatietype_id
+from API.eminfra.BeheerobjectService import BeheerobjectService
 
 
 class AssetService:
@@ -225,7 +226,7 @@ class AssetService:
         return self.search_child_assets_by_uuid_generator(asset_uuid=asset.uuid, recursive=recursive)
 
     def search_parent_asset_by_uuid(self, asset_uuid: str, recursive: bool = False,
-                                    return_all_parents: bool = False) -> AssetDTO | list[AssetDTO] | None:
+                                    return_all_parents: bool = False) -> AssetDTO | list[AssetDTO] | BeheerobjectDTO | None:
         """
         Search for the parent asset(s) of a given asset UUID.
 
@@ -235,7 +236,7 @@ class AssetService:
         :type recursive: bool
         :param return_all_parents: If True, return a list of all parents; if False, return only the final parent.
         :type return_all_parents: bool
-        :return: AssetDTO | list[AssetDTO] | None
+        :return: AssetDTO | list[AssetDTO] | BeheerobjectDTO | None
         """
         query_dto = QueryDTO(size=1, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              expansions=ExpansionsDTO(fields=['parent']),
@@ -255,7 +256,14 @@ class AssetService:
         if parent_data is None:
             return None  # No parent found
 
-        parent_asset = AssetDTO.from_dict(parent_data)
+        _parent_type = parent_data["_type"] # get type: asset or beheerobject.
+        parent_uuid = parent_data["uuid"]
+        if _parent_type in ('installatie', 'onderdeel'):
+            parent_asset = self.get_asset_by_uuid(asset_uuid=parent_uuid)
+        elif _parent_type == 'beheerobject':
+            parent_asset = BeheerobjectService.get_beheerobject(self, beheerobject_uuid=parent_uuid)
+        else:
+            raise ValueError('Could not retrieve property "_type" from parent Asset.')
 
         if not recursive:
             # Only return the immediate parent
@@ -274,7 +282,7 @@ class AssetService:
         return parents if return_all_parents else parents[-1]
 
     def search_parent_asset(self, asset: AssetDTO, recursive: bool = False,
-                            return_all_parents: bool = False) -> AssetDTO | list[AssetDTO] | None:
+                            return_all_parents: bool = False) -> AssetDTO | list[AssetDTO] | BeheerobjectDTO | None:
         """
         Search for the parent asset(s) of a given asset UUID.
 
@@ -284,7 +292,7 @@ class AssetService:
         :type recursive: bool
         :param return_all_parents: If True, return a list of all parents; if False, return only the final parent.
         :type return_all_parents: bool
-        :return: AssetDTO | list[AssetDTO] | None
+        :return: AssetDTO | list[AssetDTO] | BeheerobjectDTO | None
         """
         return self.search_parent_asset_by_uuid(asset_uuid=asset.uuid, recursive=recursive,
                                                 return_all_parents=return_all_parents)
