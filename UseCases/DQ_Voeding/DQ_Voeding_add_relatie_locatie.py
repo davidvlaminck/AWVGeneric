@@ -131,7 +131,6 @@ if __name__ == '__main__':
                             relatie=RelatieEnum.BEVESTIGING, doel_asset_is_parent=True, set_afgeleide_locatie=True)
     process_relatie_locatie(client=eminfra_client, df=df_assets_lsdeel, assettype=assettype_kast,
                             relatie=RelatieEnum.BEVESTIGING, doel_asset_is_parent=True, set_afgeleide_locatie=True)
-    # test dat hier alle doel-assets worden teruggegeven. parameter doel_asset_is_parent = False
     process_relatie_locatie(client=eminfra_client, df=df_assets_ls, assettype=assettype_lsdeel,
                             relatie=RelatieEnum.VOEDT, doel_asset_is_parent=False, set_afgeleide_locatie=False)
 
