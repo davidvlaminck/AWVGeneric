@@ -84,7 +84,7 @@ def process_relatie_locatie(client: EMInfraClient, df: pd.DataFrame, assettype: 
         else:
             parent_asset = client.asset_service.search_parent_asset(asset=asset, recursive=True, return_all_parents=False)
             doel_assets = list(client.asset_service.search_child_assets_generator(asset=parent_asset, recursive=True))
-        if all(type(a) == AssetDTO for a in doel_assets):
+        if all(isinstance(a, AssetDTO) for a in doel_assets):
             doel_assets = filter_assets(assets=doel_assets, assettype=assettype)
         else:
             doel_assets = []
