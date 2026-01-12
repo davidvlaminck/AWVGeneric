@@ -5,23 +5,33 @@ from datetime import datetime
 import pandas as pd
 import re
 
-from API.eminfra.EMInfraDomain import DocumentCategorieEnum, QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, \
-    OperatorEnum, ExpansionsDTO, construct_naampad, LogicalOpEnum, ApplicationEnum, ProvincieEnum
+from API.eminfra.EMInfraDomain import (DocumentCategorieEnum, QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO,
+                                       TermDTO, OperatorEnum, ExpansionsDTO, construct_naampad, LogicalOpEnum,
+                                       ApplicationEnum, ProvincieEnum)
+from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import Environment
 from pathlib import Path
 from Generic.ExcelModifier import ExcelModifier
 
-def download_documents(eminfra_client, edelta_dossiernummer: str, document_categorie:[DocumentCategorieEnum] = None, toezichter:str = None, provincie:[ProvincieEnum] = None) -> Path|None:
+
+def download_documents(client: EMInfraClient, edelta_dossiernummer: str,
+                       document_categorie: [DocumentCategorieEnum] = None,
+                       toezichter: str = None, provincie: [ProvincieEnum] = None) -> Path | None:
     """Download documents
 
     Downloading documents from EM-Infra based on the criteria:
-        edelta_dossiernummer, document_categorien, toezichter (optional), provincie (optional)
+        edelta_dossiernummer, document_categoriën (optional), toezichter (optional), provincie (optional)
 
-    :param eminfra_client: eminfra Client voor de authenticatie met EM-Infra
-    :param edelta_dossiernummer: str Dossiernummer
-    :param document_categorie: [DocumentCategorieEnum] Lijst van Document categoriën
-    :param toezichter: str Naam van de toezichter
-    :param provincie: [ProvincieEnum] Lijst van provincienamen
+    :param client: eminfra Client voor de authenticatie met EM-Infra
+    :type client: EMInfraClient
+    :param edelta_dossiernummer: Dossiernummer
+    :type edelta_dossiernummer: str
+    :param document_categorie: Document categoriën
+    :type document_categorie: list[DocumentCategorieEnum]
+    :param toezichter: Naam van de toezichter: voornaam, familienaam. Vb. Cedric Buelens
+    :type toezichter: str
+    :param provincie: Provincies
+    :type provincie: list[ProvincieEnum]
     :returns Path of the .zip-file where all the results have been downloaded.
     :rtype: Path
     """
@@ -38,10 +48,10 @@ def download_documents(eminfra_client, edelta_dossiernummer: str, document_categ
           f'\tToezichter: {toezichter}'
           f'\tProvincie: {provincie_value}')
 
-    bestek_ref = eminfra_client.get_bestekref_by_eDelta_dossiernummer(edelta_dossiernummer)
+    bestek_ref = client.bestek_service.get_bestekref(eDelta_dossiernummer=edelta_dossiernummer)
     bestek_ref_uuid = bestek_ref.uuid
 
-    # build query to search assets linked with an order (NL: bestek)
+    # build query to search assets linked with bestek
     query_dto_search_assets = QueryDTO(
         size=5,
         from_=0,
@@ -64,30 +74,32 @@ def download_documents(eminfra_client, edelta_dossiernummer: str, document_categ
     # Append "toezichter" to the search-query
     if toezichter:
         # Voeg álle toezichters toe in de zoekopdracht
-        identiteiten = eminfra_client.search_identiteit(naam=toezichter)
+        identiteiten = client.toezichter_service.search_identiteit(naam=toezichter)
         identiteiten_uuid = [identiteit.uuid for identiteit in identiteiten]
         query_dto_search_assets.selection.expressions[0].terms.append(
-            TermDTO(property='toezichter',operator=OperatorEnum.IN,value=identiteiten_uuid,logicalOp=LogicalOpEnum.AND)
+            TermDTO(property='toezichter', operator=OperatorEnum.IN, value=identiteiten_uuid,
+                    logicalOp=LogicalOpEnum.AND)
         )
 
     # Append "provincie" to the search-query
     if provincie_value:
         query_dto_search_assets.selection.expressions[0].terms.append(
             TermDTO(
-                property='locatieProvincie',operator=OperatorEnum.IN,value=provincie_value,logicalOp=LogicalOpEnum.AND)
+                property='locatieProvincie', operator=OperatorEnum.IN, value=provincie_value,
+                logicalOp=LogicalOpEnum.AND)
         )
 
-    # build query to download documents
-    query_dto_search_document = QueryDTO(
-        size=100
-        , from_=0
-        , pagingMode=PagingModeEnum.OFFSET
-        , selection=SelectionDTO(
-            expressions=[ExpressionDTO(
-                terms=[TermDTO(property='categorie', operator=OperatorEnum.IN, value=document_categorie_value)]
-            )]
-        )
-    )
+    # # build query to download documents
+    # query_dto_search_document = QueryDTO(
+    #     size=100
+    #     , from_=0
+    #     , pagingMode=PagingModeEnum.OFFSET
+    #     , selection=SelectionDTO(
+    #         expressions=[ExpressionDTO(
+    #             terms=[TermDTO(property='categorie', operator=OperatorEnum.IN, value=document_categorie_value)]
+    #         )]
+    #     )
+    # )
 
     # Create temporary folder, download all files, write an overview in an Excel file and zip all results to an output folder (Downloads).
     downloads_path = Path.home() / 'Downloads' / 'Results'
@@ -96,7 +108,8 @@ def download_documents(eminfra_client, edelta_dossiernummer: str, document_categ
     with (tempfile.TemporaryDirectory() as temp_dir):
         temp_path = Path(temp_dir)
 
-        asset_bucket_generator = eminfra_client.search_all_assets(query_dto_search_assets)
+        asset_bucket_generator = client.asset_service.search_assets_generator(
+            query_dto=query_dto_search_assets, actief=True)
 
         # Store assets in a pandas dataframe
         df_assets = pd.DataFrame(
@@ -112,7 +125,7 @@ def download_documents(eminfra_client, edelta_dossiernummer: str, document_categ
                 print(f"Processed {i} assets in {elapsed.total_seconds():.2f} seconds")
 
             # locatiekenmerk
-            locatiekenmerk = eminfra_client.get_locatie(asset.uuid)
+            locatiekenmerk = client.locatie_service.get_locatie_by_uuid(asset_uuid=asset.uuid)
             if locatiekenmerk.locatie.get('adres'):  # Skip when locatiekenmerk.locatie is None
                 locatie_adres = locatiekenmerk.locatie.get('adres')
                 locatie_gemeente = locatie_adres.get('gemeente')
@@ -122,27 +135,29 @@ def download_documents(eminfra_client, edelta_dossiernummer: str, document_categ
                 if locatie_provincie is None:
                     locatie_provincie = 'ongekend'
 
-
             # identiteitkenmerk (toezichter)
             toezichter_uuid = asset.kenmerken.get('data')[0].get('toezichter').get('uuid')
-            identiteit_kenmerk = eminfra_client.get_identiteit(toezichter_uuid)
+            identiteit_kenmerk = client.toezichter_service.get_identiteit(toezichter_uuid=toezichter_uuid)
             toezichter_naam = identiteit_kenmerk.naam
             toezichter_voornaam = identiteit_kenmerk.voornaam
             toezichter_volledige_naam = f'{toezichter_naam}_{toezichter_voornaam}'
 
             naampad = construct_naampad(asset)
 
-            documents = list(
-                eminfra_client.search_documents_by_asset_uuid(
-                    asset_uuid=asset.uuid
-                    , query_dto=query_dto_search_document
-                )
-            )
+            documents = list(client.document_service.get_documents_by_uuid_generator(
+                asset_uuid=asset.uuid, categorie=document_categorie))
 
             # create a folder in the temp path
             directory_path = temp_path / locatie_provincie / toezichter_volledige_naam
 
-            if documents:
+            if not documents:
+                # when documents are missing, append prefix "geen_documenten_"to the folder name.
+                directory_path_geen_bestanden_beschikbaar = directory_path / '_geen_bestanden_beschikbaar' / naampad.replace(
+                    '/', '__')
+                directory_path_geen_bestanden_beschikbaar.mkdir(parents=True, exist_ok=True)
+                print(f"Directory '{directory_path_geen_bestanden_beschikbaar}' is created or already exists.")
+
+            else:
                 for document in documents:
                     row_dict = {
                         'uuid': asset.uuid
@@ -164,26 +179,24 @@ def download_documents(eminfra_client, edelta_dossiernummer: str, document_categ
                     df_assets = pd.concat([df_assets, row_df], ignore_index=True)
 
                     # Write document to temp_dir
-                    eminfra_client.download_document(
+                    client.document_service.download_document(
                         document=document
-                        , directory = directory_path / naampad.replace('/', '__') / document.categorie.value
+                        , directory=directory_path / naampad.replace('/', '__') / document.categorie.value
                     )
-            else:
-                # when documents are missing, append prefix "geen_documenten_"to the folder name.
-                directory_path_geen_bestanden_beschikbaar = directory_path / '_geen_bestanden_beschikbaar' / naampad.replace('/', '__')
-                directory_path_geen_bestanden_beschikbaar.mkdir(parents=True, exist_ok=True)
-                print(f"Directory '{directory_path_geen_bestanden_beschikbaar}' is created or already exists.")
 
         # Write overview
-        edelta_dossiernummer_str = re.sub('[^0-9a-zA-Z]+', '_', edelta_dossiernummer)  # replace all non-alphanumeric characters with an underscore
+        # replace all non-alphanumeric characters with an underscore
+        edelta_dossiernummer_str = re.sub('[^0-9a-zA-Z]+', '_',
+                                          edelta_dossiernummer)
         output_file_path_excel = temp_path / 'overzicht.xlsx'
         df_assets.to_excel(excel_writer=output_file_path_excel
                            , sheet_name=edelta_dossiernummer_str
                            , index=False
                            , engine="openpyxl")
 
-        excelModifier = ExcelModifier(output_file_path_excel)
-        excelModifier.add_hyperlink(sheet=edelta_dossiernummer_str, link_type=ApplicationEnum.EM_INFRA, env=Environment.PRD)
+        excelModifier: ExcelModifier = ExcelModifier(output_file_path_excel)
+        excelModifier.add_hyperlink(sheet=edelta_dossiernummer_str, link_type=ApplicationEnum.EM_INFRA,
+                                    env=Environment.PRD)
 
         # Zip the output folder. Temp folder is automatically removed
         zip_path = downloads_path / f'documenten_{edelta_dossiernummer_str}'

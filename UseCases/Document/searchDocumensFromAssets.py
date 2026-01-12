@@ -23,9 +23,5 @@ if __name__ == '__main__':
     # provincie = [ProvincieEnum.ANTWERPEN]
     provincie = None
 
-    download_dir = download_documents(eminfra_client=eminfra_client
-                                      , edelta_dossiernummer=edelta_dossiernummer
-                                      , document_categorie=document_categorie
-                                      , provincie=provincie
-                                      , toezichter=toezichter
-                                      )
+    download_dir = download_documents(client=eminfra_client, edelta_dossiernummer=edelta_dossiernummer,
+                                      document_categorie=document_categorie, toezichter=toezichter, provincie=provincie)
