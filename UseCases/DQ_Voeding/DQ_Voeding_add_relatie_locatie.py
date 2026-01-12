@@ -35,11 +35,15 @@ def filter_assets(assets: list[AssetDTO], assettype: AssettypeDTO) -> [AssetDTO]
     """
     Filter from a list of assets the active assets that match an uri.
     """
-    return [a for a in assets if a.type.uri == assettype.uri and a.actief]
+    return [
+        a for a in assets
+        if a.actief
+        and a.type.uri == assettype.uri]
 
 
 def process_relatie_locatie(client: EMInfraClient, df: pd.DataFrame, assettype: AssettypeDTO,
-                            relatie: RelatieEnum, doel_asset_is_parent: bool = True, set_afgeleide_locatie: bool = True) -> None:
+                            relatie: RelatieEnum, doel_asset_is_parent: bool = True,
+                            set_afgeleide_locatie: bool = True) -> None:
     """
     Process a dataframe with assets.
 
@@ -80,7 +84,10 @@ def process_relatie_locatie(client: EMInfraClient, df: pd.DataFrame, assettype: 
         else:
             parent_asset = client.asset_service.search_parent_asset(asset=asset, recursive=True, return_all_parents=False)
             doel_assets = list(client.asset_service.search_child_assets_generator(asset=parent_asset, recursive=True))
-        doel_assets = filter_assets(assets=doel_assets, assettype=assettype)
+        if all(type(a) == AssetDTO for a in doel_assets):
+            doel_assets = filter_assets(assets=doel_assets, assettype=assettype)
+        else:
+            doel_assets = []
         if len(doel_assets) == 1:
             doel_asset = doel_assets[0]
             _ = create_relatie_if_missing(client=client, bron_asset=asset, doel_asset=doel_asset, relatie=relatie)
@@ -124,6 +131,7 @@ if __name__ == '__main__':
                             relatie=RelatieEnum.BEVESTIGING, doel_asset_is_parent=True, set_afgeleide_locatie=True)
     process_relatie_locatie(client=eminfra_client, df=df_assets_lsdeel, assettype=assettype_kast,
                             relatie=RelatieEnum.BEVESTIGING, doel_asset_is_parent=True, set_afgeleide_locatie=True)
+    # test dat hier alle doel-assets worden teruggegeven. parameter doel_asset_is_parent = False
     process_relatie_locatie(client=eminfra_client, df=df_assets_ls, assettype=assettype_lsdeel,
                             relatie=RelatieEnum.VOEDT, doel_asset_is_parent=False, set_afgeleide_locatie=False)
 
