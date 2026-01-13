@@ -40,7 +40,7 @@ class DocumentService:
     def get_documents_by_uuid_generator(self, asset_uuid: str, size: int = 10,
                                         categorie: list[DocumentCategorieEnum] = None) -> Generator[AssetDocumentDTO]:
         """
-        Retrieves all AssetDocumentDTO associated with an asset. Optionally: filter by document categori�n.
+        Retrieves all AssetDocumentDTO associated with an asset. Optionally: filter by document categories.
 
         :param asset_uuid: Asset uuid
         :type asset_uuid: str

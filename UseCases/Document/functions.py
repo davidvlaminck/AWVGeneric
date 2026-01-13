@@ -15,8 +15,8 @@ from Generic.ExcelModifier import ExcelModifier
 
 
 def download_documents(client: EMInfraClient, edelta_dossiernummer: str,
-                       document_categorie: [DocumentCategorieEnum] = None,
-                       toezichter: str = None, provincie: [ProvincieEnum] = None) -> Path | None:
+                       document_categorie: list[DocumentCategorieEnum] | None = None,
+                       toezichter: str = None, provincie: list[ProvincieEnum] | None = None) -> Path | None:
     """Download documents
 
     Downloading documents from EM-Infra based on the criteria:
@@ -26,7 +26,7 @@ def download_documents(client: EMInfraClient, edelta_dossiernummer: str,
     :type client: EMInfraClient
     :param edelta_dossiernummer: Dossiernummer
     :type edelta_dossiernummer: str
-    :param document_categorie: Document categoriën
+    :param document_categorie: Document categorien
     :type document_categorie: list[DocumentCategorieEnum]
     :param toezichter: Naam van de toezichter: voornaam, familienaam. Vb. Cedric Buelens
     :type toezichter: str

@@ -5,7 +5,7 @@ from functions import download_documents
 
 
 if __name__ == '__main__':
-    awv_acm_cookie = '086acd7d756e4f348f001effca776dae'
+    awv_acm_cookie = '<insert_cookie_here>'
     eminfra_client = EMInfraClient(cookie=awv_acm_cookie, auth_type=AuthType.COOKIE, env=Environment.PRD)
 
     # edelta_dossiernummer
