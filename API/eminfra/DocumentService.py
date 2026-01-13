@@ -40,13 +40,13 @@ class DocumentService:
     def get_documents_by_uuid_generator(self, asset_uuid: str, size: int = 10,
                                         categorie: list[DocumentCategorieEnum] = None) -> Generator[AssetDocumentDTO]:
         """
-        Retrieves all AssetDocumentDTO associated with an asset. Optionally: filter by document categoriën.
+        Retrieves all AssetDocumentDTO associated with an asset. Optionally: filter by document categoriï¿½n.
 
         :param asset_uuid: Asset uuid
         :type asset_uuid: str
         :param size: aantal documenten
         :type size: str
-        :param categorie: document categoriën
+        :param categorie: document categoriÃ«n
         :type categorie: list[DocumentCategorieEnum]
         :return: Generator[AssetDocumentDTO]
         :rtype:
@@ -57,7 +57,7 @@ class DocumentService:
             json_dict = self.requester.get(url).json()
             if categorie:
                 yield from [AssetDocumentDTO.from_dict(item)
-                            for item in json_dict['data'] if item.categorie in categorie]
+                            for item in json_dict['data'] if item.get("categorie") in [cat.value for cat in categorie]]
             else:
                 yield from [AssetDocumentDTO.from_dict(item) for item in json_dict['data']]
             dto_list_total = json_dict['totalCount']
@@ -73,7 +73,7 @@ class DocumentService:
         :type asset: AssetDTO
         :param size: aantal documenten
         :type size: str
-        :param categorie: document categoriën
+        :param categorie: document categoriï¿½n
         :type categorie: list[DocumentCategorieEnum]
         :return: Generator[AssetDocumentDTO]
         :rtype:
