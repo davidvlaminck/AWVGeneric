@@ -43,8 +43,8 @@ def download_documents(client: EMInfraClient, edelta_dossiernummer: str,
         document_categorie_value = [item.value for item in DocumentCategorieEnum]
 
     print(f'Ophalen van alle documenten die voldoen aan volgende criteria:'
-          f'\tDocument categorie: {document_categorie_value}'
           f'\tDossiernummer: {edelta_dossiernummer}'
+          f'\tDocument categorie: {document_categorie_value}'
           f'\tToezichter: {toezichter}'
           f'\tProvincie: {provincie_value}')
 
@@ -88,18 +88,6 @@ def download_documents(client: EMInfraClient, edelta_dossiernummer: str,
                 property='locatieProvincie', operator=OperatorEnum.IN, value=provincie_value,
                 logicalOp=LogicalOpEnum.AND)
         )
-
-    # # build query to download documents
-    # query_dto_search_document = QueryDTO(
-    #     size=100
-    #     , from_=0
-    #     , pagingMode=PagingModeEnum.OFFSET
-    #     , selection=SelectionDTO(
-    #         expressions=[ExpressionDTO(
-    #             terms=[TermDTO(property='categorie', operator=OperatorEnum.IN, value=document_categorie_value)]
-    #         )]
-    #     )
-    # )
 
     # Create temporary folder, download all files, write an overview in an Excel file and zip all results to an output folder (Downloads).
     downloads_path = Path.home() / 'Downloads' / 'Results'
