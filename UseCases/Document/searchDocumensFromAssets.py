@@ -5,23 +5,24 @@ from functions import download_documents
 
 
 if __name__ == '__main__':
-    awv_acm_cookie = ''
+    awv_acm_cookie = '086acd7d756e4f348f001effca776dae'
     eminfra_client = EMInfraClient(cookie=awv_acm_cookie, auth_type=AuthType.COOKIE, env=Environment.PRD)
 
     # edelta_dossiernummer
     edelta_dossiernummer = 'VWT/DVM/2023/3'
 
     # document_categorien
-    document_categorie = [DocumentCategorieEnum.FOTO]
+    document_categorie = [DocumentCategorieEnum.KEURINGSVERSLAG, DocumentCategorieEnum.BEREKENINGSNOTA]
     print(f'De mogelijke document categoriën zijn: {[item.value for item in DocumentCategorieEnum]}')
 
     # toezichter
     toezichter = 'Stefan Missotten'
+    # toezichter = 'Ben Cannaerts'
 
     # provincie
     print(f'De mogelijke provincies zijn: {[item.value for item in ProvincieEnum]}')
-    # provincie = [ProvincieEnum.ANTWERPEN]
-    provincie = None
+    provincie = [ProvincieEnum.VLAAMS_BRABANT]
 
     download_dir = download_documents(client=eminfra_client, edelta_dossiernummer=edelta_dossiernummer,
                                       document_categorie=document_categorie, toezichter=toezichter, provincie=provincie)
+    print(f'Bestanden zijn gedownload in deze folder: {download_dir}.zip')
