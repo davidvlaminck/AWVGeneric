@@ -2,7 +2,7 @@ import json
 import logging
 from pathlib import Path
 from collections.abc import Generator
-from API.eminfra.EMInfraDomain import AssetDocumentDTO, AssetDTO
+from API.eminfra.EMInfraDomain import AssetDocumentDTO, AssetDTO, DocumentCategorieEnum
 
 
 class DocumentService:
@@ -37,14 +37,17 @@ class DocumentService:
             f.write(file.content)
             return directory / file_name
 
-    def get_documents_by_uuid_generator(self, asset_uuid: str, size: int = 10) -> Generator[AssetDocumentDTO]:
+    def get_documents_by_uuid_generator(self, asset_uuid: str, size: int = 10,
+                                        categorie: list[DocumentCategorieEnum] = None) -> Generator[AssetDocumentDTO]:
         """
-        Retrieves all AssetDocumentDTO associated with an asset
+        Retrieves all AssetDocumentDTO associated with an asset. Optionally: filter by document categories.
 
         :param asset_uuid: Asset uuid
         :type asset_uuid: str
         :param size: aantal documenten
         :type size: str
+        :param categorie: document categoriën
+        :type categorie: list[DocumentCategorieEnum]
         :return: Generator[AssetDocumentDTO]
         :rtype:
         """
@@ -52,20 +55,27 @@ class DocumentService:
         while True:
             url = f"core/api/assets/{asset_uuid}/documenten?from={_from}&pagingMode=OFFSET&size={size}"
             json_dict = self.requester.get(url).json()
-            yield from [AssetDocumentDTO.from_dict(item) for item in json_dict['data']]
+            if categorie:
+                yield from [AssetDocumentDTO.from_dict(item)
+                            for item in json_dict['data'] if item.get("categorie") in [cat.value for cat in categorie]]
+            else:
+                yield from [AssetDocumentDTO.from_dict(item) for item in json_dict['data']]
             dto_list_total = json_dict['totalCount']
             _from = json_dict['from'] + size
             if _from >= dto_list_total:
                 break
 
-    def get_documents_generator(self, asset: AssetDTO, size: int = 10) -> Generator[AssetDocumentDTO]:
+    def get_documents_generator(self, asset: AssetDTO, size: int = 10,
+                                categorie: list[DocumentCategorieEnum] = None) -> Generator[AssetDocumentDTO]:
         """
         Retrieves all AssetDocumentDTO associated with an asset
         :param asset:
         :type asset: AssetDTO
         :param size: aantal documenten
         :type size: str
+        :param categorie: document categori�n
+        :type categorie: list[DocumentCategorieEnum]
         :return: Generator[AssetDocumentDTO]
         :rtype:
         """
-        return self.get_documents_by_uuid_generator(asset_uuid=asset.uuid, size=size)
+        return self.get_documents_by_uuid_generator(asset_uuid=asset.uuid, size=size, categorie=categorie)
