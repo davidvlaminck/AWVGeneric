@@ -43,13 +43,15 @@ def verleng_bestekkoppelingen(client: EMInfraClient,
         bestekkoppelingen: list[BestekKoppeling] = client.bestek_service.get_bestekkoppeling(asset=asset)
 
         index, matching_bestekkoppeling = next(((i, x) for i, x in enumerate(bestekkoppelingen)
-                                                if x.status == BestekKoppelingStatusEnum.INACTIEF
-                                                and x.bestekRef.uuid == bestekref.uuid
-                                                and x.categorie == BestekCategorieEnum.WERKBESTEK), (None, None))
+                                                if
+                                                x.status == BestekKoppelingStatusEnum.INACTIEF and
+                                                x.bestekRef.uuid == bestekref.uuid and
+                                                x.categorie == BestekCategorieEnum.WERKBESTEK), (None, None))
 
-        if (matching_bestekkoppeling and
-                datetime.fromisoformat(matching_bestekkoppeling.eindDatum).date() ==
-                datetime(year=2026, month=1, day=8).date()):
+        if (matching_bestekkoppeling
+                and
+                datetime.fromisoformat(matching_bestekkoppeling.eindDatum).date() !=
+                datetime(year=2026, month=12, day=10).date()):
             logging.debug(f'Verleng bestekkoppeling {matching_bestekkoppeling.bestekRef.eDeltaBesteknummer}')
             bestekkoppelingen[index].eindDatum = format_datetime(einddatum)
             # Update all the bestekkoppelingen for this asset
@@ -82,6 +84,6 @@ if __name__ == '__main__':
 
     logging.info("Query assets...")
     input_filepath = Path.home() / 'Downloads' / 'MDM19H01.xlsx'
-    df_assets = pd.read_excel(input_filepath, sheet_name='query-result (7)', header=0, usecols=["uuid", "naampad"])
+    df_assets = pd.read_excel(input_filepath, sheet_name='Sheet1', header=0, usecols=["uuid", "naampad"])
     bestekref = eminfra_client.bestek_service.get_bestekref(eDelta_besteknummer=EDELTA_BESTEKNUMMER)
     verleng_bestekkoppelingen(client=eminfra_client, df=df_assets, bestekref=bestekref)
