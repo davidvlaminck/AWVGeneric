@@ -79,7 +79,9 @@ def verleng_bestekkoppelingen(client: EMInfraClient,
 
 if __name__ == '__main__':
     configure_logger()
-    logging.info('Verlengen van bestekkoppeling "MDM/19H01" naar 10/12/2026.')
+    logging.info(
+        f'Verlengen van bestekkoppeling "{EDELTA_BESTEKNUMMER}" naar {format_datetime(EINDDATUM)}.'
+    )
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
 
     logging.info("Query assets...")
