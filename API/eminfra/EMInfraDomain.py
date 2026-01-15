@@ -446,11 +446,20 @@ class ToezichterKenmerk(BaseDataclass):
     _type: str
     type: dict
     links: [Link]
-    toezichter: dict | None = None
-    toezichtGroep: dict | None = None
+    toezichter: ResourceRefDTO | None = None
+    toezichtGroep: ResourceRefDTO | None = None
 
     def __post_init__(self):
+         self._fix_nested_classes({('toezichter', ResourceRefDTO), ('toezichtGroep', ResourceRefDTO)})
          self._fix_nested_list_classes({('links', Link)})
+
+@dataclass
+class ToezichtKenmerkUpdateDTO(BaseDataclass):
+    toezichter: ResourceRefDTO
+    toezichtGroep: ResourceRefDTO
+
+    def __post_init__(self):
+         self._fix_nested_classes({('toezichter', ResourceRefDTO), ('toezichtGroep', ResourceRefDTO)})
 
 @dataclass
 class SchadebeheerderKenmerk(BaseDataclass):
