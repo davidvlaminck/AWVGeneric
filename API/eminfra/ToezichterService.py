@@ -33,16 +33,16 @@ class ToezichterService:
         :type toezichtkenmerkupdate: ToezichtKenmerkUpdateDTO
         :return: None
         """
-        toezichter_uuid = toezichtkenmerkupdate.toezichter.uuid if toezichtkenmerkupdate.toezichter else None
-        toezichtgroep_uuid = toezichtkenmerkupdate.toezichter.uuid if toezichtkenmerkupdate.toezichter else None
-        payload = {
-            "toezichter": {
-                "uuid": toezichter_uuid
-            },
-            "toezichtGroep": {
-                "uuid": toezichtgroep_uuid
-            }
-        }
+        payload = {}
+        if toezichtkenmerkupdate.toezichter:
+            payload["toezichter"] = {"uuid": toezichtkenmerkupdate.toezichter.uuid}
+        else:
+            payload["toezichter"] = None
+        if toezichtkenmerkupdate.toezichtGroep:
+            payload["toezichtGroep"] = {"uuid": toezichtkenmerkupdate.toezichtGroep.uuid}
+        else:
+            payload["toezichtGroep"] = None
+
         response = self.requester.put(
             url=f'core/api/assets/{asset_uuid}/kenmerken/{self.TOEZICHTER_UUID}',
             json=payload
