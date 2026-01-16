@@ -33,12 +33,14 @@ class ToezichterService:
         :type toezichtkenmerkupdate: ToezichtKenmerkUpdateDTO
         :return: None
         """
+        toezichter_uuid = toezichtkenmerkupdate.toezichter.uuid if toezichtkenmerkupdate.toezichter else None
+        toezichtgroep_uuid = toezichtkenmerkupdate.toezichter.uuid if toezichtkenmerkupdate.toezichter else None
         payload = {
             "toezichter": {
-                "uuid": toezichtkenmerkupdate.toezichter.uuid
+                "uuid": toezichter_uuid
             },
             "toezichtGroep": {
-                "uuid": toezichtkenmerkupdate.toezichtGroep.uuid
+                "uuid": toezichtgroep_uuid
             }
         }
         response = self.requester.put(
