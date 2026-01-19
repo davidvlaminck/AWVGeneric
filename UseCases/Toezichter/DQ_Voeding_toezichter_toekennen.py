@@ -6,7 +6,8 @@ import pandas as pd
 
 from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
-from API.eminfra.EMInfraDomain import ToezichtKenmerkUpdateDTO, ResourceRefDTO, BeheerobjectDTO, AssetDTO
+from API.eminfra.EMInfraDomain import ToezichtKenmerkUpdateDTO, ResourceRefDTO, BeheerobjectDTO, AssetDTO, \
+    ToezichterKenmerk
 
 from UseCases.utils import load_settings, read_rsa_report, configure_logger
 
@@ -46,6 +47,45 @@ def map_toezichtgroep(client: EMInfraClient, beheerobject_naam: str) -> Resource
         ):
             return ResourceRefDTO(uuid=toezichtgroep.uuid, links=toezichtgroep.links)
 
+def update_row(row: dict, asset_toezichterkenmerk: ToezichterKenmerk, toezichtkenmerkupdate: ToezichtKenmerkUpdateDTO) -> dict:
+    """
+    Append info to a row (dict)
+
+    :param row: row
+    :type row: dict
+    :param asset_toezichterkenmerk:
+    :type asset_toezichterkenmerk: ToezichterKenmerk
+    :param toezichtkenmerkupdate:
+    :type toezichtkenmerkupdate: ToezichtKenmerkUpdateDTO
+    :return row
+    """
+    row["toezichter_oud_uuid"] = ''
+    row["toezichter_oud_naam"] = ''
+    row["toezichtgroep_oud_uuid"] = ''
+    row["toezichtgroep_oud_naam"] = ''
+    row["toezichter_nieuw_uuid"] = ''
+    row["toezichter_nieuw_naam"] = ''
+    row["toezichtgroep_nieuw_uuid"] = ''
+    row["toezichtgroep_nieuw_naam"] = ''
+
+    if asset_toezichterkenmerk.toezichter:
+        row["toezichter_oud_uuid"] = asset_toezichterkenmerk.toezichter.uuid
+        row["toezichter_oud_naam"] = eminfra_client.toezichter_service.get_identiteit(
+            toezichter_uuid=asset_toezichterkenmerk.toezichter.uuid).naam
+    if asset_toezichterkenmerk.toezichtGroep:
+        row["toezichtgroep_oud_uuid"] = asset_toezichterkenmerk.toezichtGroep.uuid
+        row["toezichtgroep_oud_naam"] = eminfra_client.toezichter_service.get_toezichtgroep(
+            toezichtgroep_uuid=asset_toezichterkenmerk.toezichtGroep.uuid).naam
+    if toezichtkenmerkupdate.toezichter:
+        row["toezichter_nieuw_uuid"] = toezichtkenmerkupdate.toezichter.uuid
+        row["toezichter_nieuw_naam"] = eminfra_client.toezichter_service.get_identiteit(
+            toezichter_uuid=toezichtkenmerkupdate.toezichter.uuid).naam
+    if toezichtkenmerkupdate.toezichtGroep:
+        row["toezichtgroep_nieuw_uuid"] = toezichtkenmerkupdate.toezichtGroep.uuid
+        row["toezichtgroep_nieuw_naam"] = eminfra_client.toezichter_service.get_toezichtgroep(
+            toezichtgroep_uuid=toezichtkenmerkupdate.toezichtGroep.uuid).naam
+    return row
+
 
 def validate_parent_asset(asset: AssetDTO) -> bool:
     """
@@ -60,6 +100,31 @@ def validate_parent_asset(asset: AssetDTO) -> bool:
         return False
     else:
         return True
+
+
+def map_provincie_naar_toezichtgroep(client: EMInfraClient, provincie: str):
+    """
+    Map een provincie naar de uuid van een toezichtgroep
+
+    :param provincie:
+    :type provincie: str
+    :return: ResourceRefDTO
+    """
+    dict_toezichtsgroep = {
+        "West-Vlaanderen": "V&W-WW",
+        "Oost-Vlaanderen": "V&W-WO",
+        "Antwerpen": "V&W-WA",
+        "Vlaams-Brabant": "V&W-WVB",
+        "Limburg": "V&W-WL"
+    }
+    if toezichtgroep_naam := dict_toezichtsgroep.get(provincie):
+        if toezichtgroep := next(
+                client.toezichter_service.search_toezichtgroep_lgc(
+                    naam=toezichtgroep_naam
+                ),
+                None,
+        ):
+            return ResourceRefDTO(uuid=toezichtgroep.uuid, links=toezichtgroep.links)
 
 
 def process_assets(df: pd.DataFrame) -> pd.DataFrame:
@@ -114,22 +179,111 @@ def process_assets(df: pd.DataFrame) -> pd.DataFrame:
                     client=eminfra_client, beheerobject_naam=beheerobject.naam)
 
         row = {"asset_uuid": asset_uuid}
-        if asset_toezichterkenmerk.toezichter:
-            row["toezichter_oud_uuid"] = asset_toezichterkenmerk.toezichter.uuid
-            row["toezichter_oud_naam"] = eminfra_client.toezichter_service.get_identiteit(
-                toezichter_uuid=asset_toezichterkenmerk.toezichter.uuid).naam
-        if asset_toezichterkenmerk.toezichtGroep:
-            row["toezichtgroep_oud_uuid"] = asset_toezichterkenmerk.toezichtGroep.uuid
-            row["toezichtgroep_oud_naam"] = eminfra_client.toezichter_service.get_toezichtgroep(
-                toezichtgroep_uuid=asset_toezichterkenmerk.toezichtGroep.uuid).naam
-        if toezichtkenmerkupdate.toezichter:
-            row["toezichter_nieuw_uuid"] = toezichtkenmerkupdate.toezichter.uuid
-            row["toezichter_nieuw_naam"] = eminfra_client.toezichter_service.get_identiteit(
-                toezichter_uuid=toezichtkenmerkupdate.toezichter.uuid).naam
-        if toezichtkenmerkupdate.toezichtGroep:
-            row["toezichtgroep_nieuw_uuid"] = toezichtkenmerkupdate.toezichtGroep.uuid
-            row["toezichtgroep_nieuw_naam"] = eminfra_client.toezichter_service.get_toezichtgroep(
-                toezichtgroep_uuid=toezichtkenmerkupdate.toezichtGroep.uuid).naam
+        row = update_row(row=row, asset_toezichterkenmerk=asset_toezichterkenmerk,
+                         toezichtkenmerkupdate=toezichtkenmerkupdate)
+        rows.append(row)
+
+        eminfra_client.toezichter_service.update_toezichtkenmerk(
+            asset_uuid=asset_uuid,
+            toezichtkenmerkupdate=toezichtkenmerkupdate
+        )
+
+    return pd.DataFrame(rows)
+
+
+def process_assets_met_toezichtgroep(df: pd.DataFrame, col_toezichtgroep: str) -> pd.DataFrame:
+    """
+    Process assets from a dataframe.
+
+    Update de toezichtgroep met een bestaande Toezichtsgroep, gedefinieerd in col_toezichtgroep.
+
+    Geeft een (ander) dataframe terug dat kan gebruikt worden om een overzicht van de updates naar bijvoorbeeld
+    een Excel-bestand weg te schrijven.
+    """
+    rows = []
+    # loop over the dataframe assets
+    for idx, df_row in df.iterrows():
+        asset_uuid = df_row["uuid"]
+        logging.info(f'Processing asset ({idx + 1}/{len(df)}): ({asset_uuid} - {df_row["naampad"]})')
+
+        # toezichter en toezichtsgroep ophalen
+        # toezichter en toezichtsgroep zitten in het object toezichterkenmerk vervat.
+        asset_toezichterkenmerk = eminfra_client.toezichter_service.get_toezichter_by_uuid(asset_uuid=asset_uuid)
+
+        # aanmaken ToezichtKenmerkUpdate()
+        toezichtkenmerkupdate = ToezichtKenmerkUpdateDTO(
+            toezichter=asset_toezichterkenmerk.toezichter,
+            toezichtGroep=asset_toezichterkenmerk.toezichtGroep
+        )
+
+        # update toezichtgroep
+        naam_toezichtgroep = df_row[f'{col_toezichtgroep}']
+        toezichtgroep = next(eminfra_client.toezichter_service.search_toezichtgroep_lgc(naam=naam_toezichtgroep))
+        if not asset_toezichterkenmerk.toezichtGroep:
+            toezichtkenmerkupdate.toezichtGroep = toezichtgroep
+
+        row = {"asset_uuid": asset_uuid}
+        row = update_row(row, asset_toezichterkenmerk=asset_toezichterkenmerk,
+                         toezichtkenmerkupdate=toezichtkenmerkupdate)
+        rows.append(row)
+
+        eminfra_client.toezichter_service.update_toezichtkenmerk(
+            asset_uuid=asset_uuid,
+            toezichtkenmerkupdate=toezichtkenmerkupdate
+        )
+
+    return pd.DataFrame(rows)
+
+
+def process_assets_specifieke_weg(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Process assets from a dataframe.
+
+    Update de toezichtsgroep op basis van de locatie van de asset of parent-asset naar de toezichtgroep van de provincie.
+
+    Geeft een (ander) dataframe terug dat kan gebruikt worden om een overzicht van de updates naar bijvoorbeeld
+    een Excel-bestand weg te schrijven.
+    """
+    rows = []
+    # loop over the dataframe assets
+    for idx, df_row in df.iterrows():
+        asset_uuid = df_row["uuid"]
+        logging.info(f'Processing asset ({idx + 1}/{len(df)}): ({asset_uuid} - {df_row["naampad"]})')
+
+        # toezichter en toezichtsgroep ophalen
+        # toezichter en toezichtsgroep zitten in het object toezichterkenmerk vervat.
+        asset_toezichterkenmerk = eminfra_client.toezichter_service.get_toezichter_by_uuid(asset_uuid=asset_uuid)
+
+        # aanmaken ToezichtKenmerkUpdate()
+        toezichtkenmerkupdate = ToezichtKenmerkUpdateDTO(
+            toezichter=asset_toezichterkenmerk.toezichter,
+            toezichtGroep=asset_toezichterkenmerk.toezichtGroep
+        )
+
+        # locatie asset
+        locatie = eminfra_client.locatie_service.get_locatie_by_uuid(asset_uuid=asset_uuid)
+        if not locatie.locatie:
+            # locatie parent-asset
+            parent_asset = eminfra_client.asset_service.search_parent_asset_by_uuid(
+                asset_uuid=asset_uuid, recursive=False, return_all_parents=False)
+            locatie = eminfra_client.locatie_service.get_locatie_by_uuid(asset_uuid=parent_asset.uuid)
+        if not locatie.locatie:
+            continue
+
+        if adres := locatie.locatie.get("adres"):
+            provincie = adres.get("provincie")
+        else:
+            continue
+
+        # map provincie naar toezichtgroep
+        toezichtgroep = map_provincie_naar_toezichtgroep(client=eminfra_client, provincie=provincie)
+
+        if not asset_toezichterkenmerk.toezichtGroep:
+            toezichtkenmerkupdate.toezichtGroep = toezichtgroep
+
+        row = {"asset_uuid": asset_uuid}
+        row = update_row(row, asset_toezichterkenmerk=asset_toezichterkenmerk,
+                         toezichtkenmerkupdate=toezichtkenmerkupdate)
         rows.append(row)
 
         eminfra_client.toezichter_service.update_toezichtkenmerk(
@@ -154,12 +308,28 @@ if __name__ == '__main__':
 
     # filter df op toestand en op lege commentaarvelden
     df_assets = df_assets[
-        df_assets["toestand"].isin(['gepland', 'in-gebruik', 'in-ontwerp', 'in-opbouw']) &
-        df_assets['opmerkingen (blijvend)'].isna()
+        df_assets["toestand"].isin(['gepland', 'in-gebruik', 'in-ontwerp', 'in-opbouw'])
+        & df_assets['opmerkingen (blijvend)'].notna()
         ]
     df_assets.reset_index(inplace=True)
 
-    df_output = process_assets(df=df_assets)
+    # logging.info("Process assets: toekennen toezichtgroep via de toezichtgroep van de parent-asset of "
+    #              "via de naam van het beheerobject")
+    # df_output = process_assets(df=df_assets)
+
+    # logging.info("Rechtstreeks toekennen van de toezichtgroep op basis van naam i.d. comments")
+    # df_assets_met_toezichtsgroep = df_assets[df_assets[
+    #     "opmerkingen (blijvend)"].isin(
+    #     ['EMT_BMI', 'EMT_WHG', 'EMT_WHW', 'TOV', 'VMM-WATER', 'V&W-WW', 'V&W-WO', 'V&W-WA', 'V&W-WVB', 'V&W-WL'])]
+    # df_assets_met_toezichtsgroep.reset_index(inplace=True)
+    # df_output = process_assets_met_toezichtgroep(
+    #     df=df_assets_met_toezichtsgroep, col_toezichtgroep='opmerkingen (blijvend)')
+
+    logging.info("Toekennen van toezichtgroep op basis van locatie van asset of parent-asset")
+    df_assets_specifieke_weg = df_assets[df_assets["opmerkingen (blijvend)"] == "specifieke weg"]
+    df_assets_specifieke_weg.reset_index(inplace=True)
+    df_output = process_assets_specifieke_weg(df=df_assets_specifieke_weg)
+
 
     output_excel_path = 'test_output.xlsx'
     if Path(output_excel_path).exists():
