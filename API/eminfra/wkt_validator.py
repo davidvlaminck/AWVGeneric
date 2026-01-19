@@ -1,5 +1,5 @@
 from shapely import wkt
-from shapely.errors import WKTReadingError
+from shapely.errors import ShapelyError
 
 
 def is_valid_wkt(wkt_string: str) -> bool:
@@ -15,5 +15,5 @@ def is_valid_wkt(wkt_string: str) -> bool:
     try:
         geom = wkt.loads(wkt_string)
         return geom.is_valid
-    except (WKTReadingError, Exception):
+    except (ShapelyError, Exception):
         return False
