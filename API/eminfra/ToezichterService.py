@@ -2,7 +2,8 @@ from collections.abc import Generator
 
 from API.eminfra.EMInfraDomain import (AssetDTO, ToezichterKenmerk, IdentiteitKenmerk, ToezichtgroepDTO, QueryDTO,
                                        SelectionDTO, PagingModeEnum, ExpressionDTO, TermDTO, OperatorEnum,
-                                       LogicalOpEnum, BetrokkenerelatieDTO, ToezichtgroepTypeEnum)
+                                       LogicalOpEnum, BetrokkenerelatieDTO, ToezichtgroepTypeEnum,
+                                       ToezichtKenmerkUpdateDTO)
 
 
 class ToezichterService:
@@ -20,8 +21,39 @@ class ToezichterService:
     def get_toezichter(self, asset: AssetDTO) -> ToezichterKenmerk:
         return self.get_toezichter_by_uuid(asset_uuid=asset.uuid)
 
+    def update_toezichtkenmerk(self, asset_uuid: str, toezichtkenmerkupdate: ToezichtKenmerkUpdateDTO) -> None:
+        """
+        Update toezicht kenmerk.
+
+        Updating both toezichter and toezichtgroep.
+
+        :param asset_uuid: Asset UUID
+        :type asset_uuid: str
+        :param toezichtkenmerkupdate:
+        :type toezichtkenmerkupdate: ToezichtKenmerkUpdateDTO
+        :return: None
+        """
+        payload = {}
+        if toezichtkenmerkupdate.toezichter:
+            payload["toezichter"] = {"uuid": toezichtkenmerkupdate.toezichter.uuid}
+        else:
+            payload["toezichter"] = None
+        if toezichtkenmerkupdate.toezichtGroep:
+            payload["toezichtGroep"] = {"uuid": toezichtkenmerkupdate.toezichtGroep.uuid}
+        else:
+            payload["toezichtGroep"] = None
+
+        response = self.requester.put(
+            url=f'core/api/assets/{asset_uuid}/kenmerken/{self.TOEZICHTER_UUID}',
+            json=payload
+        )
+        if response.status_code != 202:
+            raise ProcessLookupError(response.content.decode("utf-8"))
+
     def add_toezichter(self, asset_uuid: str, toezichtgroep_uuid: str, toezichter_uuid: str) -> None:
         """
+        Deprecated. Use function update_toezichtkenmerk() instead.
+
         Both toezichter and toezichtsgroep are mandatory.
         Updating only one of both (toezichter/toezichtsgroep), purges the other.
 
@@ -40,8 +72,8 @@ class ToezichterService:
                 "uuid": toezichtgroep_uuid
             }
         response = self.requester.put(
-            url=f'core/api/assets/{asset_uuid}/kenmerken/{self.TOEZICHTER_UUID}'
-            , json=payload
+            url=f'core/api/assets/{asset_uuid}/kenmerken/{self.TOEZICHTER_UUID}',
+            json=payload
         )
         if response.status_code != 202:
             raise ProcessLookupError(response.content.decode("utf-8"))
@@ -79,8 +111,8 @@ class ToezichterService:
             query_dto.selection.expressions.append(
                 ExpressionDTO(
                     terms=[
-                        TermDTO(property='type', operator=OperatorEnum.EQ, value=type)]
-                    , logicalOp=LogicalOpEnum.AND))
+                        TermDTO(property='type', operator=OperatorEnum.EQ, value=type)],
+                    logicalOp=LogicalOpEnum.AND))
         url = "identiteit/api/toezichtgroepen/search"
         while True:
             json_dict = self.requester.post(url, data=query_dto.json()).json()
@@ -99,8 +131,8 @@ class ToezichterService:
                                  expressions=[
                                      ExpressionDTO(
                                          terms=[TermDTO(property='actief', operator=OperatorEnum.EQ, value=True,
-                                                        logicalOp=None)]
-                                         , logicalOp=None
+                                                        logicalOp=None)],
+                                         logicalOp=None
                                      )
                                  ]
                              )
@@ -111,15 +143,15 @@ class ToezichterService:
             query_dto.selection.expressions.append(
                 ExpressionDTO(
                     terms=[
-                        TermDTO(property='naam', operator=OperatorEnum.CONTAINS, value=f'{naam_part}', logicalOp=None)
-                        , TermDTO(property='voornaam', operator=OperatorEnum.CONTAINS, value=f'{naam_part}',
-                                  logicalOp=LogicalOpEnum.OR)
-                        , TermDTO(property='roepnaam', operator=OperatorEnum.CONTAINS, value=f'{naam_part}',
-                                  logicalOp=LogicalOpEnum.OR)
-                        , TermDTO(property='gebruikersnaam', operator=OperatorEnum.CONTAINS, value=f'{naam_part}',
-                                  logicalOp=LogicalOpEnum.OR)
-                    ]
-                    , logicalOp=LogicalOpEnum.AND
+                        TermDTO(property='naam', operator=OperatorEnum.CONTAINS, value=f'{naam_part}', logicalOp=None),
+                        TermDTO(property='voornaam', operator=OperatorEnum.CONTAINS, value=f'{naam_part}',
+                                logicalOp=LogicalOpEnum.OR),
+                        TermDTO(property='roepnaam', operator=OperatorEnum.CONTAINS, value=f'{naam_part}',
+                                logicalOp=LogicalOpEnum.OR),
+                        TermDTO(property='gebruikersnaam', operator=OperatorEnum.CONTAINS, value=f'{naam_part}',
+                                logicalOp=LogicalOpEnum.OR)
+                    ],
+                    logicalOp=LogicalOpEnum.AND
                 )
             )
 
@@ -152,8 +184,8 @@ class ToezichterService:
     def add_betrokkenerelatie(self, asset: AssetDTO, agent_uuid: str, rol: str) -> BetrokkenerelatieDTO:
         json_body = {
             "bron": {
-                "uuid": f"{asset.uuid}"
-                , "_type": f"{asset._type}"
+                "uuid": f"{asset.uuid}",
+                "_type": f"{asset._type}"
             },
             "doel": {
                 "uuid": f"{agent_uuid}"
