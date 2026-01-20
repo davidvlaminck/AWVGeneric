@@ -92,7 +92,9 @@ def validate_parent_asset(asset: AssetDTO) -> bool:
     Validate is a parent asset is valid in this scope. Meaning a legact asset and not an installatie/beheerobject.
     :return: boolean
     """
-    if isinstance(asset, BeheerobjectDTO):
+    if asset is None:
+        return False
+    elif isinstance(asset, BeheerobjectDTO):
         logging.debug("Parent asset is Beheerobject / Installatie.")
         return False
     elif asset.type.uri.startswith('https://wegenenverkeer.data.vlaanderen.be'):

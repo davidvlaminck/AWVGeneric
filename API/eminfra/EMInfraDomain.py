@@ -455,8 +455,8 @@ class ToezichterKenmerk(BaseDataclass):
 
 @dataclass
 class ToezichtKenmerkUpdateDTO(BaseDataclass):
-    toezichter: ResourceRefDTO
-    toezichtGroep: ResourceRefDTO
+    toezichter: ResourceRefDTO | None
+    toezichtGroep: ResourceRefDTO | None
 
     def __post_init__(self):
          self._fix_nested_classes({('toezichter', ResourceRefDTO), ('toezichtGroep', ResourceRefDTO)})
