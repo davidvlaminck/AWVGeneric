@@ -1,15 +1,18 @@
 import logging
-
-import msal
 import json
 import time
-import requests
 from pathlib import Path
+
+import msal
+import requests
+
+from settings_loader import load_settings
 
 logging.basicConfig(
     level=logging.INFO,  # Toon INFO en hoger
     format="%(asctime)s - %(levelname)s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S")
+
 
 class OneDriveClient:
     def __init__(
@@ -40,12 +43,11 @@ class OneDriveClient:
     def login_interactive(self):
         """Perform an interactive login and save the token."""
         result = self.app.acquire_token_interactive(scopes=self.scopes)
-        if "access_token" in result:
-            result["expires_at"] = time.time() + result.get("expires_in", 3600)
-            self._save_token(result)
-            logging.info(f"Token opgeslagen in {self.token_file.resolve()}")
-        else:
+        if "access_token" not in result:
             raise RuntimeError(f"Login fout: {result.get('error_description')}")
+        result["expires_at"] = time.time() + result.get("expires_in", 3600)
+        self._save_token(result)
+        logging.info(f"Token opgeslagen in {self.token_file.resolve()}")
 
     def get_access_token(self) -> str:
         """Return a valid access token, refreshing if needed."""
@@ -147,19 +149,22 @@ class OneDriveClient:
         with open(local_path, "rb") as f:
             resp = requests.put(url, headers=headers, data=f)
 
-        if resp.status_code in (200, 201):
+        if resp.status_code in {200, 201}:
             logging.info(f"✅ Bestand succesvol geüpload als '{onedrive_path}'")
         else:
             logging.error(f"Fout bij upload: {resp.status_code} - {resp.text}")
 
+
 # ---------- Gebruik ----------
 if __name__ == "__main__":
+    settings = load_settings()
+
     client = OneDriveClient(
-        client_id="----",
-        token_file=Path("token.json"),
+        client_id=settings["azure"]["client_id"],
+        token_file=Path(settings.get("files", {}).get("token_file") or "token_onedrive.json"),
     )
     client.list_root_files()
 
-    client.download_file_by_name('r_template.xlsx', Path('r_template.xlsx'))
+    client.download_file_by_name("settings_loader.py", Path("settings_loader.py"))
 
-    client.upload_file(Path('r_template.xlsx'))
+    client.upload_file(Path("settings_loader.py"))

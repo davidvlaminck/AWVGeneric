@@ -1,0 +1,17 @@
+{
+  "azure": {
+    "client_id": "<GUID-from-Azure-App-Registration>",
+    "tenant_id": "<GUID-your-tenant-id>",
+    "client_secret": "<client-secret-value>"
+  },
+  "user": {
+    "user_principal_name": "<user@domain.com>"
+  },
+  "auth": {
+    "authority": "https://login.microsoftonline.com/<tenant_id_same_as_above>",
+    "scopes": ["https://graph.microsoft.com/.default"]
+  },
+  "files": {
+    "token_file": "token.json"
+  }
+}
