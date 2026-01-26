@@ -93,6 +93,13 @@ class OneDriveClient:
         else:
             print(f"Fout {resp.status_code}: {resp.text}")
 
+    def list_folder_files(self):
+        """List files/folders in a specific directory of the user's OneDrive."""
+        raise NotImplementedError
+
+    def delete_file(self):
+        raise NotImplementedError
+
     def download_file_by_name(self, filename: str, save_path: Path):
         """Zoekt bestand in root en downloadt het lokaal."""
         access_token = self.get_access_token()
@@ -163,6 +170,7 @@ if __name__ == "__main__":
         client_id=settings["azure"]["client_id"],
         token_file=Path(settings.get("files", {}).get("token_file") or "token_onedrive.json"),
     )
+
     client.list_root_files()
 
     client.download_file_by_name("settings_loader.py", Path("settings_loader.py"))

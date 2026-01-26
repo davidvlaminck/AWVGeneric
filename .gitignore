@@ -1,7 +1,7 @@
 # Secrets / local settings
 API/settings.json
 API/cred_onedrive.json
-**/token.json
+**/token_onedrive.json
 
 # Python
 __pycache__/

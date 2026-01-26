@@ -12,6 +12,6 @@
     "scopes": ["https://graph.microsoft.com/.default"]
   },
   "files": {
-    "token_file": "token.json"
+    "token_file": "token_onedrive.json"
   }
 }
