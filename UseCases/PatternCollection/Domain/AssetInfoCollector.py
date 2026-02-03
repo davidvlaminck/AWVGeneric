@@ -25,7 +25,7 @@ class AssetInfoCollector:
         return self.emson_importer.get_assetrelaties_by_filter(filter={'uuid': uuids})
 
     def get_assetrelaties_by_source_or_target_uuids(self, uuids: [str]) -> Generator[dict, None, None]:
-        return self.em_infra_importer.get_objects_from_oslo_search_endpoint(
+        return self.em_infra_importer.asset_service.get_objects_from_oslo_search_endpoint_gen(
             url_part='assetrelaties', filter_dict={'asset': uuids})
 
     def collect_asset_info(self, uuids: [str]) -> None:
