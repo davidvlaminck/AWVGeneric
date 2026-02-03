@@ -15,7 +15,7 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 handler.setFormatter(formatter)
 root.addHandler(handler)
 
-settings_path = Path('/home/davidlinux/Documents/AWV/resources/settings_SyncOTLDataToLegacy.json')
+settings_path = Path('/home/davidlinux/Documenten/AWV/resources/settings_SyncOTLDataToLegacy.json')
 
 
 if __name__ == '__main__':
@@ -38,7 +38,7 @@ if __name__ == '__main__':
                ('d', 'level', -1),
                ('e', 'level', 1)]
 
-    chosen_assets = syncer.em_infra_client.get_assets_by_filter_gen(filter={
+    chosen_assets = syncer.em_infra_client.asset_service.get_assets_by_filter_gen(filter={
         'typeUri': 'https://wegenenverkeer.data.vlaanderen.be/ns/installatie#MIVModule', 'naam': 'MIV231'})
     l = (list(chosen_assets))
     asset_uuids = [x['@id'][39:75] for x in l]
