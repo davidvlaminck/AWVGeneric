@@ -36,6 +36,7 @@ class JWTRequester(AbstractRequester):
 
     def post(self, url='', **kwargs) -> Response:
         kwargs = self.modify_kwargs_for_bearer_token(kwargs)
+        kwargs = self.modify_kwargs_for_files(kwargs)
         return super().post(url=url, **kwargs)
 
     def put(self, url='', **kwargs) -> Response:
@@ -121,3 +122,11 @@ class JWTRequester(AbstractRequester):
         response_json = response.json()
 
         return response_json['access_token'], response_json['expires_in']
+
+    def modify_kwargs_for_files(self, kwargs):
+        """
+        If the argument "files" is available, remove Content-Type from headers.
+        """
+        if 'files' in kwargs and 'headers' in kwargs:
+            kwargs['headers'].pop('Content-Type', None)
+        return kwargs
