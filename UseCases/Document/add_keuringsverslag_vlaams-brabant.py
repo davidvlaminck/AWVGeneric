@@ -33,7 +33,7 @@ if __name__ == '__main__':
     configure_logger()
     logging.info('Toevoegen keuringsverslagen:\t'
                  'Keuringsverslagen uit Vlaams-Brabant uploaden bij het LSDeel van de gelijknamige kast.')
-    eminfra_client = EMInfraClient(env=Environment.TEI, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
 
     root_folder = Path.home() / 'Nordend' / 'AWV - Documents' / 'Keuringsverslagen' / 'Vlaams-Brabant'
     if not Path.exists(root_folder):
@@ -89,7 +89,7 @@ if __name__ == '__main__':
 
             rows.append(row)
 
-    output_excel_path = 'Keuringsverslagen_Vlaams-Brabant_TEI.xlsx'
+    output_excel_path = 'Keuringsverslagen_Vlaams-Brabant.xlsx'
     # Write to a new file
     with pd.ExcelWriter(output_excel_path, mode='w', engine='openpyxl') as writer:
         df = pd.DataFrame(rows)
