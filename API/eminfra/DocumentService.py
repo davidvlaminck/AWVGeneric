@@ -67,46 +67,16 @@ class DocumentService:
             #'name': 'file',
             #'filename': file_path.name
         }
-        #payload = {}
-        with open(file_path, "rb") as f:
+        with file_path.open("rb") as f:
             files = {
                 "file": (file_path.name, f, "application/pdf")
-                #"file": f
             }
-#            files = [('file', (file_path.name, f, 'application/pdf'))]  # Specify the file you want to upload application/pdf
-#            response = self.requester.post(url, headers=headers, data=payload, files=files)
             response = self.requester.post(url, files=files)
-            response = self.requester.post(url, files=file_path)
             logging.debug(f'response: {response.status_code}')
             logging.debug(f'response: {response.text}')
 
         response_json = response.json()
-        # hier de uuid uithalen
-        uuid = response_json.get("uuid")
-        naam = response_json.get("naam")
-        createdOn = response_json.get("createdOn")
-        mimeType = response_json.get("mimeType")
-        storageId = response_json.get("storageId") # overbodig?
-        grootte = response_json.get("grootte")
-
-        url = f'core/api/assets/{asset_uuid}/documenten/bulk-create'
-        upload_body = {
-            "data":
-                [{
-                    "categorie": "KEURINGSVERSLAG",
-                    "naam":'A1N1.3.K.pdf',
-                    "omschrijving":"test",
-                    "document": {
-                        "naam": naam,
-                        "uuid": uuid,
-                        "mimeType": mimeType,
-                        "createdOn": createdOn,
-                        "grootte": grootte
-                    }
-                }]
-        }
-        json_dict = self.requester.post(url, json=upload_body).json()
-
+        return response_json
 
 
     def get_documents_by_uuid_generator(self, asset_uuid: str, size: int = 10,
