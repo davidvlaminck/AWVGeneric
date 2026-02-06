@@ -700,6 +700,18 @@ class AssetDocumentDTO(BaseDataclass):
         self._fix_nested_list_classes({('links', Link)})
         self._fix_nested_list_classes({('document', ResourceRefDTO)})
 
+@dataclass
+class DocumentDTO(BaseDataclass):
+    uuid: str
+    createdOn: str
+    naam: str
+    mimeType: str
+    storageId: str
+    grootte: str
+    links: [Link]
+
+    def __post_init__(self):
+        self._fix_nested_list_classes({('links', Link)})
         
 @dataclass
 class BetrokkenerelatieDTO(BaseDataclass):
