@@ -1,0 +1,96 @@
+import logging
+from datetime import datetime
+from pathlib import Path
+
+import pandas as pd
+
+from API.eminfra.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraDomain import BestekCategorieEnum, BestekKoppelingStatusEnum, BestekRef, BestekKoppeling
+from API.Enums import AuthType, Environment
+from UseCases.utils import configure_logger, load_settings
+from utils.date_helpers import format_datetime
+
+EINDDATUM = None
+OUTPUT_EXCEL_PATH = Path('Verlengen_bestekkoppeling_VWT_VHS_2020_002.xlsx')
+EDELTA_DOSSIERNUMMERS = ['VWT/VHS/2020/002/1', 'VWT/VHS/2020/002/2', 'VWT/VHS/2020/002/3']
+
+
+def verleng_bestekkoppelingen(client: EMInfraClient,
+                              df: pd.DataFrame,
+                              bestekref: BestekRef,
+                              einddatum: datetime | None = EINDDATUM,
+                              output_excel_path: Path = OUTPUT_EXCEL_PATH) -> Path:
+    """
+    Verleng de einddatum van bestekkoppelingen voor een lijst van uuid's (assets) in een Dataframe
+
+    :param client:
+    :type client:
+    :param df: Dataframe met kolom uuid
+    :type df: pd.Dataframe
+    :param bestekref: Bestek referentie
+    :type bestekref: BestekRef
+    :param einddatum: einddatum waarnaar de bestekkoppeling wordt verlengd.
+    :type einddatum: datetime
+    :param output_excel_path: output Excel path
+    :type output_excel_path: Path
+    :return output file path
+    """
+    assets_updated = []
+    for counter, df_row in df.iterrows():
+        asset = client.asset_service.get_asset_by_uuid(asset_uuid=df_row["uuid"])
+        logging.debug(f'Processing ({counter}) asset: {asset.uuid}; naam: {asset.naam}; assettype: {asset.type.uri}')
+
+        bestekkoppelingen: list[BestekKoppeling] = client.bestek_service.get_bestekkoppeling(asset=asset)
+
+        index, matching_bestekkoppeling = next(((i, x) for i, x in enumerate(bestekkoppelingen)
+                                                if x.status == BestekKoppelingStatusEnum.INACTIEF
+                                                and x.bestekRef.uuid == bestekref.uuid
+                                                and x.categorie == BestekCategorieEnum.WERKBESTEK), (None, None))
+
+        if (matching_bestekkoppeling and
+                matching_bestekkoppeling.bestekRef.eDeltaBesteknummer == bestekref.eDeltaBesteknummer):
+            logging.debug(f'Verleng bestekkoppeling {matching_bestekkoppeling.bestekRef.eDeltaDossiernummer}')
+
+            if einddatum:
+                bestekkoppelingen[index].eindDatum = format_datetime(einddatum)
+            else:
+                bestekkoppelingen[index].eindDatum = None
+
+            # Update all the bestekkoppelingen for this asset
+            assets_updated.append({
+                "uuid": asset.uuid, "naam": asset.naam, "besteknummer": bestekref.eDeltaBesteknummer,
+                "Start koppeling": matching_bestekkoppeling.startDatum,
+                "Einde koppeling": matching_bestekkoppeling.eindDatum,
+                "eminfra_link": f'https://apps.mow.vlaanderen.be/eminfra/assets/{asset.uuid}'
+            })
+            client.bestek_service.change_bestekkoppelingen(asset=asset, bestekkoppelingen=bestekkoppelingen)
+        else:
+            logging.debug('geen overeenkomstige bestekkoppeling gevonden, ga verder met de volgende asset.')
+            continue
+
+    df = pd.DataFrame(assets_updated)
+    sheet_name = bestekref.eDeltaDossiernummer.replace('/', '_')
+    mode: str = 'a' if Path(output_excel_path).exists() else 'w'
+    if mode == 'a':
+        with pd.ExcelWriter(output_excel_path, mode=mode, engine='openpyxl', if_sheet_exists='replace') as writer:
+            df.to_excel(writer, sheet_name=sheet_name, index=False, freeze_panes=(1, 1))
+    elif mode == 'w':
+        with pd.ExcelWriter(output_excel_path, mode='w', engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name=sheet_name, index=False, freeze_panes=(1, 1))
+    return output_excel_path
+
+
+if __name__ == '__main__':
+    configure_logger()
+    logging.info('Verlengen van bestekkoppeling "MDM/19A03" naar 5/1/2027.')
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
+
+    logging.info("Query assets...")
+    input_filepath = (Path.home() / 'OneDrive - Vlaamse overheid - Office 365' / 'AWVGeneric' /
+                      '187_bestekkoppelingen' / '187_bestekkoppelingen.xlsx')
+    df_assets = pd.read_excel(input_filepath, usecols=["uuid", "bestek_info.dossiernummer"])
+    for edelta_dossiernummer in EDELTA_DOSSIERNUMMERS:
+        bestekref_temp = eminfra_client.bestek_service.get_bestekref(eDelta_dossiernummer=edelta_dossiernummer)
+        # filter df_assets of basis van bestekref
+        df_assets_temp = df_assets[df_assets["bestek_info.dossiernummer"] == bestekref_temp.eDeltaDossiernummer]
+        verleng_bestekkoppelingen(client=eminfra_client, df=df_assets_temp, bestekref=bestekref_temp)
