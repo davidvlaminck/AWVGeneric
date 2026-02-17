@@ -1,13 +1,11 @@
 import pandas as pd
 import json
-import os
 from datetime import datetime
-
-from pathlib import Path
 
 from API.eminfra.EMInfraClient import EMInfraClient
 from API.eminfra.EMInfraDomain import BestekKoppelingStatusEnum
 from API.Enums import AuthType, Environment
+from UseCases.utils import load_settings_path
 
 
 def collect_child_assets(asset_uuid, eminfra_client, all_assets=None, all_uuids=None):
@@ -54,7 +52,7 @@ if __name__ == '__main__':
         beheerobjecten = json.load(file).get('beheerobjecten')
 
     environment = Environment.PRD
-    settings_path = Path(os.environ["OneDrive"]) / 'projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
+    settings_path = load_settings_path()
     eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=settings_path)
     print("Update de bestekkoppelingen voor assets die gelinkt zijn aan het project BRAVO4.")
     print("Beëindig het huidige bestek en installeer een nieuw bestek: INTERN-5904")

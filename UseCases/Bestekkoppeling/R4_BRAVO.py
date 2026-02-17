@@ -7,6 +7,7 @@ from pathlib import Path
 
 from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
+from UseCases.utils import load_settings_path
 
 start_datetime = datetime(2025, 1, 1)
 eDelta_dossiernummer_new = 'INTERN-5904'
@@ -16,7 +17,7 @@ print("Beëindig het huidige bestek en installeer een nieuw bestek: INTERN-5904"
 print(f"De einddatum van het vorige bestek is tevens de startdatum van het nieuwe bestek: {start_datetime}")
 
 environment = Environment.PRD
-settings_path = Path(os.environ["OneDrive"]) / 'projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
+settings_path = load_settings_path()
 eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=settings_path)
 print(f"Initializing an EMInfraClient on the {environment} environment")
 

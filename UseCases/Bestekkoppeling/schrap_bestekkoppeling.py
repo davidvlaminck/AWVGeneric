@@ -1,10 +1,11 @@
-import os
 import pandas as pd
 
 from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 
 from pathlib import Path
+
+from UseCases.utils import load_settings_path
 
 print("""
     Dit script schrapt de bestekkoppelingen die gelinkt zijn aan een bestek zonder naam.
@@ -20,7 +21,7 @@ if __name__ == '__main__':
     environment = Environment.PRD
     print(f'environment:\t\t{environment}')
 
-    settings_path = Path(os.environ["OneDrive"]) / 'projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
+    settings_path = load_settings_path()
     eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=settings_path)
 
     excel_path = Path.home() / 'Downloads' / 'bestekken' / '[RSA] Assets gelinkt aan bestekken zonder aannemer.xlsx'

@@ -5,11 +5,11 @@ from pathlib import Path
 
 from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
-
+from UseCases.utils import load_settings_path
 
 environment = Environment.PRD
 print(f'environment:\t\t{environment}')
-settings_path = Path.home() / 'OneDrive - Nordend' / 'projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
+settings_path = load_settings_path()
 eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=settings_path)
 eindDatum = datetime(2025, 2, 1)
 

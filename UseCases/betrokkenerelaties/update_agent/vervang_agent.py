@@ -3,14 +3,14 @@ import logging
 from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 
-from UseCases.utils import load_settings, build_query_search_betrokkenerelaties, build_query_search_assets
+from UseCases.utils import load_settings_path, build_query_search_betrokkenerelaties, build_query_search_assets
 
 
 if __name__ == '__main__':
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s', filemode="w")
     logging.info('Vervang agent door diens opvolger.')
     logging.info('Hedwig Van Landeghem door Arne De Sterck')
-    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings_path())
 
     agent1 = next(eminfra_client.search_agent(naam="Hedwig Van Landeghem", actief=True), None)
     if not agent1:

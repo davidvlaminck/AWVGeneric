@@ -4,15 +4,12 @@ from API.Enums import AuthType, Environment
 import geopandas as gpd
 from pathlib import Path
 
+from UseCases.utils import load_settings_path
+
 print(""""
         Update geometrie van de Asset (Legacy) via de em-infra API
         Inlezen van GeoJSON en update van Beheerobjecten van de nieuwe wegsegmenten (A-wegen, N-wegen, Rwegen, ...) 
       """)
-
-def load_settings():
-    """Load API settings from JSON"""
-    settings_path = Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
-    return settings_path
 
 def read_json(filepath: Path, usecols=list[str] | None) -> gpd.GeoDataFrame:
     """ Reads GeoJSON in Pandas dataframe
@@ -28,7 +25,7 @@ def read_json(filepath: Path, usecols=list[str] | None) -> gpd.GeoDataFrame:
 
 
 if __name__ == '__main__':
-    settings_path = load_settings()
+    settings_path = load_settings_path()
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
 
     json_path = Path().home() / 'Downloads' / 'Beheersegment' / 'input' / 'beheersegmentenGeometrieVTC_20250416_met_nieuwe_id.geojson'

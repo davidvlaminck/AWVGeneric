@@ -8,7 +8,7 @@ from pathlib import Path
 from otlmow_model.OtlmowModel.Classes.ImplementatieElement.RelatieObject import RelatieObject
 from otlmow_model.OtlmowModel.Helpers.RelationCreator import create_betrokkenerelation
 from otlmow_converter.OtlmowConverter import OtlmowConverter
-from UseCases.utils import load_settings
+from UseCases.utils import load_settings_path
 
 from Generic.ExcelModifier import ExcelModifier
 
@@ -168,7 +168,7 @@ def _deactivate_status(item):
     return item
 
 if __name__ == '__main__':
-    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings_path())
 
     # Initialize empty DataFrame for logging
     log_df = pd.DataFrame(columns=["uuid", "message"])

@@ -9,13 +9,8 @@ from pathlib import Path
 from otlmow_model.OtlmowModel.Classes.Onderdeel.Lichtmast import Lichtmast
 from otlmow_converter.OtlmowConverter import OtlmowConverter
 
+from UseCases.utils import load_settings_path
 
-def load_settings():
-    """Load API settings from JSON"""
-    return (
-        Path().home()
-        / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
-    )
 
 def read_report(filepath: Path, usecols=list[str]):
     """Read RSA-report as input into a DataFrame."""
@@ -44,7 +39,7 @@ def format_locatie_kenmerk_lgc_2_wkt(locatie: LocatieKenmerk) -> str:
 
 
 if __name__ == '__main__':
-    settings_path = load_settings()
+    settings_path = load_settings_path()
     excel_path = Path().home() / 'Downloads' / 'Lichtmast'
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s', filemode="w")

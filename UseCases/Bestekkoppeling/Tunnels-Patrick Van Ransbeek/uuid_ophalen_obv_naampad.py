@@ -3,7 +3,7 @@ import logging
 import pandas as pd
 from pathlib import Path
 
-from UseCases.utils import load_settings
+from UseCases.utils import load_settings_path
 from API.eminfra.EMInfraClient import EMInfraClient
 from API.eminfra.EMInfraDomain import QueryDTO, PagingModeEnum, SelectionDTO, OperatorEnum, TermDTO, ExpressionDTO, \
     construct_naampad, ExpansionsDTO
@@ -16,7 +16,7 @@ if __name__ == '__main__':
     environment = Environment.PRD
     logging.info(f'Omgeving: {environment.name}')
 
-    eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=load_settings_path())
 
     naampad_prefixen = ['TYS.TUNNEL', 'A2584']
     for naampad in naampad_prefixen:

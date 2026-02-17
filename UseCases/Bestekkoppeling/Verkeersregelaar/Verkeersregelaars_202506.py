@@ -2,6 +2,8 @@ import copy
 import datetime
 from dateutil.relativedelta import relativedelta
 import logging
+
+from UseCases.utils import load_settings_path
 from utils.date_helpers import format_datetime
 from API.eminfra.EMInfraClient import EMInfraClient
 from API.eminfra.EMInfraDomain import BestekKoppeling, BestekCategorieEnum, AssetDTO, BestekKoppelingStatusEnum
@@ -16,11 +18,6 @@ print("""
         Toevoegen van een nieuwe bestekkoppeling (Yunex/Swarco) op de eerste positie van alle bestekkoppelingen.
         Beëindigen van de bestaande bestekkoppeling op deze startdatum.
       """)
-
-
-def load_settings():
-    """Load API settings from JSON"""
-    return Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
 
 
 def import_data(filepath: Path):
@@ -64,7 +61,7 @@ if __name__ == '__main__':
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s',
                         filemode="w")
     logging.info('Verkeersregelaars:\tUpdate bestekkoppelingen')
-    settings_path = load_settings()
+    settings_path = load_settings_path()
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
 
     bestekref_swarco = eminfra_client.get_bestekref_by_eDelta_dossiernummer('VWT/INN/2020/011_004AWV/TLC_1')

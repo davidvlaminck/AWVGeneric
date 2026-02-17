@@ -2,11 +2,12 @@ from API.eminfra.EMInfraClient import EMInfraClient
 from API.eminfra.EMInfraDomain import (QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum,
                                        LogicalOpEnum)
 from API.Enums import AuthType, Environment
+from UseCases.utils import load_settings_path
 
 if __name__ == '__main__':
     from pathlib import Path
 
-    settings_path = Path('C:/Users/DriesVerdoodtNordend/OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json')
+    settings_path = load_settings_path()
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
 
     # Step 1. Search assets "Geluidwerende constructie", including the parent asset.

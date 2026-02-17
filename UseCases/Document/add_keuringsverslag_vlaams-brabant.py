@@ -7,7 +7,7 @@ from API.Enums import AuthType, Environment
 from API.eminfra.EMInfraDomain import QueryDTO, ExpansionsDTO, PagingModeEnum, SelectionDTO, TermDTO, OperatorEnum, \
     ExpressionDTO, LogicalOpEnum, AssetDTO, DocumentCategorieEnum
 
-from UseCases.utils import load_settings, configure_logger
+from UseCases.utils import load_settings_path, configure_logger
 
 
 def filter_assettype(assets: list[AssetDTO], uri: str) -> AssetDTO | None:
@@ -33,7 +33,7 @@ if __name__ == '__main__':
     configure_logger()
     logging.info('Toevoegen keuringsverslagen:\t'
                  'Keuringsverslagen uit Vlaams-Brabant uploaden bij het LSDeel van de gelijknamige kast.')
-    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings_path())
 
     root_folder = Path.home() / 'Nordend' / 'AWV - Documents' / 'Keuringsverslagen' / 'Vlaams-Brabant'
     if not Path.exists(root_folder):

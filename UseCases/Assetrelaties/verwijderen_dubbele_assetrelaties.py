@@ -7,12 +7,12 @@ from API.eminfra.EMInfraClient import EMInfraClient
 from API.eminfra.EMInfraDomain import RelatieEnum
 from API.Enums import AuthType, Environment
 
-from UseCases.utils import load_settings, read_rsa_report, configure_logger
+from UseCases.utils import load_settings_path, read_rsa_report, configure_logger
 
 if __name__ == '__main__':
     configure_logger()
     logging.info('Verwijderen van niet-gerichte assetsrelaties die dubbel voorkomen.')
-    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings_path())
 
     input_excel_path = Path.home() / 'Nordend/AWV - Documents/ReportingServiceAssets/Report0211' / '[RSA] Dubbele niet-gerichte relatie tussen assets.xlsx'
     df_assets = read_rsa_report(filepath=input_excel_path, usecols=['bronuuid', 'doeluuid', 'relatie', 'unique'])

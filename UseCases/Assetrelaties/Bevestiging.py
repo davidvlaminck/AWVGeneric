@@ -4,9 +4,8 @@ from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path
 
-def load_settings():
-    """Load API settings from JSON"""
-    return Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
+from UseCases.utils import load_settings_path
+
 
 def read_excel_as_dataframe(filepath: Path, sheet_name: str, usecols: list[str]):
     """Read RSA-report as input into a DataFrame."""
@@ -21,7 +20,7 @@ if __name__ == '__main__':
     logging.info('Aanmaken van een Bevestiging-Relatie tussen 2 Legacy assets.'
                  'Opdracht om Kasten, LS, LSDeel, Afstandsbewaking en Segmentcontrollers te localiseren.')
 
-    settings_path = load_settings()
+    settings_path = load_settings_path()
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
 
     KENMERKTYPE_UUID, RELATIETYPE_UUID = eminfra_client.get_kenmerktype_and_relatietype_id(relatie_uri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Bevestiging')

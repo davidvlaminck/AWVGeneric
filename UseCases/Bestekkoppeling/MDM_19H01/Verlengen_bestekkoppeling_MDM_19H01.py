@@ -7,7 +7,7 @@ import pandas as pd
 from API.eminfra.EMInfraClient import EMInfraClient
 from API.eminfra.EMInfraDomain import BestekCategorieEnum, BestekKoppelingStatusEnum, BestekRef, BestekKoppeling
 from API.Enums import AuthType, Environment
-from UseCases.utils import configure_logger, load_settings
+from UseCases.utils import configure_logger, load_settings_path
 from utils.date_helpers import format_datetime
 
 EINDDATUM = datetime(year=2026, month=12, day=10, hour=0, minute=0)
@@ -82,7 +82,7 @@ if __name__ == '__main__':
     logging.info(
         f'Verlengen van bestekkoppeling "{EDELTA_BESTEKNUMMER}" naar {format_datetime(EINDDATUM)}.'
     )
-    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings_path())
 
     logging.info("Query assets...")
     input_filepath = Path.home() / 'Downloads' / 'MDM19H01.xlsx'

@@ -9,7 +9,7 @@ from API.Enums import AuthType, Environment
 from API.eminfra.EMInfraDomain import ToezichtKenmerkUpdateDTO, ResourceRefDTO, BeheerobjectDTO, AssetDTO, \
     ToezichterKenmerk
 
-from UseCases.utils import load_settings, read_rsa_report, configure_logger
+from UseCases.utils import load_settings_path, read_rsa_report, configure_logger
 
 
 def map_toezichtgroep(client: EMInfraClient, beheerobject_naam: str) -> ResourceRefDTO | None:
@@ -300,7 +300,7 @@ if __name__ == '__main__':
     configure_logger()
     logging.info('https://github.com/davidvlaminck/AWVGeneric/issues/179')
     logging.info('toezichter en toezichtsgroep toekennen')
-    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings_path())
 
     input_file = (Path.home() / 'Nordend' / 'AWV - Documents' / 'reportingServiceAssets' / 'Report0217' /
                   '[RSA] Toezichtsgroep ontbreekt voor voeding-assets (LS, LSDeel, HS, HSDeel, HSCabine).xlsx')

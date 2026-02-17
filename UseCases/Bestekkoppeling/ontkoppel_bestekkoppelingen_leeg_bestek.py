@@ -1,11 +1,10 @@
-import os
 import pandas as pd
 
 from pathlib import Path
 
 from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
-
+from UseCases.utils import load_settings_path
 
 if __name__ == '__main__':
     filepath = Path(r"C:\Users\DriesVerdoodtNordend\Downloads\[RSA] Assets gelinkt aan bestekken zonder aannemer.xlsx")
@@ -13,7 +12,7 @@ if __name__ == '__main__':
                               usecols=["uuid", "assettype", "naampad"])
 
     environment = Environment.PRD
-    settings_path = Path(os.environ["OneDrive"]) / 'projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
+    settings_path = load_settings_path()
     eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=settings_path)
 
     print("\tStart updating bestekkoppelingen")

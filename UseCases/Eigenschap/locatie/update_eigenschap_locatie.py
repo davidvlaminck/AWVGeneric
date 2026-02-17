@@ -8,18 +8,13 @@ from pathlib import Path
 from otlmow_model.OtlmowModel.Classes.Onderdeel.Netwerkelement import Netwerkelement
 from otlmow_converter.OtlmowConverter import OtlmowConverter
 
+from UseCases.utils import load_settings_path
+
 print(""""
         Update de eigenschap locatie van een asset (LGC)
         IP Netwerkelementen hebben dezelfde locatie als hun Bijhorende legacy object van type IP. 
         Update de locatie van IP Netwerkelementen waarvoor dit nog niet zo is. 
       """)
-
-def load_settings():
-    """Load API settings from JSON"""
-    return (
-        Path().home()
-        / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
-    )
 
 def read_report():
     """Read RSA-report as input into a DataFrame."""
@@ -58,7 +53,7 @@ def format_locatie_kenmerk_lgc_2_wkt(locatie: LocatieKenmerk) -> str:
 
 
 if __name__ == '__main__':
-    settings_path = load_settings()
+    settings_path = load_settings_path()
     excel_path = Path().home() / 'Downloads' / 'update_eigenschap' / 'locatie'
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
 

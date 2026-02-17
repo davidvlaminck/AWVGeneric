@@ -4,7 +4,7 @@ import pandas as pd
 
 from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
-from UseCases.utils import load_settings
+from UseCases.utils import load_settings_path
 
 if __name__ == '__main__':
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s',
@@ -14,7 +14,7 @@ if __name__ == '__main__':
     logging.info('Aanmaken van beheerobjecten indien nog onbestaand.'
                  f'Omgeving: {env}'
                  f'Beheerobjecten: {beheerobjecten_aan_te_maken}')
-    eminfra_client = EMInfraClient(env=env, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=env, auth_type=AuthType.JWT, settings_path=load_settings_path())
 
     rows = []
     for beheerobject_naam in beheerobjecten_aan_te_maken:

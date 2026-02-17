@@ -1,4 +1,3 @@
-import os
 import pandas as pd
 
 from API.eminfra.EMInfraClient import EMInfraClient
@@ -7,6 +6,9 @@ from API.eminfra.EMInfraDomain import QueryDTO, PagingModeEnum, ExpansionsDTO, S
 from API.Enums import AuthType, Environment
 
 from pathlib import Path
+
+from UseCases.utils import load_settings_path
+
 
 def log_action(uuid: str, message: str = ""):
     """Logs an action into the DataFrame."""
@@ -36,7 +38,7 @@ def return_beheerobject(asset: AssetDTO, depth=0):
         return current_asset, current_depth
 
 if __name__ == '__main__':
-    settings_path = Path(os.environ["OneDrive"]) / 'projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
+    settings_path = load_settings_path()
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
 
     filepath = Path().home() / 'Downloads' / 'LS_Keuringsinfo_eigenschappen' / '[RSA] Laagspanningsaansluiting (Legacy) keuringsinfo.xlsx'

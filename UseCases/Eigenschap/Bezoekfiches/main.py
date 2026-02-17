@@ -7,7 +7,7 @@ from API.eminfra.EMInfraClient import EMInfraClient
 from API.eminfra.EMInfraDomain import Graph, AssetDTO, RelatieEnum
 from API.Enums import AuthType, Environment
 
-from UseCases.utils import load_settings, read_rsa_report
+from UseCases.utils import load_settings_path, read_rsa_report
 
 
 def get_nodes_from_graph(graph: Graph, uri: str = None) -> list[AssetDTO]:
@@ -47,7 +47,7 @@ if __name__ == '__main__':
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s',
                         filemode="w")
     logging.info('Ophalen eigenschappen van de beheeracties van Inspectie Wegverlichting, horend bij VPLMast.')
-    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings_path())
 
     df_assets = pd.read_excel('Export masten C1383.xlsx', sheet_name='Sheet0', header=0, usecols=['id'])
 

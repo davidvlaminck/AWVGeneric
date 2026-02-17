@@ -3,7 +3,7 @@ from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path
-from UseCases.utils import load_settings, configure_logger, read_rsa_report
+from UseCases.utils import load_settings_path, configure_logger, read_rsa_report
 
 if __name__ == '__main__':
     configure_logger()
@@ -11,7 +11,7 @@ if __name__ == '__main__':
         'Toevoegen van een toezichtsgroep op basis van een mapping bestand.\n'
         'Het mapping bestand bevat de naam van agenten en diens bijbehorende toezichtsgroep.'
     )
-    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings_path())
 
     logging.info('Read input Excel file into df.')
     excel_path = Path().home() / 'Nordend/AWV - Documents/ReportingServiceAssets/Report0191' / '[RSA] Laagspanningsgedeelte (Legacy) keuringsinfo.xlsx'

@@ -3,7 +3,7 @@ from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path
 from otlmow_converter.OtlmowConverter import OtlmowConverter
-from UseCases.utils import load_settings
+from UseCases.utils import load_settings_path
 from UseCases.utils import build_betrokkenerelatie, get_bestaande_betrokkenerelaties
 
 BASE_DIR = Path.home() / "OneDrive - Nordend/projects/AWV/OTL_Aanpassingen/Toezichter_update"
@@ -74,7 +74,7 @@ def write_output(existing, created, out_dir: Path):
 
 
 def main():
-    client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
+    client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings_path())
     df = load_input(INPUT_FILE)
     existing, created = process_assets(client, df)
     write_output(existing, created, OUTPUT_DIR)

@@ -14,9 +14,10 @@ from otlmow_model.OtlmowModel.Classes.ImplementatieElement.RelatieObject import 
 from otlmow_model.OtlmowModel.Helpers.RelationCreator import create_betrokkenerelation
 
 
-def load_settings(user: str = 'Dries'):
+
+def load_settings_path(user: str = 'Dries') -> Path:
     if user == 'Dries':
-        return Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
+        return Path('C:/resources/settings_SyncOTLDataToLegacy.json')
     else:
         raise NotImplementedError(f'user: {user} is not implemented in function call load_settings()')
 

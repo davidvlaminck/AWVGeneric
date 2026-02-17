@@ -5,12 +5,12 @@ import pandas as pd
 from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 
-from UseCases.utils import load_settings, read_rsa_report, configure_logger
+from UseCases.utils import load_settings_path, read_rsa_report, configure_logger
 
 if __name__ == '__main__':
     configure_logger()
     logging.info('Use case naam:\t use case beschrijving')
-    eminfra_client = EMInfraClient(env=Environment.TEI, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=Environment.TEI, auth_type=AuthType.JWT, settings_path=load_settings_path())
 
     df_assets = read_rsa_report()
 

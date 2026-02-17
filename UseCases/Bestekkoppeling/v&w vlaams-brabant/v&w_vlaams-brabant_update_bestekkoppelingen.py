@@ -4,7 +4,7 @@ from datetime import datetime
 import pandas as pd
 from pathlib import Path
 
-from UseCases.utils import load_settings
+from UseCases.utils import load_settings_path
 from utils.date_helpers import format_datetime
 from API.eminfra.EMInfraClient import EMInfraClient
 from API.eminfra.EMInfraDomain import BestekKoppelingStatusEnum, BestekCategorieEnum, BestekKoppeling
@@ -15,7 +15,7 @@ if __name__ == '__main__':
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s\t', filemode="w")
     logging.info('V&W Vlaams-Brabant: \tBestekkoppelingen toevoegen voor een lijst van assets en deactiveren van de huidige bestekkoppeling.')
 
-    settings_path = load_settings()
+    settings_path = load_settings_path()
     logging.info(f'settings_path: {settings_path}')
 
     environment = Environment.PRD

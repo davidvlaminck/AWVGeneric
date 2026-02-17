@@ -4,14 +4,11 @@ from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path
 
+from UseCases.utils import load_settings_path
+
 print(""""
         Wissen (leegmaken) van de wetenschappelijke notatie van een attribuut, door het toekennen van een lege string.      
       """)
-
-def load_settings():
-    """Load API settings from JSON"""
-    settings_path = Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
-    return settings_path
 
 def read_report():
     """Read RSA-report as input into a DataFrame."""
@@ -39,7 +36,7 @@ def update_asset(asset: AssetDTO, eminfra_client: EMInfraClient):
     eminfra_client.update_eigenschap(assetId=asset_uuid, eigenschap=eigenschap)
 
 if __name__ == '__main__':
-    settings_path = load_settings()
+    settings_path = load_settings_path()
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
 
     df_assets = read_report()

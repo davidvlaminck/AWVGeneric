@@ -9,7 +9,7 @@ import pandas as pd
 from pathlib import Path
 
 from Generic.ExcelModifier import ExcelModifier
-from UseCases.utils import load_settings
+from UseCases.utils import load_settings_path
 
 print("""
     Ophalen van informatie via verschillende eminfra API calls en bewaren van de info in een Pandas dataframe.
@@ -28,7 +28,7 @@ print("""
 """)
 
 if __name__ == '__main__':
-    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings_path())
 
     # intialize an empty dataframe
     df_assets = pd.DataFrame(columns=

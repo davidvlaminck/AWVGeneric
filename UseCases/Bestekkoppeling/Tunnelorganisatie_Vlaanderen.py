@@ -6,6 +6,7 @@ import pandas as pd
 from pathlib import Path
 
 from Generic.ExcelModifier import ExcelModifier
+from UseCases.utils import load_settings_path
 from utils.date_helpers import format_datetime
 from API.eminfra.EMInfraClient import EMInfraClient
 from API.eminfra.EMInfraDomain import QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum, \
@@ -25,7 +26,7 @@ if __name__ == '__main__':
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s\t', filemode="w")
     logging.info('Tunnelorganisatie Vlaanderen: \tBestekkoppelingen beëindigen en nieuwe bestekkoppeling toevoegen')
 
-    settings_path = Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
+    settings_path = load_settings_path()
     logging.info(f'settings_path: {settings_path}')
 
     environment = Environment.PRD

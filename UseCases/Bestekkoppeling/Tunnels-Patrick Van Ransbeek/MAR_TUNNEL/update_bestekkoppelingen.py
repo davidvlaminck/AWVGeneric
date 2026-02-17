@@ -4,7 +4,7 @@ from datetime import datetime
 import pandas as pd
 from pathlib import Path
 
-from UseCases.utils import load_settings
+from UseCases.utils import load_settings_path
 from utils.date_helpers import format_datetime
 from API.eminfra.EMInfraClient import EMInfraClient
 from API.eminfra.EMInfraDomain import BestekKoppelingStatusEnum, BestekCategorieEnum, BestekKoppeling
@@ -141,7 +141,7 @@ if __name__ == '__main__':
 
     environment = Environment.PRD
     logging.info(f'Omgeving: {environment.name}')
-    eminfra_client = EMInfraClient(auth_type=AuthType.JWT, env=environment, settings_path=load_settings())
+    eminfra_client = EMInfraClient(auth_type=AuthType.JWT, env=environment, settings_path=load_settings_path())
 
     # Read Excel as pandas dataframe
     filepath_input = Path.home() / 'Downloads' / 'MAR_TUNNEL' / BESTANDSNAAM

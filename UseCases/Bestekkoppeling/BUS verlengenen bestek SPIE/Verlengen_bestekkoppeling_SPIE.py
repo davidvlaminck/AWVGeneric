@@ -7,7 +7,7 @@ import pandas as pd
 from API.eminfra.EMInfraClient import EMInfraClient
 from API.eminfra.EMInfraDomain import QueryDTO, BestekCategorieEnum, BestekKoppelingStatusEnum, BestekRef
 from API.Enums import AuthType, Environment
-from UseCases.utils import configure_logger, load_settings
+from UseCases.utils import configure_logger, load_settings_path
 from utils.date_helpers import format_datetime
 from utils.query_dto_helpers import build_query_search_assettype
 
@@ -65,7 +65,7 @@ def verleng_bestekkoppelingen(eminfra_client: EMInfraClient,
 if __name__ == '__main__':
     configure_logger()
     logging.info('Verlengen van bestekkoppeling "VWT/VL/2021/3" bij alle BUS en KAR van 3/12/2025 naar 02/06/2025.')
-    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings_path())
 
     logging.info("Query assets...")
     search_query_BUS = build_query_search_assettype(assettype_uuid=ASSETTYPE_UUID_BUS)

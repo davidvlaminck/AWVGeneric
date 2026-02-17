@@ -7,13 +7,13 @@ import pandas as pd
 from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 
-from UseCases.utils import load_settings
+from UseCases.utils import load_settings_path
 
 
 if __name__ == '__main__':
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s', filemode="w")
     logging.info('Omkeren van em-infra wijzigingen:\t Terugdraaien van de wijzigingen uitgevoerd door Patrick Van Ransbeek op 09/10/20025 tussen 11:45 en 11:50.')
-    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings_path())
 
     logging.info("Ophalen van alle wijzigingen.")
     identiteit_patrick = next(eminfra_client.search_identiteit(naam='Patrick Van Ransbeek'), None)

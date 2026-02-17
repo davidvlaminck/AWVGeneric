@@ -4,7 +4,7 @@ from API.eminfra.EMInfraDomain import RelatieEnum
 from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path
-from UseCases.utils import load_settings
+from UseCases.utils import load_settings_path
 
 
 def read_excel_as_dataframe(filepath: Path, usecols: list[str]):
@@ -20,7 +20,7 @@ if __name__ == '__main__':
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s', filemode="w")
     logging.info('Aanmaken van een Bevestiging-Relatie tussen de Legacy assets Afstandsbewaking en LSDeel')
 
-    settings_path = load_settings()
+    settings_path = load_settings_path()
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
 
     # Read input report

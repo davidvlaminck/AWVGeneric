@@ -8,16 +8,12 @@ from otlmow_model.OtlmowModel.Helpers.RelationCreator import create_betrokkenere
 from otlmow_converter.OtlmowConverter import OtlmowConverter
 from otlmow_model.OtlmowModel.Classes.Onderdeel.Bevestiging import Bevestiging
 
+from UseCases.utils import load_settings_path
+
 print(
     """"
     Aanmaken van Bevestiging-Relaties tussen de PT-Verwerkingseenheid en PT-Demodulator in een DAVIE-conform bestand.
     """)
-
-def load_settings():
-    """Load API settings from JSON"""
-    settings_path = Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
-    return settings_path
-
 
 def read_RSA_report_as_dataframe(filepath: Path, usecols=None):
     """Read RSA-report as input into a DataFrame."""
@@ -29,7 +25,7 @@ def read_RSA_report_as_dataframe(filepath: Path, usecols=None):
 
 
 if __name__ == '__main__':
-    settings_path = load_settings()
+    settings_path = load_settings_path()
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
 
     # Read input report

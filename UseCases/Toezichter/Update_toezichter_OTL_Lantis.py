@@ -5,7 +5,7 @@ from API.eminfra.EMInfraDomain import (AssetDTO, QueryDTO, PagingModeEnum, Selec
                                        OperatorEnum, LogicalOpEnum, AgentDTO)
 from API.Enums import AuthType, Environment
 import pandas as pd
-from UseCases.utils import load_settings
+from UseCases.utils import load_settings_path
 
 print("""
         Update van de toezichters van OTL-assets, Kris Smet en Ruben Henrard, naar Lantis
@@ -41,7 +41,7 @@ def build_query_search_betrokkenerelaties(asset: AssetDTO):
 if __name__ == '__main__':
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s', filemode="w")
     logging.info('Update toezichter naar LANTIS:\t Toezichters Kristof Smet en Ruben Henrard')
-    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings_path())
 
     toezichter_lantis = next(eminfra_client.search_agent(naam='LANTIS', actief=True), None)
     toezichter_namen = ['Ruben Henrard', 'Kristof Smet']

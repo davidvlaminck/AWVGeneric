@@ -7,7 +7,7 @@ import pandas as pd
 from API.eminfra.EMInfraClient import EMInfraClient
 from API.eminfra.EMInfraDomain import BestekCategorieEnum, BestekKoppelingStatusEnum, BestekRef, BestekKoppeling
 from API.Enums import AuthType, Environment
-from UseCases.utils import configure_logger, load_settings
+from UseCases.utils import configure_logger, load_settings_path
 from utils.date_helpers import format_datetime
 
 EINDDATUM = datetime(year=2027, month=1, day=5, hour=0, minute=0)
@@ -78,7 +78,7 @@ def verleng_bestekkoppelingen(client: EMInfraClient,
 if __name__ == '__main__':
     configure_logger()
     logging.info('Verlengen van bestekkoppeling "MDM/19A03" naar 5/1/2027.')
-    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings_path())
 
     logging.info("Query assets...")
     input_filepath = Path.home() / 'Downloads' / 'query-result (6).csv'

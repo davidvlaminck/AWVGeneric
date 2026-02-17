@@ -11,10 +11,7 @@ print(""""
 
 def load_settings():
     """Load API settings from JSON"""
-    return (
-            Path().home()
-            / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
-    )
+    return ('C:/resources/settings_SyncOTLDataToLegacy.json')
 
 
 if __name__ == '__main__':
