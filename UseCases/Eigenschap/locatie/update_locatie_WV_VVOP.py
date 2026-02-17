@@ -59,6 +59,16 @@ def initiate_query_dto(installatie_naam: str) -> QueryDTO:
     )
 
 
+def update_row_info(row: dict, key: str, value: str) -> dict:
+    """
+    Update dictionaty with key-value combination. Execute check on existing keys and update its value.
+    """
+    if key not in row.keys():
+        raise ValueError(f"Key {key} is not present in row")
+    dict[key] = value
+    return dict
+
+
 if __name__ == '__main__':
     configure_logger()
     logging.info('https://github.com/davidvlaminck/AWVGeneric/issues/190')
@@ -80,14 +90,30 @@ if __name__ == '__main__':
 
         logging.info("Search Kast")
         query_search_kast = initiate_query_dto(installatie_naam=installatie_naam)
-        kast = eminfra_client.asset_service.search_assets_generator(query_dto=query_search_kast, actief=True)
-
+        kasten = list(eminfra_client.asset_service.search_assets_generator(query_dto=query_search_kast, actief=True))
+        if len(kasten) != 1:
+            raise ValueError('Gegeven de criteria, zijn er meerdere Kasten (Legacy) teruggevonden in éénzelfde boomstructuur.')
+        kast = kasten[0]
 
         logging.info("Get location of Kast")
+        locatie = eminfra_client.locatie_service.get_locatie_by_uuid(asset_uuid=kast.uuid)
 
         logging.info("Transfer location to asset")
-
         logging.info("Update location info")
+        eminfra_client.locatie_service.update_locatie_by_uuid(bron_asset_uuid=asset_uuid, wkt_geometry=locatie.geometrie)
+
+        row = update_row_info(row=row, key='kast.uuid', value=kast.uuid)
+        row = update_row_info(row=row, key='kast.naam', value=kast.naam)
+        row = update_row_info(row=row, key='kast.assettype', value=kast.type.uri)
+        row = update_row_info(row=row, key='kast.locatie.geometrie', value=locatie.geometrie)
+        row = update_row_info(row=row, key='wv.uuid', value=asset.uuid)
+        row = update_row_info(row=row, key='wv.naam', value=asset.naam)
+        row = update_row_info(row=row, key='wv.assettype', value=asset.type.uri)
+        row = update_row_info(row=row, key='wv.locatie.geometrie', value=locatie.geometrie)
+        row = update_row_info(row=row, key='vvop.uuid', value=asset.uuid)
+        row = update_row_info(row=row, key='vvop.naam', value=asset.naam)
+        row = update_row_info(row=row, key='vvop.assettype', value=asset.type.uri)
+        row = update_row_info(row=row, key='vvop.locatie.geometrie', value=locatie.geometrie)
 
         rows.append(row)
 
@@ -95,8 +121,8 @@ if __name__ == '__main__':
     # Append to existing file
     with pd.ExcelWriter(output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
         df = pd.DataFrame(rows)
-        df.to_excel(writer, sheet_name='Sheet1', index=False, freeze_panes=[1, 1])
+        df.to_excel(writer, sheet_name='Sheet1', index=False, freeze_panes=(1, 1))
     # Write to a new file
     with pd.ExcelWriter(output_excel_path, mode='w', engine='openpyxl') as writer:
         df = pd.DataFrame(rows)
-        df.to_excel(writer, sheet_name='Sheet1', index=False, freeze_panes=[1, 1])
+        df.to_excel(writer, sheet_name='Sheet1', index=False, freeze_panes=(1, 1))
