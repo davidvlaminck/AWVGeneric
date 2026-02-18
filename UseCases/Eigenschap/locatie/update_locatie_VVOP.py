@@ -68,7 +68,7 @@ def update_row_info(row_info: dict, key: str, value: str) -> dict:
     """
     Update dictionary with key-value combination. Execute check on existing keys and update its value.
     """
-    if key not in row.keys():
+    if key not in row_info.keys():
         raise ValueError(f"Key {key} is not present in row")
     row_info[key] = value
     return row_info
