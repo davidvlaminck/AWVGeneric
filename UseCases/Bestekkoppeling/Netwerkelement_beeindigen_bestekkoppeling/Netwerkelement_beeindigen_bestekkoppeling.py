@@ -6,7 +6,7 @@ import pandas as pd
 from API.eminfra.EMInfraClient import EMInfraClient
 from API.eminfra.EMInfraDomain import BestekCategorieEnum, BestekKoppelingStatusEnum
 from API.Enums import AuthType, Environment
-from UseCases.utils import configure_logger, load_settings
+from UseCases.utils import configure_logger, load_settings_path
 from utils.date_helpers import format_datetime
 from utils.query_dto_helpers import build_query_search_assettype
 
@@ -18,7 +18,7 @@ OUTPUT_EXCEL_PATH = 'Netwerkelementen_Swarco_VWT-NET-2020-017.xlsx'
 if __name__ == '__main__':
     configure_logger()
     logging.info('Beëindigen van bestekkoppeling "VWT/NET/2020/017" bij alle Netwerkelementen op voorwaarde dat er minstens 1 ander actief bestek aan de asset gekoppeld is.')
-    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings_path())
 
     logging.info("Get all assets of assettype Netwerkelement.")
     search_query = build_query_search_assettype(assettype_uuid=ASSETTYPE_UUID_NETWERKELEMENT)

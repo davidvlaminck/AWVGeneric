@@ -1,13 +1,11 @@
-from pathlib import Path
-
 from API.eminfra.EMInfraClient import EMInfraClient
 from API.eminfra.EMInfraDomain import TermDTO, QueryDTO, OperatorEnum, PagingModeEnum, ExpansionsDTO, SelectionDTO, \
     ExpressionDTO, LogicalOpEnum
 from API.Enums import Environment, AuthType
-
+from UseCases.utils import load_settings_path
 
 if __name__ == '__main__':
-    settings_path = Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
+    settings_path = load_settings_path()
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
 
     type_term = TermDTO(property='type', operator=OperatorEnum.EQ, value='c505b262-fe1f-42cb-970f-7f44487b24ec')

@@ -5,7 +5,7 @@ from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path
 from otlmow_converter.OtlmowConverter import OtlmowConverter
-from UseCases.utils import load_settings
+from UseCases.utils import load_settings_path
 from UseCases.utils import build_betrokkenerelatie, get_bestaande_betrokkenerelaties
 
 BASE_DIR = Path.home() / "OneDrive - Nordend/projects/AWV/OTL_Aanpassingen/toezichter"
@@ -118,7 +118,7 @@ def write_output(existing, created, out_dir: Path):
 def main():
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s',
                 filemode="w")
-    client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
+    client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings_path())
     for assettype in ['Signaalkabel', 'Voedingskabel', 'Beschermbuis', 'WVLichtmast']:
         df = read_report(
             INPUT_DIR / f'[RSA] Bijhorende assets hebben een verschillende toezichtshouder (assettype = {assettype}).xlsx'

@@ -6,7 +6,7 @@ import pandas as pd
 from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 
-from UseCases.utils import load_settings, configure_logger
+from UseCases.utils import load_settings_path, configure_logger
 
 INPUT_DIR = Path.home() / 'Downloads/Tunnels/input_preprocessing'
 INPUT_FILES = [
@@ -59,7 +59,7 @@ if __name__ == '__main__':
     logging.info('Tunnels: ')
     logging.info('Controleren of een ID van een bestaand asset uit de tunnelboom uit AIM, eveneens op de Productieomgeving bestaat.')
     logging.info('Kopiëren van dit ID of leeglaten indien het asset nog niet bestaat')
-    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings_path())
 
     for input_file in get_input_files():
         df_tunnel_assets = read_input_file(input_file)

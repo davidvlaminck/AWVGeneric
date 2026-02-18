@@ -4,7 +4,9 @@ from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path
 
-SETTINGS_PATH = Path.home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
+from UseCases.utils import load_settings_path
+
+SETTINGS_PATH = load_settings_path()
 INPUT_FILE = Path.home() / 'Downloads/SegmentController_Afstandsbewaking/Bevestigingsrelaties.xlsx'
 SHEETS = ['Bevestiging']
 

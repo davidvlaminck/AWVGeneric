@@ -7,7 +7,7 @@ from API.eminfra.EMInfraClient import EMInfraClient
 from API.eminfra.EMInfraDomain import RelatieEnum, AssetDTO, AssettypeDTO
 from API.Enums import AuthType, Environment
 
-from UseCases.utils import load_settings, configure_logger, create_relatie_if_missing, read_rsa_report
+from UseCases.utils import load_settings_path, configure_logger, create_relatie_if_missing, read_rsa_report
 
 ASSETTYPE_UUID_KAST = '10377658-776f-4c21-a294-6c740b9f655e'
 ASSETTYPE_UUID_LS = '80fdf1b4-e311-4270-92ba-6367d2a42d47'
@@ -101,7 +101,7 @@ if __name__ == '__main__':
                  'Toevoegen van relaties en locaties voor assettypes:\n'
                  '\n\tHS\n\tHSDeel\n\tHSCabine\n\tLS\n\tLSDeel\n\tAfstandsbewaking\n\tSegmentController')
     environment = Environment.PRD
-    eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=load_settings_path())
 
     input_filepath = (Path.home() / 'Downloads' /
                       '[RSA] Locatie ontbreekt voor voeding-assets (LS, LSDeel, HS, HSDeel, HSCabine, '

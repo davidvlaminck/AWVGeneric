@@ -4,12 +4,12 @@ from API.eminfra.EMInfraClient import EMInfraClient
 from API.eminfra.EMInfraDomain import OperatorEnum
 from API.Enums import AuthType, Environment
 
-from UseCases.utils import load_settings
+from UseCases.utils import load_settings_path
 
 if __name__ == '__main__':
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s',
                         filemode="w")
-    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings_path())
 
     logging.info('Zoek inactieve beheerobjecten met child-assets.')
     logging.info('Activeer deze beheerobjecten')

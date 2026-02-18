@@ -7,11 +7,11 @@ from typing import Optional
 import pandas as pd
 import geopandas as gpd
 
-from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 from pathlib import Path
 
 from API.Locatieservices2Client import Locatieservices2Client
+from UseCases.utils import load_settings_path
 from utils.locatieservice_helpers import convert_ident8
 from utils.wkt_geometry_helpers import coordinates_2_wkt, get_euclidean_distance_wkt, generate_osm_link, \
     parse_coordinates
@@ -23,11 +23,6 @@ from shapely.errors import ShapelyError
 
 # Regex pattern for Lichtmast name matching
 LICHTMAST_REGEX_PATTERN = r'[a-zA-Z]{1}\d{1,3}[NPMXnpmx]{1}\d+\.?\d*\.[P]\d*'
-
-
-def load_settings():
-    """Load API settings from JSON"""
-    return Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
 
 
 def is_full_match(name: str, pattern: str = LICHTMAST_REGEX_PATTERN) -> bool:
@@ -194,7 +189,7 @@ if __name__ == '__main__':
                         filemode="w")
     logging.info(
         'Analyse van de locatie van de Lichtmasten.\nAfleiden van de locatie op basis van de naam van de Lichtmast, door gebruik te maken van de Locatieservice2 API.')
-    settings_path = load_settings()
+    settings_path = load_settings_path()
 
     ls2_client = Locatieservices2Client(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
 

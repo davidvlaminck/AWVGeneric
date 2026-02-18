@@ -5,7 +5,7 @@ from API.eminfra.EMInfraDomain import (RelatieEnum, OperatorEnum, PagingModeEnum
                                        TermDTO, LogicalOpEnum)
 from API.Enums import AuthType, Environment
 
-from UseCases.utils import load_settings, configure_logger
+from UseCases.utils import load_settings_path, configure_logger
 
 ASSETTYPE_KAST = '10377658-776f-4c21-a294-6c740b9f655e'
 
@@ -39,7 +39,7 @@ def build_search_query(client: EMInfraClient, assettype_uuid: str, relatie_richt
 if __name__ == '__main__':
     configure_logger()
     logging.info('Omkeren van niet-gerichte assetsrelaties.')
-    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings_path())
 
     search_query = build_search_query(client=eminfra_client, relatie_richting='in', relatie=RelatieEnum.BEVESTIGING,
                                       assettype_uuid=ASSETTYPE_KAST)

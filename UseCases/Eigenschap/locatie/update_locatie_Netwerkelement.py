@@ -4,15 +4,9 @@ from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path
+
+from UseCases.utils import load_settings_path
 from utils.wkt_geometry_helpers import format_locatie_kenmerk_lgc_2_wkt, geometries_are_identical
-
-
-def load_settings():
-    """Load API settings from JSON"""
-    return (
-        Path().home()
-        / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
-    )
 
 def read_excel_as_dataframe(filepath: Path, usecols: list[str]):
     """Read RSA-report as input into a DataFrame."""
@@ -36,7 +30,7 @@ if __name__ == '__main__':
         """
     )
 
-    settings_path = load_settings()
+    settings_path = load_settings_path()
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
 
     excel_path = Path().home() / 'Downloads' / 'Netwerkelement' / 'DA-2025-43389_export_selectie.xlsx'

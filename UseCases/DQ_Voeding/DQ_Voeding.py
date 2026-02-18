@@ -5,7 +5,7 @@ from API.eminfra.EMInfraClient import EMInfraClient
 from API.eminfra.EMInfraDomain import RelatieEnum, AssetDTO
 from API.Enums import AuthType, Environment
 
-from UseCases.utils import load_settings, configure_logger, create_relatie_if_missing
+from UseCases.utils import load_settings_path, configure_logger, create_relatie_if_missing
 from utils.query_dto_helpers import build_query_search_assettype
 from utils.wkt_geometry_helpers import format_locatie_kenmerk_lgc_2_wkt, get_euclidean_distance_wkt
 
@@ -329,7 +329,7 @@ if __name__ == '__main__':
     configure_logger()
     logging.info('Kwaliteitscontrole van voeding-gerelateerde assets.')
     environment = Environment.PRD
-    eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=load_settings_path())
 
     asset_multiple_children_kast, asset_foute_relaties_kast = add_relaties_vanuit_kast(client=eminfra_client)
     asset_multiple_children_hscabine, asset_foute_relaties_hscabine = add_relaties_vanuit_hscabine(client=eminfra_client)

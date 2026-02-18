@@ -3,10 +3,12 @@ from API.EMSONClient import EMSONClient
 from API.Enums import AuthType, Environment
 import pandas as pd
 
+from UseCases.utils import load_settings_path
+
 if __name__ == '__main__':
     from pathlib import Path
 
-    settings_path = Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
+    settings_path = load_settings_path()
     eminfra_client = EMInfraClient(env=Environment.TEI, auth_type=AuthType.JWT, settings_path=settings_path)
     daily_cookie = '' # to complete
     emson_client = EMSONClient(auth_type=AuthType.COOKIE, env=Environment.TEI, cookie=daily_cookie)

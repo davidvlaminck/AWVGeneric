@@ -13,13 +13,12 @@ from pathlib import Path
 
 from UseCases.Lantis_bypass.LantisDomain import AssetType, RelatieInfo, ParentAssetInfo, AssetInfo, EigenschapInfo
 from UseCases.Lantis_bypass.LantisFunctions import map_relatie, map_status
-from UseCases.utils import create_relatie_if_missing
+from UseCases.utils import create_relatie_if_missing, load_settings_path
 
 
 class BypassProcessor:
     def __init__(self, environment: Environment = Environment.TEI,
-                 settings_path: Path = Path().home() / 'OneDrive - Nordend/projects/AWV/resources'
-                                                       '/settings_SyncOTLDataToLegacy.json'
+                 settings_path: Path = load_settings_path()
                  , eDelta_dossiernummer: str = "INTERN-095"
                  , input_path_componentenlijst: Path = Path(
                 __file__).resolve().parent / 'data' / 'input' / 'Componentenlijst_20250507.xlsx'

@@ -6,12 +6,12 @@ import pandas as pd
 from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 
-from UseCases.utils import load_settings, configure_logger
+from UseCases.utils import load_settings_path, configure_logger
 
 if __name__ == '__main__':
     configure_logger()
     logging.info('Read an Excel and get the UUID.')
-    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings_path())
 
     filepath = Path.home() / 'downloads' / 'netwerkpoorten.xlsx'
     if not filepath.exists():

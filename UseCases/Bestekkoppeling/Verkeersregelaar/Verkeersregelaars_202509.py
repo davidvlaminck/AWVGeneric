@@ -9,10 +9,8 @@ from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path
 
+from UseCases.utils import load_settings_path
 
-def load_settings():
-    """Load API settings from JSON"""
-    return Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
 
 def import_data(filepath: Path):
     """Import Excel data in a Dataframe"""
@@ -43,7 +41,7 @@ if __name__ == '__main__':
          - VWT/INN/2020/011_004AWV/TLC_1 (Swarco)
          - VWT/INN/2020/011_004AWV/TLC_2 (Yunex)
     """)
-    settings_path = load_settings()
+    settings_path = load_settings_path()
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
 
     bestekref_swarco = eminfra_client.get_bestekref_by_eDelta_dossiernummer('VWT/INN/2020/011_004AWV/TLC_1')
@@ -70,7 +68,9 @@ if __name__ == '__main__':
         # Logica toepassen in functie van de aannemer (Swarco of Yunex).
         logging.debug('Controleer of 1 van de ACTIEVE bestekken, diens besteknummer start met de naam "VWT/INN/2020/011_".')
         for bestekkoppeling in bestekken_lgc_update:
-            if bestekkoppeling.status == BestekKoppelingStatusEnum.ACTIEF and bestekkoppeling.bestekRef.eDeltaBesteknummer.startswith("VWT/INN/2020/011_") and bestekkoppeling.bestekRef.uuid not in (bestekref_yunex.uuid, bestekref_swarco.uuid):
+            if (bestekkoppeling.status == BestekKoppelingStatusEnum.ACTIEF and
+                    bestekkoppeling.bestekRef.eDeltaBesteknummer.startswith("VWT/INN/2020/011_")
+                    and bestekkoppeling.bestekRef.uuid not in (bestekref_yunex.uuid, bestekref_swarco.uuid)):
                 logging.debug('Controleer dat de startdatum van de bestekkoppeling in de toekomst ligt.')
                 if bestekkoppeling.startDatum > STARTDATE:
                     logging.debug('Update startdatum van het bestek')

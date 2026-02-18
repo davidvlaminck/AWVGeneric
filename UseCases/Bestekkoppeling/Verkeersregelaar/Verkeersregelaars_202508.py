@@ -1,16 +1,14 @@
 import copy
 import datetime
 import logging
+
+from UseCases.utils import load_settings_path
 from utils.date_helpers import format_datetime
 from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path
 
-
-def load_settings():
-    """Load API settings from JSON"""
-    return Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
 
 def import_data(filepath: Path):
     """Import Excel data in a Dataframe"""
@@ -34,7 +32,7 @@ if __name__ == '__main__':
          - VWT/INN/2020/011_004AWV/TLC_1 (Swarco)
          - VWT/INN/2020/011_004AWV/TLC_2 (Yunex)
     """)
-    settings_path = load_settings()
+    settings_path = load_settings_path()
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
 
     bestekref_swarco = eminfra_client.get_bestekref_by_eDelta_dossiernummer('VWT/INN/2020/011_004AWV/TLC_1')

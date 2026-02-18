@@ -5,12 +5,10 @@ import pandas as pd
 from API.Locatieservices2Client import Locatieservices2Client
 
 from API.Enums import AuthType, Environment
+from UseCases.utils import load_settings_path
 
 from pipeline import enrich_assets
 
-def load_settings():
-    """Load API settings from JSON"""
-    return Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
 
 if __name__ == '__main__':
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s',
@@ -21,7 +19,7 @@ if __name__ == '__main__':
         'Afleiden van de locatie op basis van de naam van de Lichtmast, door gebruik te maken van de Locatieservice2 API
         """)
 
-    settings = load_settings()
+    settings = load_settings_path()
     ls2 = Locatieservices2Client(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings)
     infile = Path.home() / 'Downloads' / 'Lichtmast' / 'input' / 'DA-2025-55772_export.xlsx'
     outfile = Path.home() / 'Downloads' / 'Lichtmast' / 'output' / 'DA-2025-XXXXX_import_test.xlsx'

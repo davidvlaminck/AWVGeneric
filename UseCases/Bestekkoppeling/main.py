@@ -3,7 +3,7 @@ from datetime import datetime
 
 from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
-
+from UseCases.utils import load_settings_path
 
 if __name__ == '__main__':
     from pathlib import Path
@@ -18,7 +18,7 @@ if __name__ == '__main__':
     print(f'eDelta_dossiernummer:\t\t{eDelta_dossiernummer}')
     print(f'eDelta_besteknummer:\t\t{eDelta_besteknummer}')
 
-    settings_path = Path(os.environ["OneDrive"]) / 'projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
+    settings_path = load_settings_path()
     eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=settings_path)
 
     dummyAsset = eminfra_client.assets.get_asset_by_uuid(asset_uuid=asset_uuid)

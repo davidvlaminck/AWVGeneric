@@ -7,3 +7,4 @@ geopandas
 openpyxl
 tqdm
 prettytable
+pytz

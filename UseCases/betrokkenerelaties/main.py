@@ -2,12 +2,12 @@ from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
 import pandas as pd
 
-from UseCases.utils import load_settings
+from UseCases.utils import load_settings_path
 
 if __name__ == '__main__':
     from pathlib import Path
 
-    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings_path())
 
     #################################################################################
     ####  Read RSA-report as input

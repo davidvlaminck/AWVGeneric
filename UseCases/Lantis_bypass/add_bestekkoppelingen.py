@@ -9,6 +9,7 @@ from API.Enums import AuthType, Environment
 import pandas as pd
 from pathlib import Path
 
+from UseCases.utils import load_settings_path
 
 
 def import_data_as_dataframe(filepath: Path, sheet_name: str = None):
@@ -137,7 +138,7 @@ if __name__ == '__main__':
     logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s\t', filemode="w")
     logging.info('Lantis Bypass: \tToevoegen van een bestekkoppeling voor Legacy en OTL assets op basis van de relatie gemigreerd')
 
-    settings_path = Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
+    settings_path = load_settings_path()
     logging.info(f'settings_path: {settings_path}')
 
     environment = Environment.PRD

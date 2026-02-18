@@ -1,20 +1,16 @@
 from API.eminfra.EMInfraClient import EMInfraClient
 from API.eminfra.EMInfraDomain import BoomstructuurAssetTypeEnum
 from API.Enums import AuthType, Environment
-from pathlib import Path
+
+from UseCases.utils import load_settings_path
 
 print(""""
         Functionaliteiten gelinkt aan Beheerobject
       """)
 
-def load_settings():
-    """Load API settings from JSON"""
-    settings_path = Path().home() / 'OneDrive - Nordend/projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
-    return settings_path
-
 
 if __name__ == '__main__':
-    settings_path = load_settings()
+    settings_path = load_settings_path()
     eminfra_client = EMInfraClient(env=Environment.TEI, auth_type=AuthType.JWT, settings_path=settings_path)
 
     ##########################################

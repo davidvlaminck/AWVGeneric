@@ -1,9 +1,8 @@
 from datetime import datetime
-from pathlib import Path
 
 from API.eminfra.EMInfraClient import EMInfraClient
 from API.Enums import AuthType, Environment
-
+from UseCases.utils import load_settings_path
 
 if __name__ == '__main__':
 
@@ -13,7 +12,7 @@ if __name__ == '__main__':
     print(f'environment:\t\t{environment}')
     print(f'asset_uuid:\t\t{asset_uuid}')
 
-    settings_path = Path.home() / 'OneDrive - Nordend' / 'projects/AWV/resources/settings_SyncOTLDataToLegacy.json'
+    settings_path = load_settings_path()
     eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=settings_path)
 
     # search_postits (all postits)

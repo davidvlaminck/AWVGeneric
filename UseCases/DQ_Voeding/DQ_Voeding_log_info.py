@@ -7,7 +7,7 @@ from API.eminfra.EMInfraClient import EMInfraClient
 from API.eminfra.EMInfraDomain import RelatieEnum, AssetDTO
 from API.Enums import AuthType, Environment
 
-from UseCases.utils import load_settings, configure_logger
+from UseCases.utils import load_settings_path, configure_logger
 from utils.toezichter_helpers import get_toezichter_naam
 
 INSTALLATIE_TYPES = {
@@ -44,7 +44,7 @@ if __name__ == '__main__':
     configure_logger()
     logging.info('Kwaliteitscontrole van voeding-gerelateerde assets.')
     environment = Environment.PRD
-    eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=load_settings())
+    eminfra_client = EMInfraClient(env=environment, auth_type=AuthType.JWT, settings_path=load_settings_path())
 
     input_file = Path.home() / 'Nordend/AWV - Documents/DataQuality/Voeding' / f'DQ Voeding assets met meerdere child assets_{environment.value[0]}.xlsx'
     output_file = input_file
