@@ -11,8 +11,8 @@ from API.eminfra.EMInfraDomain import OperatorEnum, QueryDTO, PagingModeEnum, Ex
 
 from UseCases.utils import load_settings_path, configure_logger
 
-ROOT_FOLDER = Path().home() / 'Nordend/AWV - Documents/ReportingServiceAssets'
-INPUT_FILE = os.path.join(ROOT_FOLDER, 'Report0221', 'Report0221.xlsx')
+ROOT_FOLDER = Path().home() / 'Nordend/AWV - Documents/ReportingServiceAssets/Report0221'
+INPUT_FILE = os.path.join(ROOT_FOLDER, 'Report0221.xlsx')
 
 
 def initiate_row() -> dict:
@@ -22,17 +22,15 @@ def initiate_row() -> dict:
     return {
         "kast.uuid": None,
         "kast.naam": None,
+        "kast.toestand": None,
         "kast.assettype": None,
         "kast.geometrie": None,
         "wv.uuid": None,
         "wv.naam": None,
+        "wv.toestand": None,
         "wv.assettype": None,
-        "wv.geometrie": None
-        #,
-        #"vvop.uuid": None,
-        #"vvop.naam": None,
-        #"vvop.assettype": None,
-        #"vvop.geometrie": None
+        "wv.geometrie": None,
+        "opmerking": None
     }
 
 def initiate_query_dto(installatie_naam: str) -> QueryDTO:
@@ -112,21 +110,27 @@ if __name__ == '__main__':
         wv = eminfra_client.asset_service.get_asset_by_uuid(asset_uuid=asset_uuid)
         row = update_row_info(row_info=row, key='wv.uuid', value=wv.uuid)
         row = update_row_info(row_info=row, key='wv.naam', value=wv.naam)
+        row = update_row_info(row_info=row, key='wv.toestand', value=wv.toestand.value)
         row = update_row_info(row_info=row, key='wv.assettype', value=wv.type.uri)
 
         logging.info("Search installatie")
         installatie = eminfra_client.asset_service.search_parent_asset_by_uuid(
             asset_uuid=asset_uuid, return_all_parents=False, recursive=True)
-        # todo. WV (Legay) die niet in een Boomstructuur staat. > log and continue
-        # example: e0c0a305-aa8a-469e-8525-edf58d239b6c
+        if not installatie:
+            logging.warning('WV Lichtmast (Legacy) zit niet in een boomstructuur.')
+            row = update_row_info(row_info=row, key='opmerking', value='WV (Legacy) staat niet in een boomstructuur')
+            rows.append(row)
+            continue
 
         logging.info("Search Kast")
         query_search_kast = initiate_query_dto(installatie_naam=installatie.naam)
         kasten = list(eminfra_client.asset_service.search_assets_generator(query_dto=query_search_kast))
         if len(kasten) != 1:
             log_message = (f'Gegeven de criteria, zijn er {len(kasten)} Kasten (Legacy) teruggevonden in eenzelfde '
-                           f'boomstructuur in plaats van 1.')
+                           f'boomstructuur in plaats van 1. Locatie wordt niet overgedragen.')
             logging.warning(log_message)
+            row = update_row_info(row_info=row, key='opmerking', value=log_message)
+
         else:
             logging.info('Found 1 Kast, continue.')
             kast = kasten[0]
@@ -137,27 +141,26 @@ if __name__ == '__main__':
 
             row = update_row_info(row_info=row, key='kast.uuid', value=kast.uuid)
             row = update_row_info(row_info=row, key='kast.naam', value=kast.naam)
+            row = update_row_info(row_info=row, key='kast.toestand', value=kast.toestand.value)
             row = update_row_info(row_info=row, key='kast.assettype', value=kast.type.uri)
             row = update_row_info(row_info=row, key='kast.geometrie', value=kast_wkt_geometrie)
 
             logging.info("Update location of WV based on location of Kast")
             if kast_wkt_geometrie:
-                #eminfra_client.locatie_service.update_locatie_by_uuid(bron_asset_uuid=asset_uuid, wkt_geometry=kast_wkt_geometrie)
+                eminfra_client.locatie_service.update_locatie_by_uuid(bron_asset_uuid=asset_uuid, wkt_geometry=kast_wkt_geometrie)
                 row = update_row_info(row_info=row, key='wv.geometrie', value=kast_wkt_geometrie)
-
-        #row = update_row_info(row_info=row, key='vvop.uuid', value=wv.uuid)
-        #row = update_row_info(row_info=row, key='vvop.naam', value=wv.naam)
-        #row = update_row_info(row_info=row, key='vvop.assettype', value=wv.type.uri)
-        #row = update_row_info(row_info=row, key='vvop.geometrie', value='')
+                row = update_row_info(row_info=row, key='opmerking', value='locatie overgenomen van Kast')
 
         rows.append(row)
 
-    output_excel_path = 'output_WV.xlsx'
-    # Append to existing file
-    with pd.ExcelWriter(output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-        df = pd.DataFrame(rows)
-        df.to_excel(writer, sheet_name='Sheet1', index=False, freeze_panes=(1, 1))
-    # Write to a new file
-    with pd.ExcelWriter(output_excel_path, mode='w', engine='openpyxl') as writer:
-        df = pd.DataFrame(rows)
-        df.to_excel(writer, sheet_name='Sheet1', index=False, freeze_panes=(1, 1))
+    output_excel_path = ROOT_FOLDER / 'output_WV.xlsx'
+    if output_excel_path.exists():
+        # Append to existing file
+        with pd.ExcelWriter(output_excel_path, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
+            df = pd.DataFrame(rows)
+            df.to_excel(writer, sheet_name='Sheet1', index=False, freeze_panes=(1, 1))
+    else:
+        # Write to a new file
+        with pd.ExcelWriter(output_excel_path, mode='w', engine='openpyxl') as writer:
+            df = pd.DataFrame(rows)
+            df.to_excel(writer, sheet_name='Sheet1', index=False, freeze_panes=(1, 1))
