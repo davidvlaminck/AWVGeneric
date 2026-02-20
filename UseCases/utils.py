@@ -7,7 +7,7 @@ from pathlib import Path
 from API.eminfra.EMInfraClient import EMInfraClient
 from API.eminfra.EMInfraDomain import (AssetDTO, QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO,
                                        OperatorEnum, AgentDTO, LogicalOpEnum, ExpansionsDTO, RelatieEnum,
-                                       AssetRelatieDTO)
+                                       AssetRelatieDTO, DocumentDTO, DocumentCategorieEnum)
 from API.eminfra.Generic import get_kenmerktype_and_relatietype_id
 from collections.abc import Generator
 from otlmow_model.OtlmowModel.Classes.ImplementatieElement.RelatieObject import RelatieObject
@@ -166,3 +166,25 @@ def create_relatie_if_missing(client: EMInfraClient, bron_asset: AssetDTO, doel_
     else:
         raise NotImplementedError
     return relatie
+
+
+def filter_document_type(documents: list[DocumentDTO], document_type: DocumentCategorieEnum) -> list[DocumentDTO]:
+    """
+    Filter a list of Document objects based on document type
+
+    :param documents: list of documents
+    :type documents: list[DocumentDTO]
+    :param document_type: document type
+    :type document_type: DocumentCategorieEnum
+    :return: list of filtered documents
+    :rtype: list[DocumentDTO]
+    """
+    return [d for d in documents if d.type == document_type]
+
+
+def filter_asset_type(assets: list[AssetDTO], uri: str) -> list[AssetDTO]:
+    """
+    Filter a list of Assets based on assettype
+
+    """
+    return [a for a in assets if a.type.uri == uri]
