@@ -1,0 +1,190 @@
+import logging
+from datetime import datetime
+
+import pandas as pd
+from pathlib import Path
+
+from UseCases.utils import load_settings_path
+from utils.date_helpers import format_datetime
+from API.eminfra.EMInfraClient import EMInfraClient
+from API.eminfra.EMInfraDomain import BestekKoppelingStatusEnum, BestekCategorieEnum, BestekKoppeling
+from API.Enums import AuthType, Environment
+
+BESTANDSNAAM = 'Import AIM_OOS klaar v Prod met bestek.xlsx'
+# BESTANDSNAAM = 'Import AIM_Pos2 klaar v Prod met bestek.xlsx'
+
+
+import pandas as pd
+import openpyxl
+import os
+
+def process_assets(file_path, sheet_name):
+    """
+    Process the assets of the Excel file and overwrite the file in-place
+    """
+    # Validate file existence
+    if not os.path.exists(file_path):
+        logging.error(f"Error: File '{file_path}' not found.")
+        return
+
+    try:
+        # Step 1: Read the sheet into a DataFrame
+        df = pd.read_excel(file_path, sheet_name=sheet_name, engine="openpyxl")
+        logging.info("Original DataFrame:")
+        logging.info(df)
+
+        # Step 2: Modify the DataFrame (example: add a new column)
+        df["New_Column"] = range(1, len(df) + 1)
+
+        # Step 3: Load the workbook with openpyxl (preserves other sheets & formatting)
+        workbook = openpyxl.load_workbook(file_path)
+
+        # Step 4: Write updated DataFrame back to the same sheet
+        with pd.ExcelWriter(file_path, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
+            writer.book = workbook
+            df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+        print(f"Updated '{sheet_name}' in '{file_path}' successfully.")
+
+    except Exception as e:
+        print(f"Error: {e}")
+
+
+def read_excel_as_df(filepath: Path, usecols: list = None) -> pd.DataFrame:
+    if not Path.exists(filepath):
+        raise FileExistsError(f'Filepath "{filepath}" does not exist.')
+
+    if not usecols:
+        usecols = ['id', 'naampad', '1e bestek', 'Startdatum 1e bestek', '2e bestek', 'Startdatum 2e bestek',
+                   '3e bestek', 'Startdatum 3e bestek', 'type', 'actief', 'toestand']
+
+    df = pd.read_excel(filepath, sheet_name='Sheet0', header=0, usecols=usecols)
+    df = df.rename(columns={
+        'id': 'uuid',
+        '1e bestek': 'bestek1_naam', 'Startdatum 1e bestek': 'bestek1_datum', '2e bestek': 'bestek2_naam',
+        'Startdatum 2e bestek': 'bestek2_datum', '3e bestek': 'bestek3_naam', 'Startdatum 3e bestek': 'bestek3_datum'})
+    df = df.dropna(subset=["uuid"])
+    return df
+
+
+def get_bestek_info(bestek_naam: str) -> tuple[datetime, datetime]:
+    """
+    Returns startdatum and enddatum from a bestek
+
+    :param bestek_naam: Naam van het bestek
+    :type bestek_naam: str
+    :return: tuple[str, str]
+
+    """
+    besteknaam_dict = {
+        "INTERN-2129": {
+            "startDatum": datetime(2018, 2, 22),
+            "eindDatum": ""
+        },
+        "WA/INV/TNL/2024/2": {
+            "startDatum": datetime(2024, 12, 24),
+            "eindDatum": datetime(2028, 12, 31)
+        },
+        "WA/INV/TNL/2021/2": {
+            "startDatum": datetime(2022, 7, 16),
+            "eindDatum": ""
+        },
+        "WA/OND/TNL/2023/1": {
+            "startDatum": datetime(2024, 8, 5),
+            "eindDatum": ""
+        },
+        "WA/OND/TNL/2023/2": {
+            "startDatum": datetime(2024, 12, 24),
+            "eindDatum": ""
+        }
+    }
+    bestek_info = besteknaam_dict[bestek_naam]
+    return [bestek_info["startDatum"], bestek_info["eindDatum"]]
+
+
+def process_assets_add_bestekkoppelingen(df: pd.DataFrame) -> None:
+    """
+    Toevoegen bestekkoppelingen voor een asset op basis van diens ID.
+    Bestaande bestekkoppelingen blijven bewaard.
+    Nieuwe bestekkoppelingen worden achteraan toegevoegd.
+    Uiteindelijk worden alle bestekkoppelingen gesorteerd en de inactieve verschijnen achteraan.
+
+    :param df:
+    :return: None
+    """
+    for idx, df_row in df.iterrows():
+        logging.debug(f'Processing asset ({idx + 1}/{len(df)}):'
+                      f'\nnaampad: {df_row["naampad"]}'
+                      f'\nasset_uuid: {df_row["uuid"]}')
+        update_bestekkoppelingen = False
+        asset = eminfra_client.asset_service.get_asset_by_uuid(asset_uuid=df_row["uuid"])
+
+        if not asset:
+            logging.info("Aanmaak nieuwe asset")
+
+
+        # ophalen van de huidige/bestaande/actuele bestekkoppeling
+        bestekkoppelingen = eminfra_client.bestek_service.get_bestekkoppeling_by_uuid(asset_uuid=asset.uuid)
+
+        # ophalen van de bestek naam uit het Excel-bestand
+        for i in range(1, 4):
+            bestek_naam = df_row[f"bestek{i}_naam"]
+            logging.debug('Skip empty values of Bestekken')
+            if pd.isna(bestek_naam):
+                continue
+            update_bestekkoppelingen = True
+            bestek_startdatum, bestek_einddatum = get_bestek_info(bestek_naam=bestek_naam)
+            logging.info(f'Appending bestek: {bestek_naam} with start_date: {bestek_startdatum} '
+                         f'and end_date: {bestek_einddatum}')
+
+            bestekref_new = eminfra_client.bestek_service.get_bestekref(eDelta_dossiernummer=bestek_naam)
+
+            # Check if bestekkoppeling exists: edit startdatum and einddatum
+            if matching_koppeling := next(
+                    (k for k in bestekkoppelingen if k.bestekRef.uuid == bestekref_new.uuid), None, ):
+                logging.debug(f'Bestekkoppeling "{bestekref_new.eDeltaBesteknummer}" bestaat reeds, '
+                              f'start- en einddatum wordt geüpdatet.')
+                matching_koppeling.startDatum = format_datetime(bestek_startdatum) if bestek_startdatum else None
+                matching_koppeling.eindDatum = format_datetime(bestek_einddatum) if bestek_einddatum else None
+            # Add new bestekkoppeling
+            else:
+                logging.debug(
+                    f'Bestekkoppeling "{bestekref_new.eDeltaBesteknummer}" bestaat nog niet, en wordt aangemaakt')
+                bestekkoppeling_new = BestekKoppeling(
+                    bestekRef=bestekref_new,
+                    status=BestekKoppelingStatusEnum.ACTIEF,
+                    startDatum=format_datetime(bestek_startdatum) if bestek_startdatum else None,
+                    eindDatum=format_datetime(bestek_einddatum) if bestek_einddatum else None,
+                    categorie=BestekCategorieEnum.WERKBESTEK
+                )
+                # Insert the new bestekkoppeling at the end (not specifically in front of index position 0)
+                bestekkoppelingen.append(bestekkoppeling_new)
+
+        if update_bestekkoppelingen:
+            # Herorden de volgorde van de bestekkoppelingen: alle inactieve onderaan de lijst.
+            bestekkoppelingen = sorted(bestekkoppelingen, key=lambda x: x.status.value, reverse=False)
+
+            # Update all the bestekkoppelingen for this asset
+            eminfra_client.bestek_service.change_bestekkoppelingen_by_uuid(
+                asset_uuid=asset.uuid, bestekkoppelingen=bestekkoppelingen)
+
+
+if __name__ == '__main__':
+    logging.basicConfig(filename="logs.log", level=logging.DEBUG, format='%(levelname)s:\t%(asctime)s:\t%(message)s\t',
+                        filemode="w")
+    logging.info('Bestekkoppelingen aanpassen voor assets van de Tunnels')
+
+    environment = Environment.PRD
+    logging.info(f'Omgeving: {environment.name}')
+    eminfra_client = EMInfraClient(auth_type=AuthType.JWT, env=environment, settings_path=load_settings_path())
+
+    # Read Excel as pandas dataframe
+    excel_file = (Path.home() / 'OneDrive - Vlaamse overheid - Office 365' / '1_AWVGeneric' /
+                      '192_importeren_tunnelbomen_oostertunnel_A2595' / 'input' / BESTANDSNAAM)
+    sheet = "Sheet0"
+    process_assets(excel_file, sheet)
+
+    # df_assets = read_excel_as_df(filepath=filepath_input)
+    #
+    # process_assets_initiate(df=df_assets)
+    # process_assets_add_bestekkoppelingen(df=df_assets)
