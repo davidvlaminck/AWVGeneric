@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime
 from pathlib import Path
+import pandas as pd
 
 from UseCases.utils import load_settings_path
 from utils.date_helpers import format_datetime
@@ -8,10 +9,9 @@ from API.eminfra.EMInfraClient import EMInfraClient
 from API.eminfra.EMInfraDomain import BestekKoppelingStatusEnum, BestekCategorieEnum, BestekKoppeling
 from API.Enums import AuthType, Environment
 
-BESTANDSNAAM = 'Import AIM_OOS klaar v Prod met bestek.xlsx'
-# BESTANDSNAAM = 'Import AIM_Pos2 klaar v Prod met bestek.xlsx'
-
-import pandas as pd
+ENVIRONMENT = Environment.TEI
+# BESTANDSNAAM = f'Import {ENVIRONMENT.name}_OOS klaar v Prod met bestek.xlsx'
+BESTANDSNAAM = f'Import {ENVIRONMENT.name}_Pos2 klaar v Prod met bestek.xlsx'
 
 
 
@@ -46,20 +46,36 @@ def get_bestek_info(bestek_naam: str) -> list[datetime | str]:
             "startDatum": datetime(2018, 2, 22),
             "eindDatum": ""
         },
+        "INTERN-2130": {
+            "startDatum": datetime(2018, 2, 22),
+            "eindDatum": ""
+        },
+        "INTERN-2131": {
+            "startDatum": datetime(2018, 2, 22),
+            "eindDatum": ""
+        },
         "WA/INV/TNL/2024/2": {
             "startDatum": datetime(2024, 12, 24),
-            "eindDatum": datetime(2028, 12, 31)
+            "eindDatum": datetime(2028, 12, 23)
         },
         "WA/INV/TNL/2021/2": {
             "startDatum": datetime(2022, 7, 16),
-            "eindDatum": ""
+            "eindDatum": datetime(2026, 12, 31)
         },
         "WA/OND/TNL/2023/1": {
             "startDatum": datetime(2024, 8, 5),
-            "eindDatum": ""
+            "eindDatum": datetime(2028, 12, 23)
         },
         "WA/OND/TNL/2023/2": {
             "startDatum": datetime(2024, 12, 24),
+            "eindDatum": datetime(2028, 12, 23)
+        },
+        "WA/OND/TNL/2021/1/P2": {
+            "startDatum": datetime(2022, 7, 16),
+            "eindDatum": datetime(2026, 12, 31)
+        },
+        "WA/OND/TNL/2021/1/P1": {
+            "startDatum": datetime(2022, 8, 24),
             "eindDatum": ""
         }
     }
@@ -140,13 +156,12 @@ if __name__ == '__main__':
                         filemode="w")
     logging.info('Bestekkoppelingen aanpassen voor assets van de Tunnels')
 
-    environment = Environment.PRD
-    logging.info(f'Omgeving: {environment.name}')
-    eminfra_client = EMInfraClient(auth_type=AuthType.JWT, env=environment, settings_path=load_settings_path())
+    logging.info(f'Omgeving: {ENVIRONMENT.name}')
+    eminfra_client = EMInfraClient(auth_type=AuthType.JWT, env=ENVIRONMENT, settings_path=load_settings_path())
 
     # Read Excel as pandas dataframe
     excel_file = (Path.home() / 'OneDrive - Vlaamse overheid - Office 365' / '1_AWVGeneric' /
-                      '192_importeren_tunnelbomen_oostertunnel_A2595' / 'input' / BESTANDSNAAM)
+                      '192_importeren_tunnelbomen_oostertunnel_A2595' / 'input' / ENVIRONMENT.name / BESTANDSNAAM)
 
     df_assets = read_excel_as_df(filepath=excel_file)
 
