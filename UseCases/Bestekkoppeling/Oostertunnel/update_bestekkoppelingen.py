@@ -1,7 +1,5 @@
 import logging
 from datetime import datetime
-
-import pandas as pd
 from pathlib import Path
 
 from UseCases.utils import load_settings_path
@@ -13,41 +11,8 @@ from API.Enums import AuthType, Environment
 BESTANDSNAAM = 'Import AIM_OOS klaar v Prod met bestek.xlsx'
 # BESTANDSNAAM = 'Import AIM_Pos2 klaar v Prod met bestek.xlsx'
 
-
 import pandas as pd
-import openpyxl
-import os
 
-def process_assets(file_path, sheet_name):
-    """
-    Process the assets of the Excel file and overwrite the file in-place
-    """
-    # Validate file existence
-    if not os.path.exists(file_path):
-        logging.error(f"Error: File '{file_path}' not found.")
-        return
-
-    try:
-        # Step 1: Read the sheet into a DataFrame
-        df = pd.read_excel(file_path, sheet_name=sheet_name, engine="openpyxl")
-        logging.info("Original DataFrame:")
-        logging.info(df)
-
-        # Step 2: Modify the DataFrame (example: add a new column)
-        df["New_Column"] = range(1, len(df) + 1)
-
-        # Step 3: Load the workbook with openpyxl (preserves other sheets & formatting)
-        workbook = openpyxl.load_workbook(file_path)
-
-        # Step 4: Write updated DataFrame back to the same sheet
-        with pd.ExcelWriter(file_path, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
-            writer.book = workbook
-            df.to_excel(writer, sheet_name=sheet_name, index=False)
-
-        print(f"Updated '{sheet_name}' in '{file_path}' successfully.")
-
-    except Exception as e:
-        print(f"Error: {e}")
 
 
 def read_excel_as_df(filepath: Path, usecols: list = None) -> pd.DataFrame:
@@ -67,7 +32,7 @@ def read_excel_as_df(filepath: Path, usecols: list = None) -> pd.DataFrame:
     return df
 
 
-def get_bestek_info(bestek_naam: str) -> tuple[datetime, datetime]:
+def get_bestek_info(bestek_naam: str) -> list[datetime | str]:
     """
     Returns startdatum and enddatum from a bestek
 
@@ -113,15 +78,16 @@ def process_assets_add_bestekkoppelingen(df: pd.DataFrame) -> None:
     :return: None
     """
     for idx, df_row in df.iterrows():
-        logging.debug(f'Processing asset ({idx + 1}/{len(df)}):'
+        logging.debug(f'Processing asset ({int(idx) + 1}/{len(df)}):'
                       f'\nnaampad: {df_row["naampad"]}'
                       f'\nasset_uuid: {df_row["uuid"]}')
         update_bestekkoppelingen = False
         asset = eminfra_client.asset_service.get_asset_by_uuid(asset_uuid=df_row["uuid"])
 
         if not asset:
-            logging.info("Aanmaak nieuwe asset")
-
+            log_message = 'Asset onbestaande. Maak eerst de asset aan.'
+            logging.warning(log_message)
+            raise ValueError(log_message)
 
         # ophalen van de huidige/bestaande/actuele bestekkoppeling
         bestekkoppelingen = eminfra_client.bestek_service.get_bestekkoppeling_by_uuid(asset_uuid=asset.uuid)
@@ -181,10 +147,7 @@ if __name__ == '__main__':
     # Read Excel as pandas dataframe
     excel_file = (Path.home() / 'OneDrive - Vlaamse overheid - Office 365' / '1_AWVGeneric' /
                       '192_importeren_tunnelbomen_oostertunnel_A2595' / 'input' / BESTANDSNAAM)
-    sheet = "Sheet0"
-    process_assets(excel_file, sheet)
 
-    # df_assets = read_excel_as_df(filepath=filepath_input)
-    #
-    # process_assets_initiate(df=df_assets)
-    # process_assets_add_bestekkoppelingen(df=df_assets)
+    df_assets = read_excel_as_df(filepath=excel_file)
+
+    process_assets_add_bestekkoppelingen(df=df_assets)
