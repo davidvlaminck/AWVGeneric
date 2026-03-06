@@ -100,10 +100,6 @@ if __name__ == '__main__':
 
                     rows.append(row)
 
-        # todo remove statement to break out of the Kast-generator
-        # if counter % 1000 == 0:
-        #     break
-
     output_excel_path = OUTPUT_DIR /  f'Keuringsverslagen_Kast_naar_LSDeel_{ENVIRONMENT.name}.xlsx'
     # Append to existing file
     if output_excel_path.exists():
