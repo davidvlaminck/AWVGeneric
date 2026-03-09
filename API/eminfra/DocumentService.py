@@ -147,3 +147,16 @@ class DocumentService:
         }
         response = self.requester.post(url, json=data)
         return response
+
+    def remove_document(self, asset_uuid: str, document: DocumentDTO):
+        url = f'core/api/assets/{asset_uuid}/documenten/ops/delete'
+        data = {
+            "name":"delete",
+            "description": None,
+            "async":False,
+            "uuids":[f"{document.uuid}"]
+        }
+        response = self.requester.put(url, json=data)
+        if response.status_code != 202:
+            raise ValueError(response.status_code, response.text)
+        return response
