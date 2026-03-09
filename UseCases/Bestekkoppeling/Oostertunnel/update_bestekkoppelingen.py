@@ -9,10 +9,9 @@ from API.eminfra.EMInfraClient import EMInfraClient
 from API.eminfra.EMInfraDomain import BestekKoppelingStatusEnum, BestekCategorieEnum, BestekKoppeling
 from API.Enums import AuthType, Environment
 
-ENVIRONMENT = Environment.TEI
+ENVIRONMENT = Environment.PRD
 # BESTANDSNAAM = f'Import {ENVIRONMENT.name}_OOS klaar v Prod met bestek.xlsx'
 BESTANDSNAAM = f'Import {ENVIRONMENT.name}_Pos2 klaar v Prod met bestek.xlsx'
-
 
 
 def read_excel_as_df(filepath: Path, usecols: list = None) -> pd.DataFrame:
@@ -62,6 +61,10 @@ def get_bestek_info(bestek_naam: str) -> list[datetime | str]:
             "startDatum": datetime(2022, 7, 16),
             "eindDatum": datetime(2026, 12, 31)
         },
+        "WA/OND/TNL/2021/1_P2": {
+            "startDatum": datetime(2022, 7, 16),
+            "eindDatum": datetime(2026, 12, 31)
+        },
         "WA/OND/TNL/2023/1": {
             "startDatum": datetime(2024, 8, 5),
             "eindDatum": datetime(2028, 12, 23)
@@ -75,6 +78,10 @@ def get_bestek_info(bestek_naam: str) -> list[datetime | str]:
             "eindDatum": datetime(2026, 12, 31)
         },
         "WA/OND/TNL/2021/1/P1": {
+            "startDatum": datetime(2022, 8, 24),
+            "eindDatum": ""
+        },
+        "WA/OND/TNL/2021/1_P1": {
             "startDatum": datetime(2022, 8, 24),
             "eindDatum": ""
         }
