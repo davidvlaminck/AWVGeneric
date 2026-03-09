@@ -186,5 +186,10 @@ def filter_asset_type(assets: list[AssetDTO], uri: str) -> list[AssetDTO]:
     """
     Filter a list of Assets based on assettype
 
+    :param assets: list of assets
+    :type assets: list[AssetDTO]
+    :param uri: assettype
+    :type uri: str
+    :rtype: list[AssetDTO]
     """
     return [a for a in assets if a.type.uri == uri]
