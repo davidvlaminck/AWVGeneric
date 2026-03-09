@@ -15,8 +15,8 @@ BESTANDSNAAM = f'Import {ENVIRONMENT.name}_Pos2 klaar v Prod met bestek.xlsx'
 
 
 def read_excel_as_df(filepath: Path, usecols: list = None) -> pd.DataFrame:
-    if not Path.exists(filepath):
-        raise FileExistsError(f'Filepath "{filepath}" does not exist.')
+    if not filepath.exists():
+        raise FileNotFoundError(f'Filepath "{filepath}" does not exist.')
 
     if not usecols:
         usecols = ['id', 'naampad', '1e bestek', 'Startdatum 1e bestek', '2e bestek', 'Startdatum 2e bestek',
@@ -31,14 +31,13 @@ def read_excel_as_df(filepath: Path, usecols: list = None) -> pd.DataFrame:
     return df
 
 
-def get_bestek_info(bestek_naam: str) -> list[datetime | str]:
+def get_bestek_info(bestek_naam: str) -> list[datetime]:
     """
     Returns startdatum and enddatum from a bestek
 
     :param bestek_naam: Naam van het bestek
     :type bestek_naam: str
-    :return: tuple[str, str]
-
+    :return: list[datetime]
     """
     besteknaam_dict = {
         "INTERN-2129": {
@@ -86,6 +85,8 @@ def get_bestek_info(bestek_naam: str) -> list[datetime | str]:
             "eindDatum": ""
         }
     }
+    if bestek_naam not in besteknaam_dict.keys():
+        raise KeyError(f'Bestek naam ["{bestek_naam}"] missing in dictionary.')
     bestek_info = besteknaam_dict[bestek_naam]
     return [bestek_info["startDatum"], bestek_info["eindDatum"]]
 
