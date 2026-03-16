@@ -298,7 +298,7 @@ def process_assets_specifieke_weg(df: pd.DataFrame) -> pd.DataFrame:
 
 if __name__ == '__main__':
     configure_logger()
-    logging.info('https://github.com/davidvlaminck/AWVGeneric/issues/179')
+    logging.info('https://github.com/AWV-AIM-BIM/AWVGeneric/issues/179')
     logging.info('toezichter en toezichtsgroep toekennen')
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=load_settings_path())
 

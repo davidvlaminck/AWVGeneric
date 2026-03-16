@@ -137,7 +137,7 @@ def centerpoint_wkt_from_geometries(wkt_geometries: Iterable[str]) -> str | None
 
 if __name__ == '__main__':
     configure_logger()
-    logging.info('https://github.com/davidvlaminck/AWVGeneric/issues/190')
+    logging.info('https://github.com/AWV-AIM-BIM/AWVGeneric/issues/190')
     settings_path = load_settings_path(user='Dries')
     eminfra_client = EMInfraClient(env=Environment.PRD, auth_type=AuthType.JWT, settings_path=settings_path)
 
