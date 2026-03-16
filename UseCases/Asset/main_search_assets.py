@@ -21,6 +21,7 @@ if __name__ == '__main__':
     term_bestek = TermDTO(property='"actiefOfToekomstigBestek"', operator=OperatorEnum.EQ, value='09125be9-febd-471d-bec4-ae57ef3e5800') # INTERN-099
     term_actief = TermDTO(property='actief', operator=OperatorEnum.EQ, value=True, logicalOp=LogicalOpEnum.AND)
 
+
     terms = []
     first_term = True
     if term_type:
