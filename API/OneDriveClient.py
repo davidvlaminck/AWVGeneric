@@ -1,3 +1,17 @@
+"""
+OneDrive Client for Microsoft Graph API Integration
+
+This module provides a client for interacting with Microsoft OneDrive through the Graph API.
+It handles authentication using MSAL (Microsoft Authentication Library) and provides methods
+for common OneDrive operations like listing, uploading, and downloading files.
+
+Notes:
+- Uses OAuth 2.0 for authentication with interactive login flow
+- Tokens are persisted locally and automatically refreshed when expired
+- Designed for personal Microsoft accounts (consumers authority)
+- Requires MSAL and requests libraries
+"""
+
 import logging
 import json
 import time
@@ -8,24 +22,73 @@ import requests
 
 from settings_loader import load_settings
 
+# Configure logging for the module
 logging.basicConfig(
-    level=logging.INFO,  # Toon INFO en hoger
+    level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S")
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
 
 
 class OneDriveClient:
+    """
+    Client for interacting with Microsoft OneDrive via the Graph API.
+
+    This client handles authentication, token management, and provides methods for
+    common OneDrive operations such as listing, uploading, and downloading files.
+
+    Notes:
+    - Authentication is handled via MSAL (Microsoft Authentication Library)
+    - Tokens are stored locally and automatically refreshed
+    - First use requires interactive login via browser
+    - Subsequent uses will reuse the stored token
+
+    Attributes:
+        client_id (str): Azure AD application client ID
+        token_file (Path): Path to the file where tokens are stored
+        authority (str): Microsoft authentication authority URL
+        scopes (list): OAuth scopes required for OneDrive access
+        app (PublicClientApplication): MSAL application instance
+    """
+
     def __init__(
         self,
         client_id: str,
         token_file: Path,
         authority: str = "https://login.microsoftonline.com/consumers",
-        scopes=None,
+        scopes: list = None,
     ):
+        """
+        Initialize the OneDrive client.
+
+        Args:
+            client_id: Azure AD application (client) ID
+            token_file: Path where the authentication token will be stored
+            authority: Microsoft login authority URL (default: consumers for personal accounts)
+            scopes: List of OAuth scopes (default: ["Files.ReadWrite.All"])
+
+        Notes:
+            - The 'consumers' authority is for personal Microsoft accounts
+            - Use 'organizations' or a tenant ID for work/school accounts
+            - Default scope allows reading and writing all files the user can access
+
+            OneNote scope options:
+            - "Notes.Read": Read-only access to OneNote notebooks and sections
+            - "Notes.ReadWrite": Read and write access to OneNote notebooks and sections
+            - "Notes.Create": Create new notebooks and sections in OneNote
+            - "Notes.ReadWrite.All": Full read/write access to all OneNote content the user can access
+            - "Notes.ReadWrite.CreatedByApp": Write access only to notes created by this app
+
+            For OneDrive files:
+            - "Files.Read": Read-only access to files
+            - "Files.ReadWrite": Read and write access to files
+            - "Files.ReadWrite.All": Access to all files the user can access
+            - "Files.ReadWrite.AppFolder": Access to app-specific folder in OneDrive
+        """
         self.client_id = client_id
         self.token_file = Path(token_file)
         self.authority = authority
-        self.scopes = scopes or ["Files.ReadWrite.All"]
+        self.scopes = scopes or ["Files.ReadWrite.All", "Notes.ReadWrite.All"]
         self.app = msal.PublicClientApplication(self.client_id, authority=self.authority)
 
     # ---------- Token persistence ----------
