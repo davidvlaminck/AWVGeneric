@@ -1,64 +1,87 @@
+import logging
+
+from utils.wkt_geometry_helpers import format_locatie_kenmerk_lgc_2_wkt
+
 from prettytable import PrettyTable
 
 from API.eminfra.EMInfraClient import EMInfraClient
 from API.eminfra.EMInfraDomain import QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum, \
     LogicalOpEnum, ExpansionsDTO, construct_naampad
 from API.Enums import AuthType, Environment
-from UseCases.Agents.get_agents import query_dto
-from UseCases.utils import load_settings_path
+from UseCases.utils import load_settings_path, configure_logger
 
 ENVIRONMENT = Environment.PRD
 
+
+def get_wkt(asset):
+    try:
+        locatieKenmerk = eminfra_client.locatie_service.get_locatie_by_uuid(asset_uuid=asset.uuid)
+        return format_locatie_kenmerk_lgc_2_wkt(locatie=locatieKenmerk)
+    except Exception as e:
+        return None
+
 if __name__ == '__main__':
+    configure_logger()
+    logging.info(f'Generic script to search assets')
+
     settings_path = load_settings_path()
     eminfra_client = EMInfraClient(env=ENVIRONMENT, auth_type=AuthType.JWT, settings_path=settings_path)
 
-    asset_types = list(eminfra_client.assettype_service.get_all_assettypes())
-    print(f'aantal OTL types: {len(asset_types)}')
-
-    # todo deze logica voor het opbiouwen van een QueryDTO zoekterm naar een utils functie vertalen OF naar de module AssetService verplaatsen
-    term_type = TermDTO(property='type', operator=OperatorEnum.EQ, value='a7eadedf-b5cf-491b-8b89-ccced9a37004')
-    term_bestek = TermDTO(property='"actiefOfToekomstigBestek"', operator=OperatorEnum.EQ, value='09125be9-febd-471d-bec4-ae57ef3e5800') # INTERN-099
-    term_actief = TermDTO(property='actief', operator=OperatorEnum.EQ, value=True, logicalOp=LogicalOpEnum.AND)
-
-
-    terms = []
-    first_term = True
-    if term_type:
-        if not first_term:
-            term_type.append(logicalOp=LogicalOpEnum.AND)
-            first_term = False
-        terms.append(term_type)
-    if term_bestek:
-        if not first_term:
-            term_bestek.append(logicalOp=LogicalOpEnum.AND)
-            first_term = False
-        terms.append(term_bestek)
-    if term_actief:
-        if not first_term:
-            term_actief.append(logicalOp=LogicalOpEnum.AND)
-            first_term = False
-        terms.append(term_actief)
+    expression_actief = ExpressionDTO(
+        terms=[TermDTO(property='actief', operator=OperatorEnum.EQ, value=True)],
+        logicalOp=None
+    )
+    expression_bestek = ExpressionDTO(
+        terms=[TermDTO(property='actiefOfToekomstigBestek', operator=OperatorEnum.EQ,
+                value='09125be9-febd-471d-bec4-ae57ef3e5800')],  # INTERN-099
+        logicalOp=LogicalOpEnum.AND
+    )
 
     query_dto = QueryDTO(size=100, from_=0, pagingMode=PagingModeEnum.OFFSET,
                          expansions=ExpansionsDTO(fields=['parent']),
                          selection=SelectionDTO(
-                             expressions=[ExpressionDTO(
-                                 terms=[terms])
-                             ])
+                             expressions=[
+                                 expression_actief,
+                                 expression_bestek
+                             ]
+                         )
                          )
 
-    headers = ['uuid', 'type', 'naampad', 'em_infra_link']
+    headers = ["naam", "typeURI", "assetId.identificator", "geometry", "naampad", "link"]
     rows = []
-    for otl_asset_type in asset_types:
-        print(f'querying type {otl_asset_type.korteUri}')
-        term_type.value = otl_asset_type.uuid
-        query_dto.from_ = 0
-        rows.extend([asset.uuid, otl_asset_type.korteUri, construct_naampad(asset),
-                     f'https://apps.mow.vlaanderen.be/eminfra/assets/{asset.uuid}']
-                    for asset in eminfra_client.asset_service.search_assets_generator(query_dto))
+    rows.extend(
+        [
+            asset.naam,
+            asset.uuid,
+            asset.type.uri,
+            get_wkt(asset),
+            construct_naampad(asset),
+            f'https://apps.mow.vlaanderen.be/eminfra/assets/{asset.uuid}']
+        for asset in eminfra_client.asset_service.search_assets_generator(query_dto)
+    )
     table = PrettyTable(headers)
     table.add_rows(rows)
 
-    with open('table.csv', 'w', newline='') as f_output:
+    with open('table_bestekkoppelingen.csv', 'w', newline='') as f_output:
         f_output.write(table.get_csv_string())
+
+    # instances = []
+    # for asset in eminfra_client.asset_service.search_assets_generator(query_dto):
+    #     instance = dynamic_create_instance_from_uri(asset.type.uri)
+    #     instance.assetId.identificator = asset.uuid
+    #     instance.assetId.toegekendDoor = 'AWV'
+    #     try:
+    #         locatieKenmerk = eminfra_client.locatie_service.get_locatie_by_uuid(asset_uuid=asset.uuid)
+    #         wkt_string = format_locatie_kenmerk_lgc_2_wkt(locatie=locatieKenmerk)
+    #         instance.geometry = wkt_string
+    #     except Exception as e:
+    #         instance.geometry = None
+    #     instance.isActief = asset.actief
+    #     instance.naam = asset.naam
+    #     instance.naampad = construct_naampad(asset)
+    #     instance.notitie = asset.commentaar
+    #     instance.toestand = asset.toestand.value.lower().replace('_', '-')
+    #     logging.info("Append instance")
+    #     instances.append(instance)
+    #
+    # OtlmowConverter.from_objects_to_file(file_path=Path('new_assets.xlsx'), sequence_of_objects=instances)
