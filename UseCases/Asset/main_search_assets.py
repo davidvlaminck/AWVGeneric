@@ -11,7 +11,8 @@ from API.Enums import AuthType, Environment
 from UseCases.utils import load_settings_path, configure_logger
 
 ENVIRONMENT = Environment.PRD
-
+# BESTEK_UUID = '09125be9-febd-471d-bec4-ae57ef3e5800' # INTERN-099
+BESTEK_UUID = 'b59d4323-039f-4472-a0b9-e025a88fa79d'  # AWV/VW/2025/3
 
 def get_wkt(asset):
     try:
@@ -28,24 +29,25 @@ if __name__ == '__main__':
     eminfra_client = EMInfraClient(env=ENVIRONMENT, auth_type=AuthType.JWT, settings_path=settings_path)
 
     expression_actief = ExpressionDTO(
-        terms=[TermDTO(property='actief', operator=OperatorEnum.EQ, value=True)],
-        logicalOp=None
+        terms=[TermDTO(property='actief', operator=OperatorEnum.EQ, value=True)]
+        , logicalOp=None
     )
     expression_bestek = ExpressionDTO(
         terms=[TermDTO(property='actiefOfToekomstigBestek', operator=OperatorEnum.EQ,
-                value='09125be9-febd-471d-bec4-ae57ef3e5800')],  # INTERN-099
-        logicalOp=LogicalOpEnum.AND
+                value=BESTEK_UUID)]  # INTERN-099
+        , logicalOp=LogicalOpEnum.AND
     )
 
-    query_dto = QueryDTO(size=100, from_=0, pagingMode=PagingModeEnum.OFFSET,
-                         expansions=ExpansionsDTO(fields=['parent']),
-                         selection=SelectionDTO(
-                             expressions=[
-                                 expression_actief,
-                                 expression_bestek
-                             ]
-                         )
-                         )
+    query_dto = QueryDTO(
+        size=100,
+        from_=0,
+        pagingMode=PagingModeEnum.OFFSET,
+        expansions=ExpansionsDTO(fields=['parent']),
+        selection=SelectionDTO(
+            expressions=[
+                expression_actief,
+                expression_bestek])
+    )
 
     headers = ["naam", "typeURI", "assetId.identificator", "geometry", "naampad", "link"]
     rows = []
@@ -62,7 +64,7 @@ if __name__ == '__main__':
     table = PrettyTable(headers)
     table.add_rows(rows)
 
-    with open('table_bestekkoppelingen.csv', 'w', newline='') as f_output:
+    with open('table_bestekkoppelingen_AWV_VW_2025_3.csv', 'w', newline='') as f_output:
         f_output.write(table.get_csv_string())
 
     # instances = []
