@@ -1,0 +1,122 @@
+{
+    "OOS.TUNNEL": {
+        "voorgaand": {
+            "toezichter_gebruikersnaam": "vanstaba",
+            "toezichter_uuid": "96e11a65-3dd5-4666-a8ae-c4ef5046f365",
+            "agent_uuid": "9e4eaa27-862d-4a74-a6eb-ec90caf3fbe4",
+			"agent_naam": "Bart Van Staeyen"
+        },
+        "nieuw": {
+            "toezichter_naam": "Bart Van Staeyen",
+            "toezichter_gebruikersnaam": "vanstaba",
+            "toezichter_uuid": "96e11a65-3dd5-4666-a8ae-c4ef5046f365",
+            "agent_uuid": "9e4eaa27-862d-4a74-a6eb-ec90caf3fbe4",
+            "agent_naam": "Bart Van Staeyen",
+            "toezichtgroep_lgc_uuid": "76adaaae-6344-454a-bb7b-3a27cbee7041",
+            "toezichtgroep_otl_uuid": "7aa92dda-9e03-4f10-a0b3-1c6748c332b9",
+            "schadebeheerder_lgc_uuid": "c49feb0a-20fb-476b-bae6-4e7e04e32cb9",
+            "schadebeheerder_lgc_naam": "District Leuven",
+            "schadebeheerder_otl_uuid": "11efae3b-dc9b-451b-a79d-c2282cc2e71a"
+        }
+    },
+    "BVR.TUNNEL": {
+        "voorgaand": {
+            "toezichter_gebruikersnaam": "jazilfo",
+            "toezichter_uuid": "90777a84-9d3d-4952-afb4-eaf748910d26",
+            "agent_uuid": "b7b05905-c19c-439d-9436-1a0ebdf1a064",
+			"agent_naam": "Folad Jazil"
+        },
+        "nieuw": {
+            "toezichter_naam": "Alain Bosmans",
+            "toezichter_gebruikersnaam": "bosmansal",
+            "toezichter_uuid": "b32ff5b1-b9c2-4843-9db9-7fa584982dcc",
+            "agent_uuid": "6235e176-3e7f-4ec6-a8b7-06cc2dea16e1",
+            "agent_naam": "Alain Bosmans",
+            "toezichtgroep_lgc_uuid": "76adaaae-6344-454a-bb7b-3a27cbee7041",
+            "toezichtgroep_otl_uuid": "7aa92dda-9e03-4f10-a0b3-1c6748c332b9",
+            "schadebeheerder_lgc_uuid": "18145b27-2bac-4830-9c6c-09df07457104",
+            "schadebeheerder_lgc_naam": "District Antwerpen",
+            "schadebeheerder_otl_uuid": "e3453d77-45f6-4821-9087-c944cb232e54"
+        }
+    },
+    "BLA.TUNNEL": {
+        "voorgaand": {
+            "toezichter_gebruikersnaam": "buermsje",
+            "toezichter_uuid": "ff6fe0fe-fb87-49e5-8b47-a931a9f6d2a1",
+            "agent_uuid": "ef4c476f-fd94-4694-b2b4-a42316f9ee51",
+			"agent_naam": "Jeroen Buerms"
+        },
+        "nieuw": {
+            "toezichter_naam": "Alain Bosmans",
+            "toezichter_gebruikersnaam": "bosmansal",
+            "toezichter_uuid": "b32ff5b1-b9c2-4843-9db9-7fa584982dcc",
+            "agent_uuid": "6235e176-3e7f-4ec6-a8b7-06cc2dea16e1",
+            "agent_naam": "Alain Bosmans",
+            "toezichtgroep_lgc_uuid": "76adaaae-6344-454a-bb7b-3a27cbee7041",
+            "toezichtgroep_otl_uuid": "7aa92dda-9e03-4f10-a0b3-1c6748c332b9",
+            "schadebeheerder_lgc_uuid": "18145b27-2bac-4830-9c6c-09df07457104",
+            "schadebeheerder_lgc_naam": "District Antwerpen",
+            "schadebeheerder_otl_uuid": "e3453d77-45f6-4821-9087-c944cb232e54"
+        }
+    },
+    "GAS.TUNNEL": {
+        "voorgaand": {
+            "toezichter_gebruikersnaam": "buermsje",
+            "toezichter_uuid": "ff6fe0fe-fb87-49e5-8b47-a931a9f6d2a1",
+            "agent_uuid": "ef4c476f-fd94-4694-b2b4-a42316f9ee51",
+			"agent_naam": "Jeroen Buerms"
+        },
+        "nieuw": {
+            "toezichter_naam": "Alain Bosmans",
+            "toezichter_gebruikersnaam": "bosmansal",
+            "toezichter_uuid": "b32ff5b1-b9c2-4843-9db9-7fa584982dcc",
+            "agent_uuid": "6235e176-3e7f-4ec6-a8b7-06cc2dea16e1",
+            "agent_naam": "Alain Bosmans",
+            "toezichtgroep_lgc_uuid": "76adaaae-6344-454a-bb7b-3a27cbee7041",
+            "toezichtgroep_otl_uuid": "7aa92dda-9e03-4f10-a0b3-1c6748c332b9",
+            "schadebeheerder_lgc_uuid": "18145b27-2bac-4830-9c6c-09df07457104",
+            "schadebeheerder_lgc_naam": "District Antwerpen",
+            "schadebeheerder_otl_uuid": "e3453d77-45f6-4821-9087-c944cb232e54"
+        }
+    },
+    "VEY.TUNNEL": {
+        "voorgaand": {
+            "toezichter_gebruikersnaam": "buermsje",
+            "toezichter_uuid": "ff6fe0fe-fb87-49e5-8b47-a931a9f6d2a1",
+            "agent_uuid": "ef4c476f-fd94-4694-b2b4-a42316f9ee51",
+			"agent_naam": "Jeroen Buerms"
+        },
+        "nieuw": {
+            "toezichter_naam": "Alain Bosmans",
+            "toezichter_gebruikersnaam": "bosmansal",
+            "toezichter_uuid": "b32ff5b1-b9c2-4843-9db9-7fa584982dcc",
+            "agent_uuid": "6235e176-3e7f-4ec6-a8b7-06cc2dea16e1",
+            "agent_naam": "Alain Bosmans",
+            "toezichtgroep_lgc_uuid": "76adaaae-6344-454a-bb7b-3a27cbee7041",
+            "toezichtgroep_otl_uuid": "7aa92dda-9e03-4f10-a0b3-1c6748c332b9",
+            "schadebeheerder_lgc_uuid": "18145b27-2bac-4830-9c6c-09df07457104",
+            "schadebeheerder_lgc_naam": "District Antwerpen",
+            "schadebeheerder_otl_uuid": "e3453d77-45f6-4821-9087-c944cb232e54"
+        }
+    },
+    "A2595": {
+        "voorgaand": {
+            "toezichter_gebruikersnaam": "jazilfo",
+            "toezichter_uuid": "90777a84-9d3d-4952-afb4-eaf748910d26",
+            "agent_uuid": "b7b05905-c19c-439d-9436-1a0ebdf1a064",
+			"agent_naam": "Jeroen Buerms"
+        },
+        "nieuw": {
+            "toezichter_naam": "Peter Guldentops",
+            "toezichter_gebruikersnaam": "guldenpe",
+            "toezichter_uuid": "1596c6b0-e63e-453e-8341-c78525483f1f",
+            "agent_uuid": "0754ee5a-ff4f-4aea-a0c6-7ac668920b8f",
+            "agent_naam": "Peter Guldentops",
+            "toezichtgroep_lgc_uuid": "76adaaae-6344-454a-bb7b-3a27cbee7041",
+            "toezichtgroep_otl_uuid": "7aa92dda-9e03-4f10-a0b3-1c6748c332b9",
+            "schadebeheerder_lgc_uuid": "18145b27-2bac-4830-9c6c-09df07457104",
+            "schadebeheerder_lgc_naam": "District Antwerpen",
+            "schadebeheerder_otl_uuid": "e3453d77-45f6-4821-9087-c944cb232e54"
+        }
+    }
+}
