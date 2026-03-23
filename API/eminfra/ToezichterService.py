@@ -1,4 +1,5 @@
 from collections.abc import Generator
+from typing import Optional
 
 from API.eminfra.EMInfraDomain import (AssetDTO, ToezichterKenmerk, IdentiteitKenmerk, ToezichtgroepDTO, QueryDTO,
                                        SelectionDTO, PagingModeEnum, ExpressionDTO, TermDTO, OperatorEnum,
@@ -122,23 +123,16 @@ class ToezichterService:
             if query_dto.from_ >= dto_list_total:
                 break
 
-    def search_identiteit(self, naam: str) -> Generator[IdentiteitKenmerk]:
+    def search_identiteit(self, naam: str, actief: Optional[bool] = None) -> Generator[IdentiteitKenmerk]:
         """
-        Zoek een toezichter op basis van diens naam. Splits de input op spaties en zoek op ieder deel van de naam.
+        Zoek een toezichter (Legacy) op basis van diens naam. Splits de input op spaties en zoek op ieder deel van de naam.
+        param actief: Verfijn de resultaten voor actieve of inactieve toezichters. Default None (actieve en inactieve toezichters)
+        type actief: bool
         """
         query_dto = QueryDTO(size=5, from_=0, pagingMode=PagingModeEnum.OFFSET,
-                             selection=SelectionDTO(
-                                 expressions=[
-                                     ExpressionDTO(
-                                         terms=[TermDTO(property='actief', operator=OperatorEnum.EQ, value=True,
-                                                        logicalOp=None)],
-                                         logicalOp=None
-                                     )
-                                 ]
-                             )
-                             )
-
+                             selection=SelectionDTO(expressions=[]))
         naam_parts = naam.split(' ')
+
         for naam_part in naam_parts:
             query_dto.selection.expressions.append(
                 ExpressionDTO(
@@ -151,9 +145,17 @@ class ToezichterService:
                         TermDTO(property='gebruikersnaam', operator=OperatorEnum.CONTAINS, value=f'{naam_part}',
                                 logicalOp=LogicalOpEnum.OR)
                     ],
-                    logicalOp=LogicalOpEnum.AND
+                    logicalOp=None
                 )
             )
+
+        if actief is True or actief is False:
+            expression_term = ExpressionDTO(
+                                         terms=[TermDTO(property='actief', operator=OperatorEnum.EQ, value=actief,
+                                                        logicalOp=LogicalOpEnum.AND)],
+                                         logicalOp=None
+                                     )
+            query_dto.selection.expressions.append(expression_term)
 
         query_dto.from_ = 0
         if query_dto.size is None:
@@ -167,43 +169,3 @@ class ToezichterService:
             query_dto.from_ = json_dict['from'] + query_dto.size
             if query_dto.from_ >= dto_list_total:
                 break
-
-    def search_betrokkenerelaties(self, query_dto: QueryDTO) -> Generator[BetrokkenerelatieDTO]:
-        query_dto.from_ = 0
-        if query_dto.size is None:
-            query_dto.size = 100
-        url = "core/api/betrokkenerelaties/search"
-        while True:
-            json_dict = self.requester.post(url, data=query_dto.json()).json()
-            yield from [BetrokkenerelatieDTO.from_dict(item) for item in json_dict['data']]
-            dto_list_total = json_dict['totalCount']
-            query_dto.from_ = json_dict['from'] + query_dto.size
-            if query_dto.from_ >= dto_list_total:
-                break
-
-    def add_betrokkenerelatie(self, asset: AssetDTO, agent_uuid: str, rol: str) -> BetrokkenerelatieDTO:
-        json_body = {
-            "bron": {
-                "uuid": f"{asset.uuid}",
-                "_type": f"{asset._type}"
-            },
-            "doel": {
-                "uuid": f"{agent_uuid}"
-            },
-            "geldigheid": {
-                "van": None,
-                "tot": None
-            },
-            "rol": f"{rol}"
-        }
-        response = self.requester.post(url='core/api/betrokkenerelaties', json=json_body)
-        if response.status_code != 202:
-            raise ProcessLookupError(response.content.decode("utf-8"))
-        return BetrokkenerelatieDTO.from_dict(response.json())
-
-    def remove_betrokkenerelatie(self, betrokkenerelatie_uuid: str) -> dict:
-        url = f"core/api/betrokkenerelaties/{betrokkenerelatie_uuid}"
-        response = self.requester.delete(url=url)
-        if response.status_code != 202:
-            raise ProcessLookupError(response.content.decode("utf-8"))
-        return response
