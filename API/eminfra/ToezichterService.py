@@ -1,6 +1,8 @@
 from collections.abc import Generator
 from typing import Optional
 
+from pyarrow import null
+
 from API.eminfra.EMInfraDomain import (AssetDTO, ToezichterKenmerk, IdentiteitKenmerk, ToezichtgroepDTO, QueryDTO,
                                        SelectionDTO, PagingModeEnum, ExpressionDTO, TermDTO, OperatorEnum,
                                        LogicalOpEnum, BetrokkenerelatieDTO, ToezichtgroepTypeEnum,
@@ -123,17 +125,29 @@ class ToezichterService:
             if query_dto.from_ >= dto_list_total:
                 break
 
-    def search_identiteit(self, naam: str, actief: Optional[bool] = None) -> Generator[IdentiteitKenmerk]:
+    def search_identiteit(self, naam: str, bron: Optional[str] = None, actief: Optional[bool] = True) -> Generator[IdentiteitKenmerk]:
         """
-        Zoek een toezichter (Legacy) op basis van diens naam. Splits de input op spaties en zoek op ieder deel van de naam.
-        param actief: Verfijn de resultaten voor actieve of inactieve toezichters. Default None (actieve en inactieve toezichters)
+        Zoek een toezichter (Legacy) op basis van diens naam, bron en actief.
+        Splits de naam op spaties en zoek op ieder deel van de naam.
+
+        param naam: Naam van de toezichter
+        type naam: str
+        param bron: 'PNO' (P&O) or 'EXTERN'
+        type bron: str
+        param actief: actieve of inactieve toezichters. Default True (actieve toezichters)
         type actief: bool
         """
+        # initialize the base query
         query_dto = QueryDTO(size=5, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              selection=SelectionDTO(expressions=[]))
-        naam_parts = naam.split(' ')
 
-        for naam_part in naam_parts:
+        # Split the name into parts and build search expressions for each part
+        naam_parts = naam.split(' ')
+        for index, naam_part in enumerate(naam_parts):
+            if index == 0:
+                logicalOperator_naam = None
+            else:
+                logicalOperator_naam = LogicalOpEnum.AND
             query_dto.selection.expressions.append(
                 ExpressionDTO(
                     terms=[
@@ -145,27 +159,41 @@ class ToezichterService:
                         TermDTO(property='gebruikersnaam', operator=OperatorEnum.CONTAINS, value=f'{naam_part}',
                                 logicalOp=LogicalOpEnum.OR)
                     ],
-                    logicalOp=None
+                    logicalOp=logicalOperator_naam
                 )
             )
 
+        # append the expression 'actief'
         if actief is True or actief is False:
-            expression_term = ExpressionDTO(
-                                         terms=[TermDTO(property='actief', operator=OperatorEnum.EQ, value=actief,
-                                                        logicalOp=LogicalOpEnum.AND)],
-                                         logicalOp=None
-                                     )
-            query_dto.selection.expressions.append(expression_term)
+            expression_term_actief = ExpressionDTO(
+                                             terms=[TermDTO(property='actief', operator=OperatorEnum.EQ, value=actief,
+                                                            logicalOp=None)],
+                                             logicalOp=LogicalOpEnum.AND
+                                         )
+            query_dto.selection.expressions.append(expression_term_actief)
 
-        query_dto.from_ = 0
+        # append the expression 'type'
+        if bron:
+            if bron not in ('PNO', 'EXTERN'):
+                raise ValueError(f' Parameter "bron" should be one of these values: ("PNO", "EXTERN"), not {bron}.')
+            expression_term_type = ExpressionDTO(
+                                             terms=[TermDTO(property='type', operator=OperatorEnum.EQ, value=actief,
+                                                            logicalOp=None)],
+                                             logicalOp=LogicalOpEnum.AND
+                                         )
+            query_dto.selection.expressions.append(expression_term_type)
+
+        # Set default size if not provided
         if query_dto.size is None:
             query_dto.size = 100
 
+        # paginate through results
         url = "identiteit/api/identiteiten/search"
         while True:
-            json_dict = self.requester.post(url, data=query_dto.json()).json()
-            yield from [IdentiteitKenmerk.from_dict(item) for item in json_dict['data']]
-            dto_list_total = json_dict['totalCount']
-            query_dto.from_ = json_dict['from'] + query_dto.size
-            if query_dto.from_ >= dto_list_total:
+            response = self.requester.post(url, data=query_dto.json()).json()
+            yield from (IdentiteitKenmerk.from_dict(item) for item in response['data'])
+
+            # Update the offset for pagination
+            query_dto.from_ += query_dto.size
+            if query_dto.from_ >= response['totalCount']:
                 break
