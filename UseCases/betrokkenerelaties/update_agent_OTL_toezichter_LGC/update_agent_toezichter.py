@@ -133,7 +133,6 @@ if __name__ == "__main__":
         otl_info = data[beheerobject]["otl"]
 
         # Fetch LGC agents
-        #todo debug: Error details: Alle expressies behalve de eerste moeten een logische operator bevatten
         toezichter_lgc_old = get_single_generator_element(
             eminfra_client.toezichter_service.search_identiteit(naam=lgc_info["old"]["toezichter"], actief=None)
         )
