@@ -43,7 +43,7 @@ class SchadebeheerderService:
         :return: None
         """
         payload = {"schadeBeheerder": {"uuid": schadebeheerder.uuid}}
-        KenmerkService.put(self, asset_uuid, self.SCHADEBEHEERDER_UUID, payload)
+        KenmerkService.update_kenmerk_by_uuid(self, asset_uuid=asset_uuid, kenmerk_uuid=self.SCHADEBEHEERDER_UUID, request_body=payload)
 
     def add_schadebeheerder(self, asset: AssetDTO, schadebeheerder: SchadebeheerderKenmerk) -> None:
         """

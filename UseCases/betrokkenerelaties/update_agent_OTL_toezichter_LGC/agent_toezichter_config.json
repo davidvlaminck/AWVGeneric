@@ -1,0 +1,158 @@
+{
+    "OOS.TUNNEL": {
+        "lgc": {
+            "old": {
+                "toezichter": "Bart Van Staeyen",
+                "toezichter_gebruikersnaam": "vanstaba"
+            },
+            "new": {
+                "toezichter": "Bart Van Staeyen",
+                "toezichter_gebruikersnaam": "vanstaba",
+                "toezichtgroep": "TOV",
+                "schadebeheerder": "District Leuven"
+            }
+        },
+        "otl": {
+            "old": {
+                "toezichter": "Bart Van Staeyen",
+                "toezichtsgroep": "Tunnel Organ. VL.",
+                "schadebeheerder": "District Leuven 213"
+            },
+            "new": {
+                "toezichter": "Bart Van Staeyen",
+                "toezichtsgroep": "Tunnel Organ. VL.",
+                "schadebeheerder": "District Leuven 213"
+            }
+        }
+    },
+    "BVR.TUNNEL": {
+        "lgc": {
+            "old": {
+                "toezichter": "Folad Jazil",
+                "toezichter_gebruikersnaam": "jazilfo"
+            },
+            "new": {
+                "toezichter": "Alain Bosmans",
+                "toezichter_gebruikersnaam": "bosmansal",
+                "toezichtgroep": "TOV",
+                "schadebeheerder": "District Antwerpen"
+            }
+        },
+        "otl": {
+            "old": {
+                "toezichter": "Folad Jazil",
+                "toezichtsgroep": "Tunnel Organ. VL.",
+                "schadebeheerder": "District Antwerpen 121"
+            },
+            "new": {
+                "toezichter": "Alain Bosmans",
+                "toezichtsgroep": "Tunnel Organ. VL.",
+                "schadebeheerder": "District Antwerpen 121"
+            }
+        }
+    },
+    "LEIENTUNNELS/BLA.TUNNEL": {
+        "lgc": {
+            "old": {
+                "toezichter": "Jeroen Buerms",
+                "toezichter_gebruikersnaam": "buermsje"
+            },
+            "new": {
+                "toezichter": "Alain Bosmans",
+                "toezichter_gebruikersnaam": "bosmansal",
+                "toezichtgroep": "TOV",
+                "schadebeheerder": "District Antwerpen"
+            }
+        },
+        "otl": {
+            "old": {
+                "toezichter": "Jeroen Buerms",
+                "toezichtsgroep": "Tunnel Organ. VL.",
+                "schadebeheerder": "District Antwerpen 121"
+            },
+            "new": {
+                "toezichter": "Alain Bosmans",
+                "toezichtsgroep": "Tunnel Organ. VL.",
+                "schadebeheerder": "District Antwerpen 121"
+            }
+        }
+    },
+    "LEIENTUNNELS/GAS.TUNNEL": {
+        "lgc": {
+            "old": {
+                "toezichter": "Jeroen Buerms",
+                "toezichter_gebruikersnaam": "buermsje"
+            },
+            "new": {
+                "toezichter": "Alain Bosmans",
+                "toezichter_gebruikersnaam": "bosmansal",
+                "toezichtgroep": "TOV",
+                "schadebeheerder": "District Antwerpen"
+            }
+        },
+        "otl": {
+            "old": {
+                "toezichter": "Jeroen Buerms",
+                "toezichtsgroep": "Tunnel Organ. VL.",
+                "schadebeheerder": "District Antwerpen 121"
+            },
+            "new": {
+                "toezichter": "Alain Bosmans",
+                "toezichtsgroep": "Tunnel Organ. VL.",
+                "schadebeheerder": "District Antwerpen 121"
+            }
+        }
+    },
+    "LEIENTUNNELS/VEY.TUNNEL": {
+        "lgc": {
+            "old": {
+                "toezichter": "Jeroen Buerms",
+                "toezichter_gebruikersnaam": "buermsje"
+            },
+            "new": {
+                "toezichter": "Alain Bosmans",
+                "toezichter_gebruikersnaam": "bosmansal",
+                "toezichtgroep": "TOV",
+                "schadebeheerder": "District Antwerpen"
+            }
+        },
+        "otl": {
+            "old": {
+                "toezichter": "Jeroen Buerms",
+                "toezichtsgroep": "Tunnel Organ. VL.",
+                "schadebeheerder": "District Antwerpen 121"
+            },
+            "new": {
+                "toezichter": "Alain Bosmans",
+                "toezichtsgroep": "Tunnel Organ. VL.",
+                "schadebeheerder": "District Antwerpen 121"
+            }
+        }
+    },
+    "A2595": {
+        "lgc": {
+            "old": {
+                "toezichter": "Folad Jazil",
+                "toezichter_gebruikersnaam": "jazilfo"
+            },
+            "new": {
+                "toezichter": "Peter Guldentops",
+                "toezichter_gebruikersnaam": "guldenpe",
+                "toezichtgroep": "TOV",
+                "schadebeheerder": "District Antwerpen"
+            }
+        },
+        "otl": {
+            "old": {
+                "toezichter": "Folad Jazil",
+                "toezichtsgroep": "Tunnel Organ. VL.",
+                "schadebeheerder": "District Antwerpen 121"
+            },
+            "new": {
+                "toezichter": "Peter Guldentops",
+                "toezichtsgroep": "Tunnel Organ. VL.",
+                "schadebeheerder": "District Antwerpen 121"
+            }
+        }
+    }
+}
