@@ -41,3 +41,5 @@ if __name__ == '__main__':
     # relaties = emson_client.get_assetrelaties_by_filter(
     #     filter={'asset': '000022d5-8e1d-419a-aceb-7cfd1749aed6'})
     # print(list(relaties))
+
+    # testing a push
