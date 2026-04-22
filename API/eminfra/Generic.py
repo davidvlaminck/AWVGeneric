@@ -77,7 +77,7 @@ def get_kenmerktype_and_relatietype_id(relatie: RelatieEnum) -> (str, str):
             "321c18b8-92ca-4188-a28a-f00cdfaa0e31"
         ],
         "https://lgc.data.wegenenverkeer.be/ns/onderdeel#GemigreerdNaar": [
-            "",
+            "0f2b2466-8d6d-40d4-8124-0c489129cacd",
             "f0ed1efa-fe29-4861-89dc-5d3bc40f0894"
         ],
         "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HeeftBeheer": [
