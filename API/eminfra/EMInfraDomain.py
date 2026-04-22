@@ -84,6 +84,7 @@ class KenmerkTypeEnum(Enum):
     AANGESTUURD_DOOR = 'Aangestuurd door'
     GEEFT_STURING_AAN = 'Geeft sturing aan'
     ELEKTRISCH_AANSLUITPUNT = 'Elektrisch aansluitpunt'
+    VTC = 'VTC'
 
 RESERVED_WORD_LIST = ('from_', '_next')
 
