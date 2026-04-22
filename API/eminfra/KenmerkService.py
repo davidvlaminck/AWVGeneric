@@ -94,7 +94,7 @@ class KenmerkService:
         return self.update_kenmerk_by_uuid(asset_uuid=asset.uuid, kenmerk_uuid=kenmerk_uuid, request_body=request_body)
 
     def get_kenmerken_by_uuid(self, asset_uuid: str, naam: KenmerkTypeEnum = None) \
-            -> list[KenmerkType] | KenmerkType | None:
+            -> list[KenmerkType] | None:
         """
         Oplijsten van een specifiek of alle kenmerken van een asset
 
@@ -112,7 +112,7 @@ class KenmerkService:
             raise ProcessLookupError(response.content.decode("utf-8"))
         all_kenmerken = [KenmerkType.from_dict(item) for item in response.json()['data']]
         if naam:
-            all_kenmerken = [item for item in all_kenmerken if item.type.get("naam").startswith(naam.value)][0]
+            all_kenmerken = [item for item in all_kenmerken if item.type.get("naam").startswith(naam.value)]
         return all_kenmerken
 
     def get_kenmerken(self, asset: AssetDTO, naam: KenmerkTypeEnum = None) \

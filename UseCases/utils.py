@@ -193,3 +193,32 @@ def filter_asset_type(assets: list[AssetDTO], uri: str) -> list[AssetDTO]:
     :rtype: list[AssetDTO]
     """
     return [a for a in assets if a.type.uri == uri]
+
+
+def vervang_door_verweven_asset(client: EMInfraClient, asset = AssetDTO) -> type[AssetDTO] | None | Any:
+    """
+    Zoek of er een verweven asset bestaat.
+    Return de verweven asset indien die bestaat, zoniet geef de initiele asset terug.
+
+    :param client: Client
+    :type client: EMInfraClient
+    :param asset: Asset object
+    :type asset: AssetDTO
+    :rtype: type[AssetDTO] | None | Any
+    """
+    if asset.actief:
+        # actieve assets zijn per definitie niet-verweven
+        return asset
+
+    # Zoek de verweven asset via de relatie GemigreerdNaar
+    assets_gemigreerd = client.relatie_service.search_assets_via_relatie(asset_uuid=asset.uuid,
+                                                                                 relatie=RelatieEnum.GEMIGREERDNAAR)
+
+    # Geef de verweven asset terug indien die bestaat
+    if len(assets_gemigreerd) > 1:
+        raise ValueError('Asset dient te zijn verweven met exact 1 andere asset (en niet meerdere)')
+    elif len(assets_gemigreerd) == 0:
+        return asset  # No migration, return original asset
+    elif len(assets_gemigreerd) == 1:
+        return assets_gemigreerd[0]  # Return the migrated asset
+    return None  # Fallback (if needed)
