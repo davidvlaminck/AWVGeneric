@@ -22,7 +22,6 @@ class GeometrieService:
         response = self.requester.get(
             url=f'core/api/assets/{asset_uuid}/kenmerken/{self.GEOMETRIE_UUID}')
         if response.status_code != 200:
-            logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
         return GeometrieKenmerk.from_dict(response.json())
 
@@ -51,7 +50,6 @@ class GeometrieService:
         response = self.requester.delete(
             url=f'core/api/assets/{asset_uuid}/kenmerken/{self.GEOMETRIE_UUID}/logs/{log_id}')
         if response.status_code != 202:
-            logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
     def delete_geometrie(self, asset: AssetDTO, log_id: str) -> None:
@@ -93,7 +91,6 @@ class GeometrieService:
             , data=json.dumps(json_body)
         )
         if response.status_code != 202:
-            logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
     def add_geometrie(self, asset: AssetDTO, wkt_geometry: str, geometry_log: GeometryNiveau = GeometryNiveau.MIN_1

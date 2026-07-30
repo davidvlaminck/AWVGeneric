@@ -27,7 +27,6 @@ class BestekService:
         response = self.requester.get(
             url=f'core/api/installaties/{asset_uuid}/kenmerken/{self.BESTEKKOPPELING_UUID}/bestekken')
         if response.status_code != 200:
-            logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
         return [BestekKoppeling.from_dict(item) for item in response.json()['data']]
@@ -71,7 +70,6 @@ class BestekService:
 
         response = self.requester.post('core/api/bestekrefs/search', data=query_dto.json())
         if response.status_code != 200:
-            logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
         bestekrefs_list = [BestekRef.from_dict(item) for item in response.json()['data']]
@@ -90,7 +88,6 @@ class BestekService:
 
         response = self.requester.post('core/api/bestekrefs/search', data=query_dto.json())
         if response.status_code != 200:
-            logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
         bestekrefs_list = [BestekRef.from_dict(item) for item in response.json()['data']]
@@ -114,7 +111,6 @@ class BestekService:
             url=f'core/api/assets/{asset_uuid}/kenmerken/{self.BESTEKKOPPELING_UUID}/bestekken',
             data=json.dumps({'data': [item.asdict() for item in bestekkoppelingen]}))
         if response.status_code != 202:
-            logging.error(response)
             raise ProcessLookupError(response.content.decode("utf-8"))
 
     def change_bestekkoppelingen(self, asset: AssetDTO, bestekkoppelingen: [BestekKoppeling]) -> None:
