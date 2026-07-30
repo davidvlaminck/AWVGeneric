@@ -42,6 +42,7 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["API", "utils"]
+include = ["API/eminfra/assetrelaties.json"]
 
 [tool.ruff]
 line-length = 120
