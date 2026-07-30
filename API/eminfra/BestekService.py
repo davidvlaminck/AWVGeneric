@@ -8,6 +8,7 @@ from dateutil.relativedelta import relativedelta
 from API.eminfra.EMInfraDomain import (BestekKoppeling, BestekRef, PagingModeEnum, SelectionDTO, OperatorEnum,
                                        ExpressionDTO, TermDTO, QueryDTO, BestekCategorieEnum,
                                        BestekKoppelingStatusEnum, AssetDTO)
+from API.eminfra.Generic import DEFAULT_PAGE_SIZE
 from utils.date_helpers import validate_dates, format_datetime
 
 
@@ -61,7 +62,7 @@ class BestekService:
                              'be provided')
 
     def _get_bestekref_by_eDelta_dossiernummer(self, eDelta_dossiernummer: str) -> BestekRef | None:
-        query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
+        query_dto = QueryDTO(size=DEFAULT_PAGE_SIZE, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              selection=SelectionDTO(
                                  expressions=[ExpressionDTO(
                                      terms=[TermDTO(property='eDeltaDossiernummer',
@@ -79,7 +80,7 @@ class BestekService:
         return bestekrefs_list[0]
 
     def _get_bestekref_by_eDelta_besteknummer(self, eDelta_besteknummer: str) -> BestekRef | None:
-        query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
+        query_dto = QueryDTO(size=DEFAULT_PAGE_SIZE, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              selection=SelectionDTO(
                                  expressions=[ExpressionDTO(
                                      terms=[TermDTO(property='eDeltaBesteknummer',

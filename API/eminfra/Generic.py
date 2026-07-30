@@ -4,6 +4,11 @@ from API.eminfra.EMInfraDomain import RelatieEnum
 
 _ASSETRELATIES_PATH = Path(__file__).parent / "assetrelaties.json"
 
+# Query pagination defaults
+DEFAULT_PAGE_SIZE = 10
+LARGE_PAGE_SIZE = 100
+SINGLE_RESULT_PAGE_SIZE = 1
+
 with open(_ASSETRELATIES_PATH, "r", encoding="utf-8") as _f:
     _ASSETRELATIES_DICT: dict[str, list[str]] = json.load(_f)
 

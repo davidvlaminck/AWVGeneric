@@ -3,7 +3,7 @@ from collections.abc import Generator
 from API.eminfra.EMInfraDomain import (AssetDTO, AssetDTOToestand, QueryDTO, ExpressionDTO, TermDTO, OperatorEnum,
                                        LogicalOpEnum, ExpansionsDTO, SelectionDTO, PagingModeEnum, AssettypeDTO,
                                        RelatieEnum, BoomstructuurAssetTypeEnum, BeheerobjectDTO)
-from API.eminfra.Generic import get_kenmerktype_and_relatietype_id
+from API.eminfra.Generic import get_kenmerktype_and_relatietype_id, DEFAULT_PAGE_SIZE, SINGLE_RESULT_PAGE_SIZE
 from API.eminfra.BeheerobjectService import BeheerobjectService
 
 
@@ -172,7 +172,7 @@ class AssetService:
         :return: Generator[AssetDTO]
         """
         operator = OperatorEnum.EQ if exact_search else OperatorEnum.CONTAINS
-        query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
+        query_dto = QueryDTO(size=DEFAULT_PAGE_SIZE, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              expansions=ExpansionsDTO(fields=['parent']),
                              selection=SelectionDTO(
                                  expressions=[ExpressionDTO(
@@ -192,7 +192,7 @@ class AssetService:
         :type recursive: bool
         :return: Generator[AssetDTO]
         """
-        query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
+        query_dto = QueryDTO(size=DEFAULT_PAGE_SIZE, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              expansions=ExpansionsDTO(fields=['parent']),
                              selection=SelectionDTO(
                                  expressions=[ExpressionDTO(
@@ -238,7 +238,7 @@ class AssetService:
         :type return_all_parents: bool
         :return: AssetDTO | list[AssetDTO] | BeheerobjectDTO | None
         """
-        query_dto = QueryDTO(size=1, from_=0, pagingMode=PagingModeEnum.OFFSET,
+        query_dto = QueryDTO(size=SINGLE_RESULT_PAGE_SIZE, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              expansions=ExpansionsDTO(fields=['parent']),
                              selection=SelectionDTO(expressions=[ExpressionDTO(terms=[
                                  TermDTO(property='id', operator=OperatorEnum.EQ, value=asset_uuid)

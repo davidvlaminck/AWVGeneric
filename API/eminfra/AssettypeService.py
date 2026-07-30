@@ -1,6 +1,7 @@
 from collections.abc import Generator
 from API.eminfra.EMInfraDomain import (AssettypeDTO, QueryDTO, PagingModeEnum, SelectionDTO, TermDTO,
                                        ExpressionDTO, OperatorEnum)
+from API.eminfra.Generic import SINGLE_RESULT_PAGE_SIZE
 
 
 class AssettypeService:
@@ -29,7 +30,7 @@ class AssettypeService:
         :return:
         """
         query_dto = QueryDTO(
-            size=1,
+            size=SINGLE_RESULT_PAGE_SIZE,
             from_=0,
             pagingMode=PagingModeEnum.OFFSET,
             selection=SelectionDTO(

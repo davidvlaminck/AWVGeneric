@@ -4,6 +4,7 @@ from API.eminfra.EMInfraDomain import (AssetTypeKenmerkTypeDTO, KenmerkTypeDTO, 
                                        ExpressionDTO, TermDTO, QueryDTO, OperatorEnum, ResourceRefDTO,
                                        AssetTypeKenmerkTypeAddDTO, KenmerkTypeEnum, KenmerkType,
                                        AssetDTO)
+from API.eminfra.Generic import DEFAULT_PAGE_SIZE
 
 
 class KenmerkService:
@@ -39,7 +40,7 @@ class KenmerkService:
         return [AssetTypeKenmerkTypeDTO.from_dict(item) for item in json_dict['data']]
 
     def get_kenmerktype_by_naam(self, naam: str) -> KenmerkTypeDTO:
-        query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
+        query_dto = QueryDTO(size=DEFAULT_PAGE_SIZE, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              selection=SelectionDTO(
                                  expressions=[ExpressionDTO(
                                      terms=[TermDTO(property='naam',

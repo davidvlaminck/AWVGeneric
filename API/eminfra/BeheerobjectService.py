@@ -2,6 +2,8 @@ from collections.abc import Generator
 from API.eminfra.EMInfraDomain import (BeheerobjectDTO, BeheerobjectTypeDTO, OperatorEnum, PagingModeEnum,
                                        QueryDTO, SelectionDTO, ExpressionDTO, TermDTO, LogicalOpEnum, AssetDTO,
                                        BoomstructuurAssetTypeEnum)
+from API.eminfra.Generic import LARGE_PAGE_SIZE
+
 
 class BeheerobjectService:
     def __init__(self, requester):
@@ -15,7 +17,7 @@ class BeheerobjectService:
     def search_beheerobjecten_generator(self, naam: str, beheerobjecttype: BeheerobjectTypeDTO = None, actief: bool = None,
                               operator: OperatorEnum = OperatorEnum.CONTAINS) -> Generator[BeheerobjectDTO]:
         query_dto = QueryDTO(
-            size=100, from_=0, pagingMode=PagingModeEnum.OFFSET,
+            size=LARGE_PAGE_SIZE, from_=0, pagingMode=PagingModeEnum.OFFSET,
             selection=SelectionDTO(
                 expressions=[ExpressionDTO(
                     terms=[TermDTO(property='naam', operator=operator, value=naam)])]))

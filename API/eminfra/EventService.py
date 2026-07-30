@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 
 from API.eminfra.EMInfraDomain import EventType, IdentiteitKenmerk, EventContext, Event, QueryDTO, \
     SelectionDTO, PagingModeEnum, ExpressionDTO, TermDTO, OperatorEnum, LogicalOpEnum, AssetDTO
+from API.eminfra.Generic import LARGE_PAGE_SIZE
 from utils.date_helpers import format_datetime
 
 
@@ -19,7 +20,7 @@ class EventService:
         """
         Search all events linked to a specific context. For example aanlevering DA-2025-00001
         """
-        query_dto = QueryDTO(size=100,
+        query_dto = QueryDTO(size=LARGE_PAGE_SIZE,
                              from_=0,
                              orderByProperty='omschrijving',
                              pagingMode=PagingModeEnum.OFFSET,
@@ -61,7 +62,7 @@ class EventService:
         if all(p is None for p in (asset_uuid, created_after, created_before, created_by, event_type, event_context)):
             raise ValueError("At least one parameter must be provided.")
 
-        query_dto = QueryDTO(size=100, from_=0, pagingMode=PagingModeEnum.OFFSET,
+        query_dto = QueryDTO(size=LARGE_PAGE_SIZE, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              selection=SelectionDTO(expressions=[]))
 
         if asset_uuid:

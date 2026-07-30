@@ -1,5 +1,6 @@
 from API.eminfra.EMInfraDomain import (SchadebeheerderKenmerk, QueryDTO, PagingModeEnum, SelectionDTO, ExpressionDTO,
                                        TermDTO, OperatorEnum, AssetDTO)
+from API.eminfra.Generic import DEFAULT_PAGE_SIZE
 from API.eminfra.KenmerkService import KenmerkService
 
 
@@ -18,7 +19,7 @@ class SchadebeheerderService:
         return None
 
     def get_schadebeheerder_by_name(self, name: str) -> [SchadebeheerderKenmerk]:
-        query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
+        query_dto = QueryDTO(size=DEFAULT_PAGE_SIZE, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              selection=SelectionDTO(
                                  expressions=[
                                      ExpressionDTO(

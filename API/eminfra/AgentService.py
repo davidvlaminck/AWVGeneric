@@ -1,6 +1,7 @@
 from collections.abc import Generator
 from API.eminfra.EMInfraDomain import (QueryDTO, ExpressionDTO, TermDTO, OperatorEnum, LogicalOpEnum, SelectionDTO,
                                        PagingModeEnum, AgentDTO, BetrokkenerelatieDTO, AssetDTO)
+from API.eminfra.Generic import LARGE_PAGE_SIZE
 
 
 class AgentService:
@@ -20,7 +21,7 @@ class AgentService:
         :rtype:
         """
         query_dto = QueryDTO(
-            size=100,
+            size=LARGE_PAGE_SIZE,
             from_=0,
             pagingMode=PagingModeEnum.OFFSET,
             expansions={"fields": ["contactInfo"]},

@@ -6,6 +6,7 @@ from API.eminfra.EMInfraDomain import (AssetDTO, ToezichterKenmerk, IdentiteitKe
                                        SelectionDTO, PagingModeEnum, ExpressionDTO, TermDTO, OperatorEnum,
                                        LogicalOpEnum, BetrokkenerelatieDTO, ToezichtgroepTypeEnum,
                                        ToezichtKenmerkUpdateDTO)
+from API.eminfra.Generic import SMALL_PAGE_SIZE, DEFAULT_PAGE_SIZE
 
 
 class ToezichterService:
@@ -95,7 +96,7 @@ class ToezichterService:
         return ToezichtgroepDTO.from_dict(response.json())
 
     def search_toezichtgroep_lgc(self, naam: str, toezichtgroep_type: ToezichtgroepTypeEnum = None) -> Generator[ToezichtgroepDTO]:
-        query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
+        query_dto = QueryDTO(size=DEFAULT_PAGE_SIZE, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              selection=SelectionDTO(
                                  expressions=[
                                      ExpressionDTO(
@@ -137,7 +138,7 @@ class ToezichterService:
         type actief: bool
         """
         # initialize the base query
-        query_dto = QueryDTO(size=5, from_=0, pagingMode=PagingModeEnum.OFFSET,
+        query_dto = QueryDTO(size=SMALL_PAGE_SIZE, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              selection=SelectionDTO(expressions=[]))
 
         # Split the name into parts and build search expressions for each part

@@ -4,6 +4,7 @@ from collections.abc import Generator
 
 from API.eminfra.EMInfraDomain import (PostitDTO, QueryDTO, PagingModeEnum, SelectionDTO, OperatorEnum,
                                        LogicalOpEnum)
+from API.eminfra.Generic import DEFAULT_PAGE_SIZE
 from utils.date_helpers import validate_dates, format_datetime
 from utils.query_dto_helpers import add_expression
 
@@ -28,7 +29,7 @@ class PostitService:
         """
         # intiate empty expression
         query_dto = QueryDTO(
-            size=5,
+            size=DEFAULT_PAGE_SIZE,
             from_=0,
             pagingMode=PagingModeEnum.OFFSET,
             selection=SelectionDTO(

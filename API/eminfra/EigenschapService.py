@@ -4,6 +4,7 @@ from collections.abc import Generator
 from API.eminfra.EMInfraDomain import (Eigenschap, PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, QueryDTO,
                                        OperatorEnum, LogicalOpEnum, EigenschapValueDTO, EigenschapValueUpdateDTO,
                                        KenmerkTypeEnum, AssetDTO, KenmerkType)
+from API.eminfra.Generic import DEFAULT_PAGE_SIZE
 from API.eminfra.KenmerkService import KenmerkService
 
 
@@ -34,7 +35,7 @@ class EigenschapService:
         :param uri:
         :return:
         """
-        query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
+        query_dto = QueryDTO(size=DEFAULT_PAGE_SIZE, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              selection=SelectionDTO(
                                  expressions=[ExpressionDTO(
                                      terms=[TermDTO(property='naam',

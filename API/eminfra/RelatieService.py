@@ -4,7 +4,7 @@ from API.eminfra.EMInfraDomain import (AssetDTO, RelatieTypeDTO, RelatieEnum, As
                                        PagingModeEnum, SelectionDTO, ExpressionDTO, TermDTO, OperatorEnum,
                                        LogicalOpEnum)
 from API.eminfra.AssetService import AssetService
-from API.eminfra.Generic import get_kenmerktype_and_relatietype_id
+from API.eminfra.Generic import get_kenmerktype_and_relatietype_id, LARGE_PAGE_SIZE
 
 
 class RelatieService:
@@ -73,7 +73,7 @@ class RelatieService:
         :param relatie: RelatieEnum Relatietype
         """
         query_dto = QueryDTO(
-            size=100, from_=0, pagingMode=PagingModeEnum.OFFSET,
+            size=LARGE_PAGE_SIZE, from_=0, pagingMode=PagingModeEnum.OFFSET,
             selection=SelectionDTO(
                 expressions=[
                     ExpressionDTO(
