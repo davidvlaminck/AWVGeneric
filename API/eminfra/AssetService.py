@@ -393,9 +393,9 @@ class AssetService:
         return self.create_asset_by_uuid(parent_asset_uuid=parent_asset.uuid, naam=naam,
                                          assettype=assettype, parent_assettype=parent_assettype)
 
-    def get_assets_by_filter_gen(self, filter: dict, size: int = 100) -> Generator[dict]:
+    def get_assets_by_filter_gen(self, filter_dict: dict, size: int = 100) -> Generator[dict]:
         """filter for otl/assets/search"""
-        yield from self.get_objects_from_oslo_search_endpoint_gen(url_part='assets', filter_dict=filter, size=size)
+        yield from self.get_objects_from_oslo_search_endpoint_gen(url_part='assets', filter_dict=filter_dict, size=size)
 
     def get_objects_from_oslo_search_endpoint_gen(self, url_part: str,
                                                   filter_dict: dict = '{}', size: int = 100,

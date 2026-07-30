@@ -94,7 +94,7 @@ class ToezichterService:
             raise ProcessLookupError(response.content.decode("utf-8"))
         return ToezichtgroepDTO.from_dict(response.json())
 
-    def search_toezichtgroep_lgc(self, naam: str, type: ToezichtgroepTypeEnum = None) -> Generator[ToezichtgroepDTO]:
+    def search_toezichtgroep_lgc(self, naam: str, toezichtgroep_type: ToezichtgroepTypeEnum = None) -> Generator[ToezichtgroepDTO]:
         query_dto = QueryDTO(size=10, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              selection=SelectionDTO(
                                  expressions=[
@@ -109,11 +109,11 @@ class ToezichterService:
                                                      logicalOp=LogicalOpEnum.OR),
                                          ])
                                  ]))
-        if type:
+        if toezichtgroep_type:
             query_dto.selection.expressions.append(
                 ExpressionDTO(
                     terms=[
-                        TermDTO(property='type', operator=OperatorEnum.EQ, value=type)],
+                        TermDTO(property='type', operator=OperatorEnum.EQ, value=toezichtgroep_type)],
                     logicalOp=LogicalOpEnum.AND))
         url = "identiteit/api/toezichtgroepen/search"
         while True:
