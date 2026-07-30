@@ -261,7 +261,7 @@ class AssetService:
         if _parent_type in ('installatie', 'onderdeel'):
             parent_asset = self.get_asset_by_uuid(asset_uuid=parent_uuid)
         elif _parent_type == 'beheerobject':
-            parent_asset = BeheerobjectService.get_beheerobject(self, beheerobject_uuid=parent_uuid)
+            parent_asset = BeheerobjectService.get_beheerobject(beheerobject_uuid=parent_uuid)
         else:
             raise ValueError('Could not retrieve property "_type" from parent Asset.')
 
