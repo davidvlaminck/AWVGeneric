@@ -99,7 +99,7 @@ class BestekService:
         return bestekrefs_list[0]
 
 
-    def change_bestekkoppelingen_by_uuid(self, asset_uuid: str, bestekkoppelingen: [BestekKoppeling]) -> None:
+    def change_bestekkoppelingen_by_uuid(self, asset_uuid: str, bestekkoppelingen: list[BestekKoppeling]) -> None:
         """
 
         :param asset_uuid: Asset uuid
@@ -115,7 +115,7 @@ class BestekService:
         if response.status_code != 202:
             raise ProcessLookupError(response.content.decode("utf-8"))
 
-    def change_bestekkoppelingen(self, asset: AssetDTO, bestekkoppelingen: [BestekKoppeling]) -> None:
+    def change_bestekkoppelingen(self, asset: AssetDTO, bestekkoppelingen: list[BestekKoppeling]) -> None:
         """
 
         :param asset: Asset

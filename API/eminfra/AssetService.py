@@ -398,7 +398,7 @@ class AssetService:
         yield from self.get_objects_from_oslo_search_endpoint_gen(url_part='assets', filter_dict=filter_dict, size=size)
 
     def get_objects_from_oslo_search_endpoint_gen(self, url_part: str,
-                                                  filter_dict: dict = '{}', size: int = 100,
+                                                  filter_dict: dict = {}, size: int = 100,
                                                   expansions_fields: list[str] = None) -> Generator:
         """Returns Generator objects for each OSLO endpoint
 
