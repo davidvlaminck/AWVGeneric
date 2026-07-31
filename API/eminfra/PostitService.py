@@ -104,43 +104,61 @@ class PostitService:
             raise ProcessLookupError(response.content.decode("utf-8"))
         return response.json()
 
-    def edit_postit(self, asset_uuid: str, postit_uuid: str, commentaar: str = None, start_datum: datetime = None,
-                    eind_datum: datetime = None) -> dict:
+    def edit_postit(self, asset_uuid: str, postit_uuid: str,
+                    commentaar: str | None = None,
+                    start_datum: datetime | None = None,
+                    eind_datum: datetime | None = None,
+                    merge_existing: bool = True) -> dict:
         """
         Edit postit of an asset.
-        Although mandatory in the API Call, the parameters commentaar, startDatum and eindDatum are optional.
-        When missing, the actual values are used
 
-        Also used to perform a safe-delete, by altering only the parameter eindDatum.
+        When optional parameters are missing, the current values from the server
+        are fetched and preserved - unless the caller supplies all three fields
+        AND passes ``merge_existing=False``, in which case the GET is skipped.
 
-        :param asset_uuid: asset
-        :param postit_uuid: postit_uuid
-        :param commentaar: comment
-        :param start_datum: start date of the postit
-        :param eind_datum: end date of the postit
+        :param asset_uuid: Asset uuid.
+        :param postit_uuid: Postit uuid.
+        :param commentaar: New comment text. Pass an empty string to clear the
+            existing comment.
+        :param start_datum: New start date.
+        :param eind_datum: New end date.
+        :param merge_existing: When ``True`` (default), the existing postit is
+            fetched and any ``None`` parameters are filled with current values.
+            When ``False``, all three parameters **must** be provided; the getter
+            is skipped entirely, saving one HTTP round-trip.
         :return: dict
         """
         if start_datum and eind_datum:
             validate_dates(start_datetime=start_datum, end_datetime=eind_datum)
 
-        actual_postit = self.get_postit(asset_uuid=asset_uuid, postit_uuid=postit_uuid)
-        actual_commentaar = actual_postit.commentaar
-        actual_startDatum = actual_postit.startDatum
-        actual_eindDatum = actual_postit.eindDatum
-
-        json_body = {"commentaar": commentaar if commentaar else actual_commentaar}
-
-        if start_datum:
-            startDatum_str = format_datetime(start_datum)
-            json_body["startDatum"] = startDatum_str
+        # --- Skip the GET when the caller provides everything ---
+        if not merge_existing:
+            # Caller takes full responsibility: all fields must be present.
+            if commentaar is None or start_datum is None or eind_datum is None:
+                raise ValueError(
+                    "When merge_existing=False, commentaar, start_datum, and "
+                    "eind_datum must all be provided."
+                )
+            json_body = {
+                "commentaar": commentaar,
+                "startDatum": format_datetime(start_datum),
+                "eindDatum": format_datetime(eind_datum),
+            }
         else:
-            json_body["startDatum"] = actual_startDatum
+            # --- Original merge path (fetches existing postit) ---
+            actual_postit = self.get_postit(asset_uuid=asset_uuid, postit_uuid=postit_uuid)
 
-        if eind_datum:
-            eindDatum_str = format_datetime(eind_datum)
-            json_body["eindDatum"] = eindDatum_str
-        else:
-            json_body["eindDatum"] = actual_eindDatum
+            json_body = {"commentaar": commentaar if commentaar is not None else actual_postit.commentaar}
+
+            if start_datum is not None:
+                json_body["startDatum"] = format_datetime(start_datum)
+            else:
+                json_body["startDatum"] = actual_postit.startDatum
+
+            if eind_datum is not None:
+                json_body["eindDatum"] = format_datetime(eind_datum)
+            else:
+                json_body["eindDatum"] = actual_postit.eindDatum
 
         url = f"core/api/assets/{asset_uuid}/postits/{postit_uuid}"
         response = self.requester.put(url, json=json_body)
@@ -158,7 +176,7 @@ class PostitService:
         :return: dict
         """
         json_body = {
-            "uuids": [f"{postit_uuid}"]
+            "uuids": [postit_uuid]
         }
 
         url = f"core/api/assets/{asset_uuid}/postits/ops/remove"
