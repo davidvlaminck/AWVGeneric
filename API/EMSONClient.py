@@ -7,7 +7,7 @@ from API.Enums import AuthType, Environment
 from API.RequesterFactory import RequesterFactory
 
 @dataclass
-class Query(BaseDataclass):
+class EMSONQuery(BaseDataclass):
     size: int
     filters: dict
     orderByProperty: str
@@ -70,7 +70,7 @@ class EMSONClient:
         | gewijzigdInContext  | asset gewijzigd in context             | string of string[]                 |\n
         +---------------------+----------------------------------------+------------------------------------+
         """
-        query = Query(filters=filter, size=size, orderByProperty=order_by_property)
+        query = EMSONQuery(filters=filter, size=size, orderByProperty=order_by_property)
         while True:
             response = self.requester.post(url='api/otl/assets/search', data=query.json())
             if response.status_code != 200:
@@ -94,7 +94,7 @@ class EMSONClient:
         | asset     | Asset uuid of lijst van asset uuid’s, van assets die als bron of doel voorkomen | string of string[] |\n
         +-----------+---------------------------------------------------------------------------------+--------------------+
         """
-        query = Query(filters=filter, size=size, orderByProperty=order_by_property)
+        query = EMSONQuery(filters=filter, size=size, orderByProperty=order_by_property)
         while True:
             response = self.requester.post(url='api/otl/assetrelaties/search', data=query.json())
             if response.status_code != 200:
