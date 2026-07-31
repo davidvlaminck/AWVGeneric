@@ -40,9 +40,10 @@ class EventService:
             if query_dto.from_ >= dto_list_total:
                 break
 
-    def search_events_by_uuid_generator(self, asset_uuid: str, created_after: datetime = None, created_before: datetime = None,
-                      created_by: IdentiteitKenmerk = None, event_type: EventType = None,
-                      event_context: EventContext = None) -> Generator[Event]:
+    def search_events_by_uuid_generator(
+            self, asset_uuid: str | None = None, created_after: datetime | None = None,
+            created_before: datetime | None = None, created_by: IdentiteitKenmerk | None = None,
+            event_type: EventType | None = None, event_context: EventContext = None) -> Generator[Event]:
         """
         Search the history of em-infra, called events
         Parameters created_before and created_after have type datetime, but the API only takes into account the datum,
@@ -51,7 +52,7 @@ class EventService:
          a more restricted time range.
 
         :param asset_uuid: Asset uuid
-        :type asset_uuid: str
+        :type asset_uuid: str | None
         :param created_after: date after which the asset was edited
         :param created_before: date before the asset was edited
         :param created_by: person who created the asset
@@ -115,9 +116,10 @@ class EventService:
             if query_dto.from_ >= dto_list_total:
                 break
 
-    def search_events_generator(self, asset: AssetDTO = None, created_after: datetime = None, created_before: datetime = None,
-                      created_by: IdentiteitKenmerk = None, event_type: EventType = None,
-                      event_context: EventContext = None) -> Generator[Event]:
+    def search_events_generator(
+            self, asset: AssetDTO | None = None, created_after: datetime | None = None,
+            created_before: datetime | None = None, created_by: IdentiteitKenmerk | None = None,
+            event_type: EventType | None = None, event_context: EventContext | None = None) -> Generator[Event]:
         """
         Search the history of em-infra, called events
         Parameters created_before and created_after have type datetime, but the API only takes into account the datum,
@@ -126,7 +128,7 @@ class EventService:
          a more restricted time range.
 
         :param asset: Asset
-        :type asset: AssetDTO
+        :type asset: AssetDTO | None
         :param created_after: date after which the asset was edited
         :param created_before: date before the asset was edited
         :param created_by: person who created the asset
