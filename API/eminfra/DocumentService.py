@@ -32,7 +32,7 @@ class DocumentService:
             next(l for l in json_response['links'] if l['rel'] == 'download')['href'].split('/eminfra/')[1]
         file = self.requester.get(doc_download_link)
 
-        with open(f'{directory}/{file_name}', 'wb') as f:
+        with open(Path(directory) / file_name, 'wb') as f:
             logging.info(f'Writing file {file_name} to temp location: {directory}.')
             f.write(file.content)
             return directory / file_name
