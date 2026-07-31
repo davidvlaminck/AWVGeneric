@@ -1,15 +1,14 @@
 from API.eminfra.EMInfraDomain import ExpressionDTO, TermDTO, QueryDTO, PagingModeEnum, SelectionDTO, OperatorEnum, \
     LogicalOpEnum
 from utils.date_helpers import format_datetime
+from datetime import datetime
 
-
-def add_expression(query_dto, property_name, operator, date_value):
+def add_date_expression(query: QueryDTO, property_name: str, operator: OperatorEnum, date: datetime) -> QueryDTO:
     """Helper function to create and append an ExpressionDTO."""
-    date_str = format_datetime(date_value)
+    date_str = format_datetime(datetime=date)
     expression = ExpressionDTO(terms=[TermDTO(property=property_name, operator=operator, value=date_str)])
-    query_dto.selection.expressions.append(expression)
-    return query_dto
-
+    query.selection.expressions.append(expression)
+    return query
 
 def build_query_search_dnblaagspanning(eanNummer: str, assettype_uuid: str) -> QueryDTO:
     return QueryDTO(
@@ -34,7 +33,6 @@ def build_query_search_dnblaagspanning(eanNummer: str, assettype_uuid: str) -> Q
                         value=True)]
                     , logicalOp=LogicalOpEnum.AND)
             ]))
-
 
 def build_query_search_energiemeter(energiemeter_naam: str, assettype_uuid: str) -> QueryDTO:
     return QueryDTO(

@@ -6,7 +6,7 @@ from API.eminfra.EMInfraDomain import (PostitDTO, QueryDTO, PagingModeEnum, Sele
                                        LogicalOpEnum)
 from API.eminfra.Generic import DEFAULT_PAGE_SIZE
 from utils.date_helpers import validate_dates, format_datetime
-from utils.query_dto_helpers import add_expression
+from utils.query_dto_helpers import add_date_expression
 
 
 class PostitService:
@@ -38,10 +38,10 @@ class PostitService:
         )
 
         if start_datum:
-            add_expression(query_dto, 'startDatum', OperatorEnum.GTE, start_datum)
+            add_date_expression(query_dto, 'startDatum', OperatorEnum.GTE, start_datum)
 
         if eind_datum:
-            add_expression(query_dto, 'eindDatum', OperatorEnum.LTE, eind_datum)
+            add_date_expression(query_dto, 'eindDatum', OperatorEnum.LTE, eind_datum)
 
         # If both dates are present, add logical AND
         if start_datum and eind_datum:
