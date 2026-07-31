@@ -399,7 +399,7 @@ class AssetService:
 
     def get_objects_from_oslo_search_endpoint_gen(self, url_part: str,
                                                   filter_dict: dict = '{}', size: int = 100,
-                                                  expansions_fields: [str] = None) -> Generator:
+                                                  expansions_fields: list[str] = None) -> Generator:
         """Returns Generator objects for each OSLO endpoint
 
         :param url_part: keyword to complete the url
