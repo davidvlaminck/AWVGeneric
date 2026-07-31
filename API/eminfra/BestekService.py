@@ -174,7 +174,7 @@ class BestekService:
                                                         start_datetime=start_datetime, end_datetime=end_datetime)
 
     def end_bestekkoppeling_by_uuid(self, asset_uuid: str, bestek_ref_uuid: str,
-                            end_datetime: datetime = datetime.now()) -> dict | None:
+                            end_datetime: datetime | None = None) -> dict | None:
         """
         End a bestekkoppeling by setting an enddate. Defaults to the actual date of execution.
 
@@ -184,6 +184,8 @@ class BestekService:
         :param end_datetime: end-date of the bestek
         :return: response of the API call, or None when nothing is updated.
         """
+        if not end_datetime:
+            end_datetime = datetime.now()
         end_datetime_formatted = format_datetime(end_datetime)
         bestekkoppelingen = self.get_bestekkoppeling_by_uuid(asset_uuid=asset_uuid)
         if matching_koppeling := next(
@@ -202,7 +204,7 @@ class BestekService:
         return self.change_bestekkoppelingen_by_uuid(asset_uuid, bestekkoppelingen)
 
     def end_bestekkoppeling(self, asset: AssetDTO, bestek_ref_uuid: str,
-                            end_datetime: datetime = datetime.now()) -> dict | None:
+                            end_datetime: datetime | None = None) -> dict | None:
         """
         End a bestekkoppeling by setting an enddate. Defaults to the actual date of execution.
 
@@ -217,7 +219,7 @@ class BestekService:
 
     def add_bestekkoppeling_by_uuid(self, asset_uuid: str, eDelta_besteknummer: str | None = None,
                                     eDelta_dossiernummer: str | None = None,
-                                    start_datetime: datetime = datetime.now(), end_datetime: datetime | None = None,
+                                    start_datetime: datetime | None = None, end_datetime: datetime | None = None,
                             categorie: str = BestekCategorieEnum.WERKBESTEK, insert_index: int = 0) -> dict | None:
         """
         Add a new bestekkoppeling. Start date default the execution date. End date default open-ended.
@@ -241,6 +243,8 @@ class BestekService:
             new_bestekRef = self.get_bestekref(eDelta_dossiernummer=eDelta_dossiernummer)
 
         # Format the start_date, or set actual date if None
+        if not start_datetime:
+            start_datetime = datetime.now()
         start_datetime = format_datetime(start_datetime)
 
         # Format the end_date if present
@@ -267,7 +271,7 @@ class BestekService:
 
     def add_bestekkoppeling(self, asset: AssetDTO, eDelta_besteknummer: str | None = None,
                             eDelta_dossiernummer: str | None = None,
-                            start_datetime: datetime = datetime.now(), end_datetime: datetime | None = None,
+                            start_datetime: datetime | None = None, end_datetime: datetime | None = None,
                             categorie: str = BestekCategorieEnum.WERKBESTEK, insert_index: int = 0) -> dict | None:
         """
         Add a new bestekkoppeling. Start date default the execution date. End date default open-ended.
@@ -288,11 +292,12 @@ class BestekService:
                                                 start_datetime=start_datetime, end_datetime=end_datetime,
                                                 categorie=categorie, insert_index=insert_index)
 
-    def replace_bestekkoppeling_by_uuid(self, asset_uuid: str, eDelta_besteknummer_old: str | None = None,
-                                eDelta_dossiernummer_old: str | None = None, eDelta_besteknummer_new: str | None = None,
-                                eDelta_dossiernummer_new: str | None = None, start_datetime: datetime = datetime.now(),
-                                end_datetime: datetime | None = None,
-                                categorie: BestekCategorieEnum = BestekCategorieEnum.WERKBESTEK) -> dict | None:
+    def replace_bestekkoppeling_by_uuid(
+            self, asset_uuid: str,
+            eDelta_besteknummer_old: str | None = None, eDelta_dossiernummer_old: str | None = None,
+            eDelta_besteknummer_new: str | None = None, eDelta_dossiernummer_new: str | None = None,
+            start_datetime: datetime | None = None, end_datetime: datetime | None = None,
+            categorie: BestekCategorieEnum = BestekCategorieEnum.WERKBESTEK) -> dict | None:
         """
         Replaces an existing bestekkoppeling: ends the existing bestekkoppeling and add a new one.
 
@@ -311,6 +316,9 @@ class BestekService:
         :param categorie: bestek categorie. Default WERKBESTEK
         :return: response of the API call, or None when nothing is updated.
         """
+        if not start_datetime:
+            start_datetime = datetime.now()
+
         # End bestekkoppeling
         if (eDelta_besteknummer_old is None) == (
                 eDelta_dossiernummer_old is None):  # True if both are None or both are set
