@@ -6,9 +6,7 @@ from pathlib import Path
 from jwt import encode
 import jwt.algorithms as jwt_algo
 import requests
-import string
-
-from random import choice
+import secrets
 
 from requests import Response
 
