@@ -1,7 +1,7 @@
 import json
 
 from API.eminfra.EMInfraDomain import GeometrieKenmerk, GeometryNiveau, GeometryBron, GeometryNauwkeurigheid, AssetDTO
-from API.eminfra.wkt_validator import is_valid_wkt
+from utils.wkt_geometry_helpers import validate_wkt
 
 
 class GeometrieService:
@@ -77,7 +77,7 @@ class GeometrieService:
         :param geometry_nauwkeurigheid: default waarde "<50 cm"
         :return: None
         """
-        if not is_valid_wkt(wkt_string=wkt_geometry):
+        if not validate_wkt(wkt_string=wkt_geometry):
             raise ValueError(f'WKT Geometry is invalid: {wkt_geometry}.')
         json_body = {
             "wkt": f"{wkt_geometry}",

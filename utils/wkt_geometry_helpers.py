@@ -7,7 +7,23 @@ from API.eminfra.EMInfraDomain import LocatieKenmerk
 import geopandas as gpd
 from shapely.wkt import loads
 from shapely.errors import ShapelyError
+from shapely import wkt
 
+def validate_wkt(wkt_string: str) -> bool:
+    """
+    Validate whether a string is a valid OGC WKT geometry.
+    Extend with ewkt: SRID=31370;POINT Z(219502.9 177407.4 0)
+
+    :param wkt_string: Geometry in WKT format
+    :return: True if valid WKT, False otherwise
+    """
+    if not wkt_string or not isinstance(wkt_string, str):
+        return False
+    try:
+        geom = wkt.loads(wkt_string)
+        return geom.is_valid
+    except ShapelyError as e:
+        raise ShapelyError(f"Error occured. Check error message: {e}")
 
 def format_locatie_kenmerk_lgc_2_wkt(locatie: LocatieKenmerk) -> str:
     """

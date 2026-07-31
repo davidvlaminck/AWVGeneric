@@ -2,7 +2,7 @@ import json
 import logging
 
 from API.eminfra.EMInfraDomain import LocatieKenmerk, AssetDTO
-from API.eminfra.wkt_validator import is_valid_wkt
+from utils.wkt_geometry_helpers import validate_wkt
 
 
 class LocatieService:
@@ -55,7 +55,7 @@ class LocatieService:
                 'At least one optional parameter "doel_asset_uuid" or "wkt_geom" should be provided.'
             )
         elif wkt_geometry:
-            if not is_valid_wkt(wkt_string=wkt_geometry):
+            if not validate_wkt(wkt_string=wkt_geometry):
                 raise ValueError(f'WKT Geometry is invalid: {wkt_geometry}.')
             return self._update_locatie_via_wkt(asset_uuid=bron_asset_uuid, wkt_geom=wkt_geometry)
         else:
