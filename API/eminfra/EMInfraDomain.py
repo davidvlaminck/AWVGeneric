@@ -208,7 +208,7 @@ class ResourceRefDTO(BaseDataclass):
 
 @dataclass
 class DTOList(BaseDataclass):
-    links: [Link]
+    links: list[Link]
     _from: int
     totalCount: int
     size: int
@@ -220,7 +220,7 @@ class DTOList(BaseDataclass):
 @dataclass
 class AssettypeDTO(BaseDataclass):
     _type: str
-    links: [Link]
+    links: list[Link]
     uuid: str
     createdOn: str
     modifiedOn: str
@@ -274,7 +274,7 @@ class SelectionDTO(BaseDataclass):
 
 @dataclass
 class ExpansionsDTO(BaseDataclass):
-    fields: [str]
+    fields: list[str]
 
 
 class PagingModeEnum(Enum):
@@ -326,7 +326,7 @@ class BestekRef(BaseDataclass):
     uuid: str
     type: str
     actief: bool
-    links: [Link]
+    links: list[Link]
     createdOn: str | None = None
     modifiedOn: str | None = None
     awvId: str | None = None
@@ -375,7 +375,7 @@ class EventType(BaseDataclass):
 class EventContext(BaseDataclass):
     uuid: str
     omschrijving: str
-    links: [Link]
+    links: list[Link]
 
     def __post_init__(self):
         self._fix_nested_classes({('links', Link)})
@@ -387,7 +387,7 @@ class Event(BaseDataclass):
     createdOn: str
     determinedOn: str
     data: dict
-    links: [Link]
+    links: list[Link]
 
     def __post_init__(self):
         self._fix_nested_classes({('type', EventType), ('links', Link)})
@@ -396,7 +396,7 @@ class Event(BaseDataclass):
 class LocatieKenmerk(BaseDataclass):
     _type: str
     type: dict
-    links: [Link]
+    links: list[Link]
     locatie: dict | None = None
     geometrie: str | None = None
     omschrijving: str | None = None
@@ -409,7 +409,7 @@ class LocatieKenmerk(BaseDataclass):
 class ElektrischAansluitpuntKenmerk(BaseDataclass):
     _type: str
     type: dict
-    links: [Link]
+    links: list[Link]
     elektriciteitsAansluitingRef: dict | None = None
 
     def __post_init__(self):
@@ -420,7 +420,7 @@ class ElektrischAansluitpuntKenmerk(BaseDataclass):
 @dataclass
 class GeometryLog(BaseDataclass):
     bron: GeometryBron
-    links: [Link]
+    links: list[Link]
     niveau: GeometryNiveau
     uuid: str
     wkt: str
@@ -436,7 +436,7 @@ class GeometryLog(BaseDataclass):
 class GeometrieKenmerk(BaseDataclass):
     _type: str
     type: dict
-    links: [Link]
+    links: list[Link]
     logs: list[GeometryLog] | None = None
 
     def __post_init__(self):
@@ -446,7 +446,7 @@ class GeometrieKenmerk(BaseDataclass):
 class ToezichterKenmerk(BaseDataclass):
     _type: str
     type: dict
-    links: [Link]
+    links: list[Link]
     toezichter: ResourceRefDTO | None = None
     toezichtGroep: ResourceRefDTO | None = None
 
@@ -494,7 +494,7 @@ class IdentiteitKenmerk(BaseDataclass):
     contactFiche: dict
     voId: str | None = None
     bron: str | None = None
-    gebruikersrechtOrganisaties: [str] = None
+    gebruikersrechtOrganisaties: list[str] = None
     ldapId: str | None = None
     functie: str | None = None
     links: list[Link] | None = None
@@ -567,7 +567,7 @@ class InfraObjectDTO(BaseDataclass):
     modifiedOn: str
     naam: str
     actief: bool
-    links: [Link]
+    links: list[Link]
     kenmerken: list[dict] | None = None
     toestand: str | None = None
     authorizationMetadata: str | None = None
@@ -581,7 +581,7 @@ class InfraObjectDTO(BaseDataclass):
 
 @dataclass
 class AssetDTO(BaseDataclass):
-    links: [Link]
+    links: list[Link]
     _type: str
     uuid: str
     createdOn: str
@@ -609,7 +609,7 @@ class BeheerobjectDTO(BaseDataclass):
     createdOn: str
     modifiedOn: str
     actief: bool
-    links: [Link]
+    links: list[Link]
     naam: str | None = None
     type: dict | None = None
 
@@ -625,7 +625,7 @@ class BeheerobjectTypeDTO(BaseDataclass):
     afkorting: str
     actief: bool
     definitie: str
-    links: [Link]
+    links: list[Link]
 
     def __post_init__(self):
         self._fix_nested_list_classes({('links', Link)})
@@ -688,8 +688,8 @@ class AssetDocumentDTO(BaseDataclass):
     uuid: str
     categorie: DocumentCategorieEnum
     naam: str
-    document: [ResourceRefDTO]
-    links: [Link]
+    document: list[ResourceRefDTO]
+    links: list[Link]
     omschrijving: str | None = None
 
     def __hash__(self):
@@ -709,7 +709,7 @@ class DocumentDTO(BaseDataclass):
     mimeType: str
     storageId: str
     grootte: str
-    links: [Link]
+    links: list[Link]
 
     def __post_init__(self):
         self._fix_nested_list_classes({('links', Link)})
@@ -723,7 +723,7 @@ class RelatieTypeDTO(BaseDataclass):
     actief: bool
     type: dict
     toestand: AssetDTOToestand
-    links: [Link]
+    links: list[Link]
     naam: str | None = None
     authorizationMetadata: dict | None = None
     commentaar: str | None = None
@@ -734,7 +734,7 @@ class RelatieTypeDTO(BaseDataclass):
 @dataclass
 class RelatieTypeDTOList(BaseDataclass):
     relatieType: RelatieTypeDTO | dict
-    links: [Link]
+    links: list[Link]
 
     def __post_init__(self):
         self._fix_nested_list_classes({('links', Link)})
@@ -745,7 +745,7 @@ class PostitDTO(BaseDataclass):
     uuid: str
     createdOn: str
     modifiedOn: str
-    links: [Link]
+    links: list[Link]
     startDatum: str
     eindDatum: str  # mandatory
     commentaar: str | None = None
@@ -761,8 +761,8 @@ class AgentDTO(BaseDataclass):
     modifiedOn: str
     naam: str
     actief: bool
-    links: [Link]
-    contactInfo: [dict] = None
+    links: list[Link]
+    contactInfo: list[dict] = None
     voId: str | None = None
     ovoCode: str | None = None
 
@@ -778,7 +778,7 @@ class BetrokkenerelatieDTO(BaseDataclass):
     bron: AssetDTO
     doel: AgentDTO
     rol: str # TODO enum
-    links: [Link]
+    links: list[Link]
     geldigheid: dict | None = None
 
     def __post_init__(self):
@@ -796,7 +796,7 @@ class KenmerkTypeDTO(BaseDataclass):
     predefined: bool
     standard: bool
     definitie: str
-    links: [Link]
+    links: list[Link]
 
     def __post_init__(self):
         self._fix_nested_list_classes({('links', Link)})
@@ -805,7 +805,7 @@ class KenmerkTypeDTO(BaseDataclass):
 class KenmerkType(BaseDataclass):
     _type: str
     type: KenmerkTypeDTO
-    links: [Link]
+    links: list[Link]
     types: dict | None = None
     bestekRef: dict | None = None
     bestekKoppelingen: dict | None = None
@@ -823,7 +823,7 @@ class ToezichtgroepDTO(BaseDataclass):
     referentie: str
     actiefInterval: str
     contactFiche: dict
-    links: [Link]
+    links: list[Link]
     omschrijving: str | None = None
     createdOn: str | None = None
     modifiedOn: str | None = None
@@ -844,7 +844,7 @@ class Eigenschap(BaseDataclass):
     definitie: str
     categorie: str
     type: dict
-    links: [Link]
+    links: list[Link]
     kardinaliteitMin: int | None = None
     kardinaliteitMax: int | None = None
 
@@ -908,7 +908,7 @@ def construct_naampad(asset: AssetDTO) -> str:
 @dataclass
 class AssetRelatieDTO(BaseDataclass):
     # _type: str
-    links: [Link]
+    links: list[Link]
     uuid: str
     createdOn: str
     modifiedOn: str
@@ -927,8 +927,8 @@ class GraphLinks(BaseDataclass):
 
 @dataclass
 class Graph(BaseDataclass):
-    nodes: [AssetDTO]
-    links: [GraphLinks]
+    nodes: list[AssetDTO]
+    links: list[GraphLinks]
     limitExceeded: bool
 
     def __post_init__(self):
