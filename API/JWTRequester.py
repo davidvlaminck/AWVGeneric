@@ -1,7 +1,6 @@
 import datetime
 import json
 import logging
-import sys
 from pathlib import Path
 
 from jwt import encode
@@ -18,8 +17,11 @@ from API.AbstractRequester import AbstractRequester
 
 class JWTRequester(AbstractRequester):
     def __init__(self, private_key_path: Path, client_id: str, first_part_url: str = ''):
-        if 'cryptography' not in sys.modules:
-            raise ModuleNotFoundError('Needs module cryptography to work. Please install it with "pip install pyjwt cryptography"')
+        try:
+            import cryptography
+        except ImportError:
+            raise ModuleNotFoundError('Needs module cryptography to work. To install the module, '
+                                      'please edit the pyproject.toml file.')
 
         self.private_key_path: Path = private_key_path
         self.client_id: str = client_id
