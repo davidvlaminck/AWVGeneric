@@ -33,12 +33,13 @@ class GraphService:
             "a6747802-7679-473f-b2bd-db2cfd1b88d7",
         ]
 
-    def get_graph_by_uuid(self, asset_uuid: str, depth: int = 1, relatietypes: list = None, actief: bool = True) -> Graph:
+    def get_graph_by_uuid(self, asset_uuid: str, depth: int = 1, relatietypes: list[str] | None = None,
+                          actief: bool = True) -> Graph:
         """
         Generate the graph, starting from an asset, searching a certain depth and for some relatieTypes
 
         :param asset_uuid: central asset (node) to start the search from.
-        :param depth: depth of the Graph. default depth of 1 step
+        :param depth: depth of the Graph. default depth of 1-step
         :param relatietypes: List of relatietypes. Default None returns all possible relatietypes
         :param actief: Returns only active assets (nodes)
         :return:

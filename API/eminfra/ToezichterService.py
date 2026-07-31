@@ -6,7 +6,7 @@ from API.eminfra.EMInfraDomain import (AssetDTO, ToezichterKenmerk, IdentiteitKe
                                        SelectionDTO, PagingModeEnum, ExpressionDTO, TermDTO, OperatorEnum,
                                        LogicalOpEnum, BetrokkenerelatieDTO, ToezichtgroepTypeEnum,
                                        ToezichtKenmerkUpdateDTO)
-from API.eminfra.Generic import SMALL_PAGE_SIZE, DEFAULT_PAGE_SIZE
+from API.eminfra.Generic import DEFAULT_PAGE_SIZE
 
 
 class ToezichterService:
@@ -95,7 +95,8 @@ class ToezichterService:
             raise ProcessLookupError(response.content.decode("utf-8"))
         return ToezichtgroepDTO.from_dict(response.json())
 
-    def search_toezichtgroep_lgc(self, naam: str, toezichtgroep_type: ToezichtgroepTypeEnum = None) -> Generator[ToezichtgroepDTO]:
+    def search_toezichtgroep_lgc(self, naam: str, toezichtgroep_type: ToezichtgroepTypeEnum | None = None)\
+            -> Generator[ToezichtgroepDTO]:
         query_dto = QueryDTO(size=DEFAULT_PAGE_SIZE, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              selection=SelectionDTO(
                                  expressions=[
@@ -125,7 +126,8 @@ class ToezichterService:
             if query_dto.from_ >= dto_list_total:
                 break
 
-    def search_identiteit(self, naam: str, bron: Optional[str] = None, actief: Optional[bool] = True) -> Generator[IdentiteitKenmerk]:
+    def search_identiteit(self, naam: str, bron: Optional[str] | None = None, actief: Optional[bool] = True)\
+            -> Generator[IdentiteitKenmerk]:
         """
         Zoek een toezichter (Legacy) op basis van diens naam, bron en actief.
         Splits de naam op spaties en zoek op ieder deel van de naam.
@@ -138,7 +140,7 @@ class ToezichterService:
         type actief: bool
         """
         # initialize the base query
-        query_dto = QueryDTO(size=SMALL_PAGE_SIZE, from_=0, pagingMode=PagingModeEnum.OFFSET,
+        query_dto = QueryDTO(size=DEFAULT_PAGE_SIZE, from_=0, pagingMode=PagingModeEnum.OFFSET,
                              selection=SelectionDTO(expressions=[]))
 
         # Split the name into parts and build search expressions for each part

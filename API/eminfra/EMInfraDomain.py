@@ -200,7 +200,7 @@ class Link(BaseDataclass):
 @dataclass
 class ResourceRefDTO(BaseDataclass):
     uuid: str
-    links: Optional[list[Link]] = None
+    links: Optional[list[Link]] | None = None
 
     def __post_init__(self):
         self._fix_nested_list_classes({('links', Link)})
@@ -494,7 +494,7 @@ class IdentiteitKenmerk(BaseDataclass):
     contactFiche: dict
     voId: str | None = None
     bron: str | None = None
-    gebruikersrechtOrganisaties: list[str] = None
+    gebruikersrechtOrganisaties: list[str] | None = None
     ldapId: str | None = None
     functie: str | None = None
     links: list[Link] | None = None
@@ -677,7 +677,7 @@ class ToezichtgroepTypeEnum(Enum):
 @dataclass
 class ResourceRefDTO(BaseDataclass):
     uuid: str
-    links: Optional[list[Link]] = None
+    links: Optional[list[Link]] | None = None
 
     def __post_init__(self):
         self._fix_nested_list_classes({('links', Link)})
@@ -762,7 +762,7 @@ class AgentDTO(BaseDataclass):
     naam: str
     actief: bool
     links: list[Link]
-    contactInfo: list[dict] = None
+    contactInfo: list[dict] | None = None
     voId: str | None = None
     ovoCode: str | None = None
 

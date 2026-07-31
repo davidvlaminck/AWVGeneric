@@ -42,7 +42,8 @@ class BestekService:
         """
         return self.get_bestekkoppeling_by_uuid(asset_uuid=asset.uuid)
 
-    def get_bestekref(self, eDelta_dossiernummer: str = None, eDelta_besteknummer: str = None) -> BestekRef | None:
+    def get_bestekref(self, eDelta_dossiernummer: str | None = None, eDelta_besteknummer: str | None = None) \
+            -> BestekRef | None:
         """
         Opzoeken van een BestekRef op basis van een dossiernummer of een besteknummer.
 
@@ -127,8 +128,8 @@ class BestekService:
         return self.change_bestekkoppelingen_by_uuid(asset_uuid=asset.uuid, bestekkoppelingen=bestekkoppelingen)
 
     def adjust_date_bestekkoppeling_by_uuid(self, asset_uuid: str, bestek_ref_uuid: str,
-                                                  start_datetime: datetime = None,
-                                                  end_datetime: datetime = None) -> dict | None:
+                                                  start_datetime: datetime | None = None,
+                                                  end_datetime: datetime | None = None) -> dict | None:
         """
         Adjusts the startdate and/or the enddate of an existing bestekkoppeling.
 
@@ -158,7 +159,7 @@ class BestekService:
         return self.change_bestekkoppelingen_by_uuid(asset_uuid, bestekkoppelingen)
 
     def adjust_date_bestekkoppeling(self, asset: AssetDTO, bestek_ref_uuid: str, start_datetime: datetime = None,
-                                    end_datetime: datetime = None) -> dict | None:
+                                    end_datetime: datetime | None = None) -> dict | None:
         """
         Adjusts the startdate and/or the enddate of an existing bestekkoppeling.
 
@@ -214,8 +215,9 @@ class BestekService:
         return self.end_bestekkoppeling_by_uuid(asset_uuid=asset.uuid, bestek_ref_uuid=bestek_ref_uuid,
                                                 end_datetime=end_datetime)
 
-    def add_bestekkoppeling_by_uuid(self, asset_uuid: str, eDelta_besteknummer: str = None, eDelta_dossiernummer: str = None,
-                            start_datetime: datetime = datetime.now(), end_datetime: datetime = None,
+    def add_bestekkoppeling_by_uuid(self, asset_uuid: str, eDelta_besteknummer: str | None = None,
+                                    eDelta_dossiernummer: str | None = None,
+                                    start_datetime: datetime = datetime.now(), end_datetime: datetime | None = None,
                             categorie: str = BestekCategorieEnum.WERKBESTEK, insert_index: int = 0) -> dict | None:
         """
         Add a new bestekkoppeling. Start date default the execution date. End date default open-ended.
@@ -263,8 +265,9 @@ class BestekService:
 
             return self.change_bestekkoppelingen_by_uuid(asset_uuid, bestekkoppelingen)
 
-    def add_bestekkoppeling(self, asset: AssetDTO, eDelta_besteknummer: str = None, eDelta_dossiernummer: str = None,
-                            start_datetime: datetime = datetime.now(), end_datetime: datetime = None,
+    def add_bestekkoppeling(self, asset: AssetDTO, eDelta_besteknummer: str | None = None,
+                            eDelta_dossiernummer: str | None = None,
+                            start_datetime: datetime = datetime.now(), end_datetime: datetime | None = None,
                             categorie: str = BestekCategorieEnum.WERKBESTEK, insert_index: int = 0) -> dict | None:
         """
         Add a new bestekkoppeling. Start date default the execution date. End date default open-ended.
@@ -285,10 +288,10 @@ class BestekService:
                                                 start_datetime=start_datetime, end_datetime=end_datetime,
                                                 categorie=categorie, insert_index=insert_index)
 
-    def replace_bestekkoppeling_by_uuid(self, asset_uuid: str, eDelta_besteknummer_old: str = None,
-                                eDelta_dossiernummer_old: str = None, eDelta_besteknummer_new: str = None,
-                                eDelta_dossiernummer_new: str = None, start_datetime: datetime = datetime.now(),
-                                end_datetime: datetime = None,
+    def replace_bestekkoppeling_by_uuid(self, asset_uuid: str, eDelta_besteknummer_old: str | None = None,
+                                eDelta_dossiernummer_old: str | None = None, eDelta_besteknummer_new: str | None = None,
+                                eDelta_dossiernummer_new: str | None = None, start_datetime: datetime = datetime.now(),
+                                end_datetime: datetime | None = None,
                                 categorie: BestekCategorieEnum = BestekCategorieEnum.WERKBESTEK) -> dict | None:
         """
         Replaces an existing bestekkoppeling: ends the existing bestekkoppeling and add a new one.
@@ -329,10 +332,10 @@ class BestekService:
                                              start_datetime=start_datetime, end_datetime=end_datetime,
                                              categorie=categorie)
 
-    def replace_bestekkoppeling(self, asset: AssetDTO, eDelta_besteknummer_old: str = None,
-                                eDelta_dossiernummer_old: str = None, eDelta_besteknummer_new: str = None,
-                                eDelta_dossiernummer_new: str = None, start_datetime: datetime = datetime.now(),
-                                end_datetime: datetime = None,
+    def replace_bestekkoppeling(self, asset: AssetDTO, eDelta_besteknummer_old: str | None = None,
+                                eDelta_dossiernummer_old: str | None = None, eDelta_besteknummer_new: str | None = None,
+                                eDelta_dossiernummer_new: str | None = None, start_datetime: datetime = datetime.now(),
+                                end_datetime: datetime | None = None,
                                 categorie: BestekCategorieEnum = BestekCategorieEnum.WERKBESTEK) -> dict | None:
         """
         Replaces an existing bestekkoppeling: ends the existing bestekkoppeling and add a new one.
