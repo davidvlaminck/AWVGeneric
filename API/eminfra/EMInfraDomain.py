@@ -140,11 +140,11 @@ class BaseDataclass:
 
     @classmethod
     def from_dict(cls, dict_: dict):
-        for k in list(dict_.keys()):
+        data = dict_.copy() # <- defensive copy
+        for k in list(data.keys()):
             if k in RESERVED_WORD_LIST:
-                dict_[f'{k}_'] = dict_[k]
-                del dict_[k]
-        return cls(**dict_)
+                data[f'{k}_'] = data.pop(k) # <- mutate the copy only
+        return cls(**data)
 
     def _fix_enums(self, list_of_fields: set[tuple[str, type]]):
         for field_tuple in list_of_fields:
