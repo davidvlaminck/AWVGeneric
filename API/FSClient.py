@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Iterator
 
 from tqdm import tqdm
 
