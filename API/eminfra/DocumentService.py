@@ -94,7 +94,7 @@ class DocumentService:
         :param asset_uuid: Asset uuid
         :type asset_uuid: str
         :param size: aantal documenten
-        :type size: str
+        :type size: int
         :param categorie: document categoriën
         :type categorie: list[DocumentCategorieEnum]
         :return: Generator[AssetDocumentDTO]
@@ -121,7 +121,7 @@ class DocumentService:
         :param asset:
         :type asset: AssetDTO
         :param size: aantal documenten
-        :type size: str
+        :type size: int
         :param categorie: document categori�n
         :type categorie: list[DocumentCategorieEnum]
         :return: Generator[AssetDocumentDTO]
