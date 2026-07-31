@@ -24,7 +24,7 @@ class AssetService:
         json_dict = self.requester.get(url).json()
         return AssetDTO.from_dict(json_dict)
 
-    def _update_asset(self, asset: AssetDTO, naam: str = None, actief: bool = None, toestand: AssetDTOToestand = None,
+    def _update_asset(self, asset: AssetDTO, naam: str = None, is_actief: bool = None, toestand: AssetDTOToestand = None,
                       commentaar: str = None) -> dict:
         """
         Update an asset.
@@ -40,8 +40,8 @@ class AssetService:
         # update asset eigenschappen naam, actief, toestand en commentaar
         if naam:
             json_body["naam"] = naam
-        if actief is not None:
-            json_body["actief"] = actief
+        if is_actief is not None:
+            json_body["actief"] = is_actief
         if toestand:
             json_body["toestand"] = toestand.value
         if commentaar:
@@ -54,14 +54,14 @@ class AssetService:
             raise ProcessLookupError(response.content.decode("utf-8"))
         return response.json()
 
-    def update_asset_by_uuid(self, asset_uuid: str, naam: str = None, actief: bool = None,
+    def update_asset_by_uuid(self, asset_uuid: str, naam: str = None, is_actief: bool | None = None,
                              toestand: AssetDTOToestand = None, commentaar: str = None) -> dict:
         asset = self.get_asset_by_uuid(asset_uuid=asset_uuid)
-        return self._update_asset(asset=asset, naam=naam, actief=actief, toestand=toestand, commentaar=commentaar)
+        return self._update_asset(asset=asset, naam=naam, is_actief=is_actief, toestand=toestand, commentaar=commentaar)
 
-    def update_asset(self, asset: AssetDTO, naam: str = None, actief: bool = None, toestand: AssetDTOToestand = None,
+    def update_asset(self, asset: AssetDTO, naam: str = None, is_actief: bool = None, toestand: AssetDTOToestand = None,
                      commentaar: str = None) -> dict:
-        return self._update_asset(asset=asset, naam=naam, actief=actief, toestand=toestand, commentaar=commentaar)
+        return self._update_asset(asset=asset, naam=naam, is_actief=is_actief, toestand=toestand, commentaar=commentaar)
 
     def update_toestand_by_uuid(self, asset_uuid: str, toestand: AssetDTOToestand = AssetDTOToestand.IN_ONTWERP) \
             -> dict:
@@ -118,17 +118,17 @@ class AssetService:
 
     def activeer_asset_by_uuid(self, asset_uuid: str) -> dict:
         asset = self.get_asset_by_uuid(asset_uuid=asset_uuid)
-        return self._update_asset(asset=asset, actief=True)
+        return self._update_asset(asset=asset, is_actief=True)
 
     def activeer_asset(self, asset: AssetDTO) -> dict:
-        return self._update_asset(asset=asset, actief=True)
+        return self._update_asset(asset=asset, is_actief=True)
 
     def deactiveer_asset_by_uuid(self, asset_uuid: str) -> dict:
         asset_uuid = self.get_asset_by_uuid(asset_uuid=asset_uuid)
-        return self._update_asset(asset=asset_uuid, actief=False)
+        return self._update_asset(asset=asset_uuid, is_actief=False)
 
     def deactiveer_asset(self, asset: AssetDTO) -> dict:
-        return self._update_asset(asset=asset, actief=False)
+        return self._update_asset(asset=asset, is_actief=False)
 
     def _search_assets_helper_generator(self, query_dto: QueryDTO) -> Generator[AssetDTO]:
         query_dto.from_ = 0
@@ -144,17 +144,17 @@ class AssetService:
             if query_dto.from_ >= dto_list_total:
                 break
 
-    def search_assets_generator(self, query_dto: QueryDTO, actief: bool = None) -> Generator[AssetDTO]:
+    def search_assets_generator(self, query_dto: QueryDTO, is_actief: bool = None) -> Generator[AssetDTO]:
         """
         Search assets using a query.
         Status actief default None. Set status actief (boolean) to filter active or inactive assets.
         """
-        if actief is not None:
+        if is_actief is not None:
             query_dto.selection.expressions.append(
                 ExpressionDTO(
                     terms=[TermDTO(property='actief',
                                    operator=OperatorEnum.EQ,
-                                   value=actief)
+                                   value=is_actief)
                            ], logicalOp=LogicalOpEnum.AND)
             )
         yield from self._search_assets_helper_generator(query_dto)

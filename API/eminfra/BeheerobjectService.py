@@ -108,10 +108,10 @@ class BeheerobjectService:
         return self.wijzig_boomstructuur_by_uuid(child_asset_uuid=childAsset.uuid, parent_asset_uuid=parentAsset.uuid,
                                                  parentType=parentType)
 
-    def update_beheerobject_status(self, beheerObject: BeheerobjectDTO, status: bool) -> dict:
+    def update_beheerobject_status(self, beheerObject: BeheerobjectDTO, is_actief: bool) -> dict:
         json_body = {
             "naam": beheerObject.naam,
-            "actief": status,
+            "actief": is_actief,
             "typeUuid": beheerObject.type.get("uuid")
         }
         response = self.requester.put(
