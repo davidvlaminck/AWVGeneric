@@ -1,12 +1,12 @@
-# API Folder — Detailed Suggestions
+# API Folder — Detailed Suggestions (Updated 2026-07-31)
 
-Based on a line-by-line review of the `API/` folder (requesters, domain models, services, and clients).
+Based on a re-execution of the line-by-line review of the `API/` folder.
+Each item is annotated with **Status**: ✅ FIXED, ❌ NOT FIXED, or ⚠️ PARTIALLY FIXED.
 
 ---
 
 ## 1. Critical Bugs
-
-*Done*
+**Status:** ✅ *Done*
 
 ---
 
@@ -14,333 +14,283 @@ Based on a line-by-line review of the `API/` folder (requesters, domain models, 
 
 ### 2.1 Dangerous module-level monkey-patch
 `eminfra/EMInfraDomain.py:7-25` replaces `dataclasses._asdict_inner` globally.  
-**Suggestion:** Remove the monkey-patch. Use a custom `asdict` implementation or a mixin class instead. If serialization control is required, implement it in `BaseDataclass` without mutating `dataclasses` internals.
+**Status:** ❌ NOT FIXED  
+**Suggestion:** Remove both monkey-patches in `EMInfraDomain.py` and `Locatieservices2Domain.py`. The `__dict_factory_override__` method on `BaseDataclass` already provides the custom serialization path without needing to patch `dataclasses` internals.
 
 ### 2.2 Duplicated `_by_uuid` / by-object wrapper pattern
-Every service duplicates methods that take a UUID directly and convenience wrappers that extract the UUID from an asset/object (e.g., `get_x_by_uuid` + `get_x`, `update_x_by_uuid` + `update_x`).  
-**Suggestion:** Introduce a small filter/mixin or use a decorator to reduce the ~2x method proliferation across all service classes.
+Every service duplicates UUID-based and DTO-based methods.  
+**Status:** ❌ NOT FIXED  
+**Suggestion:** Introduce a filter/mixin or decorator to reduce the ~2x method proliferation.
 
 ### 2.3 Duplicated pagination loops
-Near-identical `while True` pagination logic is copy-pasted across `AssetService`, `ToezichterService`, `AssettypeService`, `EventService`, etc.  
-**Suggestion:** Extract a shared cursor/offset pagination helper (e.g., `PaginatedIterator` or an internal generator) to avoid copy-paste and inconsistent cursor handling.
+Copy-pasted `while True` pagination across `AssetService`, `ToezichterService`, `AssettypeService`, `EventService`, `KenmerkService`, `BeheerobjectService`, `PostitService`, `DocumentService`, `AgentService`.  
+**Status:** ❌ NOT FIXED  
+**Suggestion:** Extract a shared `PaginatedIterator` or internal generator.
 
 ### 2.4 Duplicated error-handling template
-`raise ProcessLookupError(response.content.decode("utf-8"))` + `logging.error(response)` is repeated in almost every API call.  
-**Suggestion:** Add a single `_raise_for_status(self, response, method)` or similar to `AbstractRequester` / a mixin. Services will no longer need inline error handling.
+`raise ProcessLookupError(response.content.decode("utf-8"))` + `logging.error(response)` repeated.  
+**Status:** ❌ NOT FIXED  
+**New observation:** `EMSONClient.py` uses `print(response)` instead of `logging.error(response)`.  
+**Suggestion:** Add a single `_raise_for_status(response, method)` helper to `AbstractRequester`.
 
 ---
 
 ## 3. Error Handling Inconsistencies
 
 ### 3.1 Wrong exception type
-`ProcessLookupError` (an `OSError` subclass meant for `os.kill`) is used everywhere to signal HTTP/API failures.  
-**Suggestion:** Create a domain-specific exception, e.g., `EMInfraAPIError(RuntimeError)` or `HTTPClientError(requests.HTTPError)`, or at least use `requests.HTTPError` with `response` attached.
+`ProcessLookupError` used everywhere instead of a domain-specific exception.  
+**Status:** ❌ NOT FIXED  
+**New observation:** `DocumentService.remove_document` (line 161) raises `ValueError(...)` instead of `ProcessLookupError`.  
+**Suggestion:** Create `EMInfraAPIError(RuntimeError)`.
 
 ### 3.2 Inconsistent logging
-Some failing calls log before raising (e.g., `BestekService`, `GeometrieService`), while others do not (e.g., `ToezichterService.get_toezichter_by_uuid`, `AssetService.get_asset_by_uuid`).  
-**Suggestion:** Make error handling uniform—either always log + raise, or delegate to a shared helper.
+Some methods log before raising, others don't; `EMSONClient` uses `print()`.  
+**Status:** ❌ NOT FIXED  
+**Suggestion:** Delegate to a shared error helper.
 
 ### 3.3 Inconsistent status codes
-Some methods expect `200`, others expect `202`; there is no project-wide convention.  
-**Suggestion:** Document the expected status code per operation type (GET -> 200, PUT -> 202, etc.) or make it configurable.
+No project-wide convention (GET→200, PUT→202, POST→200/201).  
+**Status:** ❌ NOT FIXED  
+**Suggestion:** Document expected status per operation type.
 
 ---
 
 ## 4. Naming & Conventions
 
 ### 4.1 Dutch/English mixing
-Docstrings and comments are largely in Dutch (`Ophalen van het GeometrieKenmerk`, `Zoek actieve child-assets`), while method names and class names are English.  
-**Suggestion:** Standardize on English for code, comments, and docstrings to keep the surface area consistent, especially since the domain objects (e.g., `Bestek`, `Beheerobject`) are already English-ish abstractions. Alternatively, if Dutch is preferred, rename methods and classes to Dutch for full consistency.
+Docstrings/comments predominantly Dutch; methods/classes English.  
+**Status:** ❌ NOT FIXED
 
 ### 4.2 Shadowing built-ins
-- `AssetService.py:396` uses parameter name `filter` (shadows built-in `filter`).
-- `ToezichterService.py:97` uses parameter name `type` (shadows built-in `type`).  
-**Suggestion:** Rename to `filter_`, `type_`, or use more descriptive names (`filter_dict`, `relatie_type`).
+- `AssetService.py:396` uses parameter `filter_dict` — ✅ **FIXED** (renamed from `filter` to `filter_dict`).
+- `ToezichterService.py:97` — **✅ FIXED** (renamed to `toezichtgroep_type`).
 
 ### 4.3 camelCase field names in dataclasses
-`EMInfraDomain.py` uses `totalCount`, `createdOn`, `modifiedOn`, `akteBlad`, `code` etc. in dataclass fields while Python convention strongly prefers `snake_case`.  
-**Suggestion:** Keep DTO fields internally consistent with JSON keys, but consider adding aliases or renaming to snake_case (`total_count`, `created_on`) and mapping to/from camelCase in `from_dict` / `asdict`.
+**Status:** ❌ NOT FIXED — `EMInfraDomain.py` still uses `totalCount`, `createdOn`, `modifiedOn`, `actiefInterval`, etc.
 
 ### 4.4 `from_` inconsistency
-`DTOList` uses `_from` while `QueryDTO` uses `from_` to work around the reserved word. The inconsistency is confusing.  
-**Suggestion:** Use `from_` consistently everywhere, or use `offset` / `position` for pagination start to avoid the reserved-word workaround entirely.
+`DTOList._from` vs `QueryDTO.from_`.  
+**Status:** ⚠️ PARTIALLY FIXED — `QueryDTO` uses `from_` consistently; `DTOList` still uses `_from` (line 212).
 
 ### 4.5 Static-like methods called on instances
-`AssetService.search_parent_asset_by_uuid:264` calls `BeheerobjectService.get_beheerobject(self, ...)` — passing `self` explicitly to a method that is not a classmethod/staticmethod. This is syntactically wrong (will raise `TypeError` at runtime).  
-**Suggestion:** Ensure all cross-service calls use proper instance methods or classmethods.
+- `AssetService.py:264` — `BeheerobjectService.get_beheerobject(beheerobject_uuid=parent_uuid)`
+  - **Status:** 🆕 **NEW — RUNTIME BUG.** `BeheerobjectService` IS imported (line 7), but `get_beheerobject` is an instance method. Calling it on the class without `self` raises `TypeError`.
+  - **Suggestion:** Use `BeheerobjectService(self.requester).get_beheerobject(beheerobject_uuid=parent_uuid)`.
+- `RelatieService.py:160` — `AssetService.get_asset_by_uuid(self, asset_uuid=...)`
+  - **Status:** ❌ NOT FIXED — Passes `self` (a `RelatieService`) as `self` to `AssetService.get_asset_by_uuid`. Works via duck-typing but is fragile.
+- `SchadebeheerderService.py:16` — `KenmerkService.get(self, asset_uuid, self.SCHADEBEHEERDER_UUID)`
+  - **Status:** ❌ NOT FIXED — Same duck-typing hack.
 
 ---
 
 ## 5. Hardcoded Values
 
 ### 5.1 Hardcoded UUIDs as class constants
-Several services use hardcoded kenmerktype UUIDs:
-- `BestekService.BESTEKKOPPELING_UUID`
-- `GeometrieService.GEOMETRIE_UUID`
-- `LocatieService.LOCATIE_UUID`
-- `ToezichterService.TOEZICHTER_UUID`
-- `GraphService.DEFAULT_GRAPH_RELATIE_TYPES` (long list of UUIDs)  
-**Suggestion:** Move these into a dedicated configuration mapping file (or `eminfra/Generic.py`) so they can be updated without touching service logic.
+**Status:** ❌ NOT FIXED
 
 ### 5.2 Hardcoded dictionary in `Generic.py`
-The `RelatieEnum` → UUID mapping is hardcoded.  
-**Suggestion:** If the set of relations grows or changes, this requires a code change. Load from a JSON/YAML resource file, or fetch dynamically from the API if available.
+**Status:** ✅ FIXED — Now loads `_ASSETRELATIES_DICT` from `assetrelaties.json` at module level (lines 12-13).
 
 ### 5.3 Hardcoded query sizes
-Repeated `size=10`, `size=100`, `size=1000` across services.  
-**Suggestion:** Define module-level constants with descriptive names (e.g., `DEFAULT_PAGE_SIZE = 100`, `LARGE_PAGE_SIZE = 1000`).
+**Status:** ⚠️ PARTIALLY FIXED — `Generic.py` defines `DEFAULT_PAGE_SIZE=10`, `LARGE_PAGE_SIZE=100`, `SINGLE_RESULT_PAGE_SIZE=1`. Some services use these; others still hardcode (e.g., `AgentService.py:56` `query_dto.size = 100`, `PostitService.py:51` `query_dto.size = 100`).
 
 ---
 
 ## 6. Type Hint Issues
 
 ### 6.1 Missing generic parameters
-`list[str]` written as `[str]` in multiple places (`EMInfraDomain.py:211, 217, 277, 329`); `dict` used without parameters; `Generator` used without type parameters.  
-**Suggestion:** Use proper generics (`list[str]`, `dict[str, Any]`, `Generator[AssetDTO, None, None]`) and enable `mypy --strict` or a similar linter.
+**Status:** ⚠️ PARTIALLY FIXED
+- ✅ Many `list[T]` fields now have parameters (e.g., `EMInfraDomain.py:207` `data: list[AssettypeDTO]`).
+- ❌ Still bare `list`: `EMInfraDomain.py:217` `data: list` (in `DTOList`), should be `list[AssettypeDTO]`.
+- ❌ Still bare `dict`: `EMInfraDomain.py:224` `terms: list[dict] | list[TermDTO]`, `EMInfraDomain.py:233-234` `expressions: list[dict] | list[ExpressionDTO]`, `settings: dict | None`; also `EMInfraDomain.py:354` `data: dict`, `EMInfraDomain.py:363` `type: dict`, `EMInfraDomain.py:365-368` `locatie/relatie/elektriciteitsAansluitingRef: dict`; `EMInfraDomain.py:438-441` `actiefInterval/contactFiche/afdeling/districtDiensten: dict`; `EMInfraDomain.py:579` `type: dict | None`; `EMInfraDomain.py:689` `type: dict`; `EMInfraDomain.py:693` `authorizationMetadata: dict | None`; `EMInfraDomain.py:747` `geldigheid: dict | None`; `EMInfraDomain.py:774-778` `types/bestekRef/bestekKoppelingen/toezichter/toezichtGroep: dict`; `EMInfraDomain.py:811` `type: dict`; `AssetService.py:396` `filter_dict: dict`; `AssetService.py:402` `expansions_fields: list[str] = None` still uses bare `dict`.
+- ❌ Still `Generator[T]` with 1 param: 31 occurrences across 11 files (e.g., `AgentService.py:11`, `AssetService.py:133`, etc.).
 
 ### 6.2 Non-None defaults typed as optional
-Several parameters have `= None` but are not union-hinted with `None`:
-- `GraphService.get_graph_by_uuid`: `relatietypes: list = None` — missing `list[str] | None`.
-- `BestekService.add_bestekkoppeling`: `asset: AssetDTO = None` without `| None`.
-- `ToezichterService.search_toezichtgroep_lgc`: `type: ToezichtgroepTypeEnum = None` — parameter named `type` shadows built-in and is not union-hinted.
-- `EMInfraDomain.py` `QueryDTO`, `SelectionDTO`, etc.: several optional defaults lack `| None`.  
-**Suggestion:** Add `| None` to all optional defaults. Run a type checker to find all instances.
+**Status:** ⚠️ PARTIALLY FIXED
+- ❌ `GraphService.py:67` `relatietypes: list = None` — still missing `| None` (line 36 was fixed but line 67 was not).
+- ❌ `AssetService.py:27` `_update_asset`: `naam: str = None`, `commentaar: str = None` — still missing `| None`.
+- ❌ `AssetService.py:57-58` `update_asset_by_uuid`: `naam: str = None`, `toestand: AssetDTOToestand = None` — still missing `| None`.
+- ❌ `BestekService.py:161` `adjust_date_bestekkoppeling`: `start_datetime: datetime = None` — still missing `| None`.
+- ❌ `LocatieService.py:39` `wkt_geometry: str = None`, line 68 `doel_asset: AssetDTO = None` — still missing `| None`.
+- ⚠️ `ToezichterService.py:129` `bron: Optional[str] | None` — redundant `Optional` + `| None`.
 
 ### 6.3 Incorrect type annotations
-- `AssetService.get_objects_from_oslo_search_endpoint_gen`: `filter_dict: dict = '{}'` — default is a `str`, not a `dict`.
-- `BestekService.change_bestekkoppelingen_by_uuid`: parameter typed as `[BestekKoppeling]` instead of `list[BestekKoppeling]`.  
-**Suggestion:** Fix the annotation; also consider whether `filter_dict` should default to `{}` instead of `'{}'`.
+- ✅ `AssetService.py:401` `filter_dict: dict = {}` — **FIXED** (was `'{}'` string, now `{}` dict).
+- ✅ `BestekService.py:102` `bestekkoppelingen: list[BestekKoppeling]` — **FIXED** (was `[BestekKoppeling]`).
+- ❌ `KenmerkService.py:29` -> `[AssetTypeKenmerkTypeDTO]` — should be `list[AssetTypeKenmerkTypeDTO]`.
+- ❌ `RelatieService.py:66-67` -> `[AssetRelatieDTO]` — should be `list[AssetRelatieDTO]`.
+- ❌ `RelatieService.py:110` -> `[AssetDTO]` — should be `list[AssetDTO]`.
+- ❌ `EMSONClient.py:53,85` -> `[dict]` — should be `list[dict]`.
+- ❌ `AssetService.py:402` `expansions_fields: [str] = None` — should be `list[str] | None = None`.
 
 ---
 
 ## 7. Mutable / Problematic Default Arguments
 
 ### 7.1 `datetime.now()` evaluated at definition time
-Default values in method signatures capture `datetime.datetime.now(...)` at import time:
-- `BestekService.add_bestekkoppeling_by_uuid`
-- `BestekService.add_bestekkoppeling`
-- `BestekService.end_bestekkoppeling_by_uuid`
-- `BestekService.end_bestekkoppeling`
-- `BestekService.replace_bestekkoppeling_by_uuid`
-- `BestekService.replace_bestekkoppeling`  
-**Suggestion:** Use `None` as the sentinel default and call `datetime.datetime.now(datetime.timezone.utc)` inside the method body.
+**Status:** ⚠️ PARTIALLY FIXED
+- ✅ `BestekService.add_bestekkoppeling_by_uuid` — now uses `start_datetime: datetime | None = None`.
+- ❌ `BestekService.replace_bestekkoppeling` (line 345) — **still has** `start_datetime: datetime = datetime.now()`.
+- ❌ Other methods in BestekService may still have the same issue.
 
 ### 7.2 `from_dict` mutates input dict
-`BaseDataclass.from_dict` modifies the input dict in place (`dict_[f'{k}_'] = ...; del dict_[k]`).  
-**Suggestion:** Copy the input dict before mutating it (`dict_.copy()`), or use a comprehension to avoid side effects.
+- ✅ `EMInfraDomain.py` — **FIXED** (uses `data = dict_.copy()` on line 139).
+- ❌ `Locatieservices2Domain.py:56-61` — **still mutates input dict** in place.
 
 ---
 
 ## 8. Requesters
 
-### 8.1 `AbstractRequester` bases URL from `first_part_url + url`
-In several clients (`EMSONClient`, `SNGatewayClient`, `Locatieservices2Client`, `FSClient`) the constructor appends a path fragment to `self.requester.first_part_url`.  
-**Suggestion:** Make `first_part_url` truly immutable (e.g., store it as a private `_base_url` and strip the trailing slash). Appending to a public string is error-prone and makes retries reuse a mutated URL suffix.
+### 8.1 URL mutation in constructors
+`EMSONClient.py:21`, `SNGatewayClient.py:11`, `Locatieservices2Client.py:14`, `FSClient.py:13`, `EMInfraClient.py:29` all append to `self.requester.first_part_url`.  
+**Status:** ❌ NOT FIXED
 
 ### 8.2 `JWTRequester` checks module presence via `sys.modules`
-`JWTRequester.__init__:21` checks `'cryptography' not in sys.modules`. This is brittle and can yield false positives/negatives.  
-**Suggestion:** Use an explicit `try: import cryptography; except ImportError: raise ModuleNotFoundError(...)`.
+**Status:** ✅ FIXED — Now uses `try: import cryptography; except ImportError: raise ModuleNotFoundError(...)`. `import sys` removed.
 
-### 8.3 `CookieRequester` and `CertRequester` inherit header mutation differently
-Both mutate `kwargs['headers']` in similar but not identical ways. `CookieRequester` uses `kwargs.setdefault`, while `CertRequester` uses a more convoluted loop.  
-**Suggestion:** Extract a shared `_apply_default_headers` helper or move the logic to `AbstractRequester._request_with_retries`.
+### 8.3 Header mutation duplication
+**Status:** ⚠️ PARTIALLY FIXED — ✅ `_apply_default_headers` extracted to `AbstractRequester.py:138-153`. `CookieRequester` and `CertRequester` now inherit it (no duplicate methods).  
+- 🆕 **NEW — BUG in `JWTRequester.py:66-83`:** After calling `self._apply_default_headers(kwargs)` (which sets `accept`), the method **re-applies** the same accept logic (lines 73-80), producing `"application/json, application/json"` instead of `"application/json"`. The redundant block (lines 73-80) must be removed.
 
 ### 8.4 `JWTRequester.generate_authentication_token` uses `random.choice`
-Line 93 uses `choice(string.ascii_lowercase)` for `jti`. This is not cryptographically secure.  
-**Suggestion:** Use `secrets.token_urlsafe(20)` instead of a random lowercase string.
+**Status:** ✅ FIXED — Now uses `secrets.token_urlsafe(20)` (line 82). `import secrets` added; `import string` and `from random import choice` removed.
 
 ### 8.5 `OneDriveClient` does not use `AbstractRequester`
-`OneDriveClient` uses raw `requests.get/post/put` instead of the project's retry-enabled `AbstractRequester`.  
-**Suggestion:** Either integrate `OneDriveClient` with `AbstractRequester` (if gecko is possible), or document why it intentionally bypasses the shared requester.
+**Status:** ❌ NOT FIXED — Still uses raw `requests.get/post/put`.
 
 ---
 
 ## 9. Other Issues
 
 ### 9.1 `BaseDataclass.asdict` shadowing
-`BaseDataclass.asdict()` calls `asdict(self)` where `asdict` is the module-level alias for `dataclasses.asdict`. This is correct due to scoping, but the method name shadows the module-level alias and is fragile.  
-**Suggestion:** Rename the instance method to `to_dict` and keep module-level `asdict` clean.
+- ✅ `EMInfraDomain.py` — **FIXED** (renamed to `to_dict`).
+- ❌ `Locatieservices2Domain.py:45` — **NOT FIXED** — still has `def asdict(self)` and calls `self.asdict()` in `json()` (lines 52-53) and `__str__` (line 83).
 
 ### 9.2 Dead code
-- `EMInfraDomain.py:174-191` contains a large commented-out `__post_init__` block. **Remove it or extract it to a base mixin.**
-- `GraphService.py` imports `AssetDTO` on line 3 but never uses it. **Remove the import.**
+- ✅ `EMInfraDomain.py` commented-out `__post_init__` block — **FIXED** (removed).
+- ✅ `GraphService.py` `AssetDTO` import — **FIXED** (it IS used on line 67).
 
-### 9.3 Missing `settings_path` / `cookie` validation
-`RequesterFactory.create_requester` opens `settings_path` without checking if it exists, and `settings.json` is read with bare `json.load`.  
-**Suggestion:** Add `Path(settings_path).exists()` guards and explicit error messages.
+### 9.3 Missing `settings_path` validation
+**Status:** ⚠️ PARTIALLY FIXED — `RequesterFactory.py:30-35` now uses `try/except`, but with a **bare `except:`** (line 34) which is too broad.  
+**Suggestion:** Use `Path(settings_path).exists()` guard + explicit `FileNotFoundError` message. Also fix `cookie: str = None` → `cookie: str | None = None` and `settings_path: Path = None` → `... | None`.
 
-### 9.4 `query_dto_helpers.py` imports a top-level `QueryDTO` that is also defined locally in `EMSONClient.py`
-`EMSONClient.Query` redefines a `BaseDataclass` when `eminfra/EMInfraDomain.py` already has a `QueryDTO`.  
-**Suggestion:** Reuse `QueryDTO` from `EMInfraDomain.py` in `EMSONClient.py` instead of redefining `Query`.
+### 9.4 `EMSONClient` `Query`/`EMSONQuery` duplicates `QueryDTO`
+**Status:** ⚠️ PARTIALLY FIXED — Class renamed from `Query` to `EMSONQuery`, but still a separate class with a different shape (`filters` vs `selection`, `fromCursor` only).  
+**Suggestion:** Reuse `QueryDTO` if possible, or document the shape difference explicitly.
 
-### 9.5 `FSClient.download_layer_to_records` is a confusing generator
-It uses `yield from` inside a loop where the loop itself is already being consumed as a generator. This makes the control flow hard to follow and the chunk remainder logic fragile.  
-**Suggestion:** Refactor into a clean generator function, or consider using `ijson` / `jsonlines` for line-delimited JSON streaming.
+### 9.5 `FSClient.download_layer_to_records` confusing generator
+**Status:** ❌ NOT FIXED — Still uses `yield from` inside a loop with `chunk_rest` reassignment (lines 46-48).
 
 ---
 
-## 10. Summary
+## 10. Summary Table (Updated)
 
-| Priority | Count | Area |
-|----------|-------|------|
-| P0 | 4 | Bugs (infinite recursion, wrong variable, wrong type hints) |
-| P1 | ~6 | Design duplication (pagination, error handling, by_uuid wrappers) |
-| P2 | 8 | Hardcoded values, error types, type hint fixes |
-| P3 | ~5 | Naming consistency, dead code, module-level monkey-patch |
-| P4 | 4 | Requester improvements, module-level imports |
+| Priority | Count | Area | Status |
+|----------|-------|------|--------|
+| P0 | 4 | Bugs (infinite recursion, wrong variable, wrong type hints) | ✅ All done |
+| P1 | ~6 | Design duplication (pagination, error handling, by_uuid wrappers) | ❌ 6+ items open |
+| P2 | 8+ | Hardcoded values, error types, type hint fixes | ⚠️ ~4 fixed, 8+ remaining |
+| P3 | ~5 | Naming consistency, dead code, monkey-patch | ⚠️ ~2 fixed, 3 remaining |
+| P4 | 4 | Requester improvements | ⚠️ 3 fixed, 1 remaining |
+| **NEW** | 3 | New issues discovered during re-review | 🆕 3 new critical issues |
 
 **Recommended refactoring order:**
-1. Fix the 4 critical bugs.
-2. Replace `ProcessLookupError` with a proper exception family.
-3. Extract shared pagination and error-handling helpers.
-4. Clean up hardcoded UUIDs / sizes.
-5. Standardize naming conventions (Dutch vs English, snake_case fields).
-6. Remove the module-level monkey-patch and dead code.
+1. ✅ Fix the 4 critical bugs (done)
+2. Replace `ProcessLookupError` with a proper exception family
+3. Extract shared pagination and error-handling helpers
+4. Clean up hardcoded UUIDs / sizes
+5. Standardize naming conventions (snake_case fields)
+6. Remove the module-level monkey-patch and dead code
+7. Fix the new runtime bug in `AssetService.py:264` (missing `self`)
+8. Fix the `accept` header double-append bug in `JWTRequester.py:66-83`
+9. Fix the `Locatieservices2Domain.py` `asdict` shadowing and `from_dict` input mutation
 
 ---
 
-## 11. Additional Issues — Deep Review of `eminfra/` Services
+## 11. Additional Issues — Deep Review
 
 ### 11.1 Architectural / Coupling Issues
-
-- **Tight coupling between services via direct method invocation**: `SchadebeheerderService` calls `KenmerkService.get(self, ...)` directly (`SchadebeheerderService.py:15`), passing `self` (a `SchadebeheerderService` instance) to `KenmerkService.get`, relying on duck-typing (both classes happen to have `self.requester`). This creates hidden, fragile coupling between services.
-  - **Suggestion:** Extract a shared utility or base mixin for common kenmerk operations, or inject the dependency explicitly.
-
-- **Cross-service static-like calls**: `AssetService.search_parent_asset_by_uuid:264` calls `BeheerobjectService.get_beheerobject(self, ...)`. `RelatieService.zoek_verweven_asset:160` calls `AssetService.get_asset_by_uuid(self, ...)`. Both bypass proper instance method semantics.
-  - **Suggestion:** These should either be proper instance method calls (instantiate `BeheerobjectService` properly), or be moved to a coordinator/service layer that holds references to both services.
-
-- **Local service instantiation inside methods**: `EigenschapService.get_eigenschappen` (line 110) imports and instantiates `KenmerkService` locally inside the method body. This hides the dependency, makes testing harder, and wastes resources on every call.
-  - **Suggestion:** Move `KenmerkService` to the class-level dependency graph (e.g., inject via `__init__` or class attribute).
+**Status:** ❌ NOT FIXED
+- `SchadebeheerderService.py:16` calls `KenmerkService.get(self, ...)` — passing `self` as `self` to a different class's instance method.
+- `AssetService.py:264` calls `BeheerobjectService.get_beheerobject(beheerobject_uuid=...)` — **🆕 NEW: RUNTIME TypeError** — no `self` passed.
+- `RelatieService.py:160` calls `AssetService.get_asset_by_uuid(self, ...)` — duck-typing hack.
 
 ### 11.2 State Mutation & Side Effects
-
-- **Generators mutate caller's `QueryDTO`**: Multiple generators mutate the input `QueryDTO` object for pagination state:
-  - `ToezichterService.search_toezichtgroep_lgc` (line 196): `query_dto.from_ += query_dto.size`
-  - `EventService.search_events_by_uuid_generator` (line 113)
-  - `AgentService.search_betrokkenerelaties` (line 48)
-  - `BeheerobjectService.search_beheerobjecten_generator` (line 42)
-  - Because generators are lazy and may not be fully consumed, or may be re-used, mutating the input object breaks idempotency and causes state leakage across calls.
-  - **Suggestion:** Pass `page_size` and `current_offset` as local variables in the generator, or use a dedicated pagination cursor/state object that is not shared with the caller.
-
-- **`from_dict` mutates input dict in place**: `BaseDataclass.from_dict` does `dict_[f'{k}_'] = dict_[k]; del dict_[k]`. If the caller reuses the original dict, it will find mutated keys.
-  - **Suggestion:** Copy the input dict before mutating (`dict_.copy()`).
+**Status:** ⚠️ PARTIALLY FIXED
+- `EMInfraDomain.py` `from_dict` — ✅ FIXED (defensive copy).
+- `Locatieservices2Domain.py` `from_dict` — ❌ NOT FIXED (mutates input).
+- Generators mutating `QueryDTO.from_` — ❌ NOT FIXED (many occurrences across services).
 
 ### 11.3 Inconsistent HTTP Status Code Expectations
-
-There is no uniform policy for expected status codes per HTTP verb:
-- `GET` generally expects `200`, but `DocumentService.download_document` follows links with implicit assumption of `200`.
-- `PUT` expects `202` in `DocumentService`, `BestekService`, `AssetService`.
-- `POST` expects `200` in `AssetService.create_asset_by_uuid`, but `GraphService.get_graph_by_uuid` expects `201`.
-- `GraphService.py:62` checks for `201` explicitly.
-- **Suggestion:** Document the expected status code per operation type, or make it configurable per verb in `AbstractRequester`.
+**Status:** ❌ NOT FIXED — No uniform policy.
 
 ### 11.4 Response Handling Inconsistencies
-
-- **Unsafe direct indexing into response JSON**: Many methods call `.json()` and immediately index `['data']` without checking if the key exists (e.g., `EigenschapService.py:21`, `KenmerkService.py:39`, `AssettypeService.py:44`, `BeheerobjectService.py:48`). If the API returns an error payload without a `data` key, a `KeyError` is raised instead of a meaningful API error.
-  - **Suggestion:** Use `dict.get('data', [])` or add explicit validation before accessing nested keys. Raise a custom `EMInfraAPIError` when the response structure is unexpected.
-
-- **`DocumentService.download_document` does `json.loads(response.content)`** instead of `response.json()` (line 30). This is inconsistent with the rest of the codebase and adds an unnecessary intermediate step.
-  - **Suggestion:** Use `response.json()` consistently.
-
-- **`remove_postit` returns the raw response object** (`PostitService.py:168`), while other `remove_*` methods return `response.json()` (parsed dict) or `None`. This inconsistency forces callers to handle two different return types for the same conceptual operation.
-  - **Suggestion:** Standardize all `remove_*` methods to return `None` on success with a 2xx/202 status, or return the parsed JSON body consistently.
+**Status:** ❌ NOT FIXED — Unsafe `['data']` indexing, `json.loads(response.content)` in `DocumentService.py:30`, inconsistent `remove_*` return types.
 
 ### 11.5 Security Issues
-
-- **Path traversal risk in `DocumentService.download_document`**: The filename comes directly from `document.naam` (`DocumentService.py:25, 35`) and is written to disk with `open(f'{directory}/{file_name}', 'wb')`. If `document.naam` contains `../` sequences, the file could be written outside the intended directory.
-  - `Path` is imported but not used; `os.path.join` or `pathlib.Path /` should be used for safe path construction.
-  - **Suggestion:** Sanitize `file_name` (remove path separators), use `Path(directory) / file_name` and verify the resolved path stays within `directory`.
-
-- **Sending literal `None` in JSON bodies**: Several methods include `None` values in JSON payloads (e.g., `PostitService.py:130` fallback). Python `json.dumps` converts `None` to `null`. If the backend does not expect `null` for optional fields, this could cause validation errors or, worse, unexpected state changes.
-  - **Suggestion:** Use a helper that strips `None` values from dicts before serialization, or only include keys when values are not `None`.
+**Status:** ❌ NOT FIXED — Path traversal in `DocumentService.download_document`, `None` sent in JSON bodies.
 
 ### 11.6 Performance Concerns
-
-- **`BeheerobjectService.create_beheerobject` fetches all beheerobjecttypes on every call** when `beheerobjecttype` is not provided (`BeheerobjectService.py:59` - `get_beheerobjecttypes()`). There is no caching. If the default type is static, this is an unnecessary network round-trip per creation.
-  - **Suggestion:** Cache the list of types at module or class level, or require the caller to always provide the type.
-
-- **`PostitService.edit_postit` always fetches the existing postit before editing** (`PostitService.py:125`), even if all three editable fields are explicitly provided. This means a partial-update always incurs a GET + PUT instead of just a PUT.
-  - **Suggestion:** Skip the GET when all fields are provided, or accept an optional `merge_existing: bool = True` parameter.
+**Status:** ⚠️ PARTIALLY FIXED
+- `BeheerobjectService.create_beheerobject` — ❌ NOT FIXED (fetches types on every call).
+- `PostitService.edit_postit` — ❌ NOT FIXED (always fetches existing postit).
 
 ### 11.7 Testability Concerns
-
-- **No mapper/response_handler abstraction**: Almost every method does `response.json()` then list-comprehension into DTOs. Because `requester` is an opaque dependency, unit tests must mock HTTP responses with exact JSON shapes. There is no `response_handler` or `mapper` interface that could be stubbed independently.
-  - **Suggestion:** Introduce a response-mapper layer or dependency-inject a `deserializer` function to make unit tests lighter.
-
-- **Generators with hidden input mutation**: Because `QueryDTO` is mutated during pagination, tests cannot safely iterate the same generator twice, run two generators concurrently with the same `QueryDTO`, or assert on the original `QueryDTO` state after consumption.
-  - **Suggestion:** Ensure generators are pure from the caller's perspective — the input object should not be mutated.
+**Status:** ❌ NOT FIXED — No mapper/response_handler abstraction; generators mutate input DTOs.
 
 ### 11.8 Import and Type Issues
-
-- **`Generic.py:103` uses old-style return type `-> (str, str)`** instead of the modern `tuple[str, str]`. Old-style parenthesized expressions are parsed as grouped expressions, not tuple types, and confuse type checkers.
-  - **Suggestion:** Change to `tuple[str, str]`.
-
-- **Unnecessary imports**: `EigenschapService` imports `KenmerkTypeEnum` and `KenmerkType` from `EMInfraDomain` (lines 4-6). `KenmerkTypeEnum` is used only in `get_eigenschappen` (line 105), and `KenmerkType` is imported but never used.
-  - **Suggestion:** Remove unused imports and move `KenmerkTypeEnum` to where it is actually needed.
-
-- **`EigenschapService.get_eigenschappen` parameter `naam` shadows built-in**: The `naam` parameter declaration line shadows nothing, but the local usage is fine. However, `KenmerkService` also has `naam` parameters which is fine. Wait — actually `EigenschapService` fine. But `KenmerkService.get_kenmerken_by_uuid` signature `naam: str = ''` — empty string default for a filter is fine. No issue here.
-
-- **`wkt_validator.py` catches `(ShapelyError, Exception)`**: `Exception` is a superclass of `ShapelyError`, so the `ShapelyError` catch is redundant. More importantly, catching `Exception` swallows `KeyboardInterrupt`, `SystemExit`, and unrelated runtime errors, making debugging silent failures very difficult.
-  - **Suggestion:** Catch only the specific exceptions expected (`ValueError`, `WKTReadingError` or whatever Shapely raises for invalid WKT), and let everything else propagate.
+**Status:** ⚠️ PARTIALLY FIXED
+- `Generic.py:103` `-> (str, str)` — ✅ FIXED (now `-> tuple[str, str]`).
+- `EigenschapService.py:6` — ✅ `KenmerkTypeEnum` and `AssetDTO` ARE used. ❌ `KenmerkType` is **unused** — remove it.
+- `wkt_validator.py:19` — ❌ NOT FIXED — still catches `(ShapelyError, Exception)`.
+- 🆕 **NEW:** `BestekService.py:3` imports `NULL` from `asyncio.windows_events` — unused.
+- 🆕 **NEW:** `BestekService.py:2` and `GeometrieService.py:2` import `logging` — unused.
+- 🆕 **NEW:** `FSClient.py:2` imports `Iterator` from `typing` — unused.
 
 ### 11.9 Docstring and Naming Issues
-
-- **Mismatched docstring type declarations**: 
-  - `DocumentService.get_documents_by_uuid_generator` docstring declares `:type size: str` even though the parameter is `int` (DocumentService.py:97).
-  - `DocumentService.get_documents_generator` docstring also declares `:type size: str` (DocumentService.py:124).
-  - **Suggestion:** Fix the docstrings to match the actual type `int`.
-
-- **Missing docstrings**: 
-  - `BeheerobjectService.get_beheerobject` (`BeheerobjectService.py:10`) has no docstring.
-  - `OnderdeelService.create_onderdeel` (`OnderdeelService.py:8`) has no docstring.
-  - **Suggestion:** Add docstrings to public methods.
-
-- **`EventService.search_events_generator` docstring duplicates the `by_uuid` variant verbatim** (`EventService.py:117-135`), including the note about `created_before`/`created_after` date precision, but does not document that `asset` can be `None`.
-  - **Suggestion:** Rewrite the docstring to reflect the actual signature and parameters of `search_events_generator`.
-
-- **`status` vs `actief` inconsistency**: `BeheerobjectService.update_beheerobject_status` uses a parameter named `status: bool`, while many other services use `actief`. This domain-verb inconsistency makes the API surface confusing.
-  - **Suggestion:** Standardize on `actief` (or `is_actief`) for boolean enabled/disabled flags across all services, or add an explicit `status` mapping.
+**Status:** ⚠️ PARTIALLY FIXED
+- `AssetService.py:27` parameter `is_actief` (was `actief` shadowed built-in) — ✅ FIXED.
+- `AssetService.py:127` `asset_uuid = self.get_asset_by_uuid(...)` overwrites UUID variable with DTO — 🆕 **NEW:** misleading variable name.
+- Docstring `:type size: str` in `DocumentService` — ❌ NOT FIXED.
+- Missing docstrings — ❌ NOT FIXED.
 
 ### 11.10 Python Best-Practice Violations
-
-- **Old-style tuple return type**: `Generic.py:103` uses `-> (str, str)` instead of `-> tuple[str, str]`.
-- **Unnecessary f-strings for simple values**: Frequent use of `f'{asset_uuid}'`, `f'{bron_asset.uuid}'`, `f'{rol}'` where plain values or `str()` conversion would suffice (e.g., `RelatieService.py:35-36`).
-- **Direct dict access without guards**: `DocumentService.download_document` does `document.document['links'][0]['href']` without `.get()` or membership checks. If `links` is missing or empty, this crashes.
-  - **Suggestion:** Add `.get('links', [])` and check length before indexing.
-- **`PostitService.edit_postit`** uses `existing_postit.commentaar or commentaar` (line 155) which silently replaces falsy but valid values (like empty string `""`) with the new value. If a caller explicitly passes `commentaar=""` to clear a postit, the existing non-empty comment is preserved because `""` is falsy.
-  - **Suggestion:** Use `if commentaar is not None` instead of truthiness checks.
-
-- **`LocatieService.update_locatie_by_uuid` parameter type hint mismatch**: `bron_asset_uuid: AssetDTO` and `doel_asset_uuid: AssetDTO` are typed as full DTO objects, but are actually used as string UUIDs (interpolated as `f'{doel_asset_uuid}'`).
-  - **Suggestion:** Change the type hint to `str | AssetDTO` or just `str`.
-
-- **`ToezichterService.search_identiteit` has `actief: Optional[bool] = True`** (`ToezichterService.py:127`). `Optional[bool]` implies `None` is meaningful, yet `None` is never handled — the parameter is always coerced to a boolean filter or skipped.
-  - **Suggestion:** Change to `actief: bool = True`, and only append the filter when `actief` is explicitly `True`. If `None` is a valid "don't filter" value, change the default to `None` and handle it explicitly.
-
-- **`EigenschapService.get_eigenschappen` returns `Eigenschap | None`** but raises `ProcessLookupError` on error instead of returning `None` for API failures (line 120). The `None` in the type hint suggests a "not found" semantic, but `ProcessLookupError` is raised instead.
-  - **Suggestion:** Distinguish between "not found" (return `None`) and "API error" (raise exception).
-
-- **`BestekService.add_bestekkoppeling` parameter `asset: AssetDTO = None` without `| None`**: The type hint declares `AssetDTO` but the default is `None`.
-  - **Suggestion:** Change to `AssetDTO | None`.
-
-- **`GeometrieService.update_geometrie` signature mismatch**: The method accepts `asset: AssetDTO` and internally calls `get_geometrie_by_uuid(asset_uuid=asset)` where `asset_uuid` expects a `str`. The method also has `validate_wkt` but the internal implementation passes the DTO instead of `asset.uuid`.
-  - **Suggestion:** Fix the internal method calls to use `asset.uuid` consistently.
+**Status:** ⚠️ PARTIALLY FIXED
+- `LocatieService.py:38-39` `doel_asset_uuid: str | None = None` — ✅ FIXED (was `AssetDTO`).
+- `ToezichterService.py:129` `bron: Optional[str] | None = None` — ⚠️ redundant `Optional` + `| None`.
+- `BestekService.py:272-274` `add_bestekkoppeling` — ✅ FIXED (`AssetDTO` without `= None`).
+- Unnecessary f-strings — ❌ NOT FIXED (many occurrences).
+- `PostitService.edit_postit` truthiness bug — ❌ NOT FIXED (still uses `commentaar if commentaar else actual_commentaar` on line 131).
+- `GeometrieService.update_geometrie` — ❌ NOT FIXED (still passes `asset` instead of `asset.uuid`).
 
 ### 11.11 `wkt_validator.py` Catching Bare `Exception`
-
-- Line 18 catches `(ShapelyError, Exception)`. `Exception` is a broad catch that swallows `KeyboardInterrupt`, `SystemExit`, and any unrelated runtime errors.
-  - **Suggestion:** Catch only the specific exceptions Shapely raises for invalid WKT (`WKTReadingError`, `GEOSException`).
+**Status:** ❌ NOT FIXED
 
 ### 11.12 `EMSONClient.Query` Duplicates `QueryDTO`
-
-- `EMSONClient.py:10` defines a local `Query(BaseDataclass)` with `size`, `filters`, `orderByProperty`, `fromCursor`, when `eminfra/EMInfraDomain.py` already has a `QueryDTO` with `size`, `from_`, `selection`, `fromCursor`, `orderByProperty`.
-  - **Suggestion:** Reuse `QueryDTO` from `EMInfraDomain.py`, or rename `QueryDTO` to match the EMSON endpoint's expected body shape.
+**Status:** ⚠️ PARTIALLY FIXED (renamed to `EMSONQuery`, but still a separate class).
 
 ### 11.13 `AbstractRequester` URL Mutation
-
-- Several clients append path fragments to `self.requester.first_part_url` in their constructors (`EMSONClient`, `SNGatewayClient`, `Locatieservices2Client`, `FSClient`). This mutates a public string attribute, making retries reuse the mutated URL suffix.
-  - **Suggestion:** Make `first_part_url` immutable by storing a private `_base_url` and composing the full URL in each request. Do not mutate `self.requester.first_part_url` after creation.
+**Status:** ❌ NOT FIXED — All client constructors still mutate `self.requester.first_part_url`.
 
 ### 11.14 `RequesterFactory.create_requester` Path Validation
+**Status:** ⚠️ PARTIALLY FIXED — Uses try/except but with bare `except:`.
 
-- `RequesterFactory.create_requester` opens `settings_path` with `open(settings_path)` without checking if the file exists first. For `JWT` and `CERT` authentication, this raises a raw `FileNotFoundError` without context.
-  - **Suggestion:** Add `Path(settings_path).exists()` guards and explicit error messages before opening.
+---
+
+## 12. New Issues Found During Re-review (Not in Original Suggestions)
+
+### 12.1 Runtime `TypeError` in `AssetService.search_parent_asset_by_uuid`
+- **File:** `AssetService.py:264`
+- **Code:** `parent_asset = BeheerobjectService.get_beheerobject(beheerobject_uuid=parent_uuid)`
+- **Issue:** `get_beheerobject` is an instance method; calling without `self` raises `TypeError`.
+- **Suggestion:** `BeheerobjectService(self.requester).get_beheerobject(beheerobject_uuid=parent_uuid)`
+
+### 12.2 Redundant `accept` header double-append in `JWTRequester`
+- **File:** `JWTRequester.py:66-83`
+- **Issue:** `_apply_default_headers` sets `accept`, then the method re-applies the same logic, yielding `"application/json, application/json"`.
+- **Suggestion:** Remove lines 73-80; keep only the `authorization` header injection.
+
+### 12.3 Misaligned variable name in `AssetService.deactiveer_asset_by_uuid`
+- **File:** `AssetService.py:127`
+- **Code:** `asset_uuid = self.get_asset_by_uuid(asset_uuid=asset_uuid)` — reassigns a UUID variable to an `AssetDTO`.
+- **Suggestion:** Rename to `asset = self.get_asset_by_uuid(...)`.
