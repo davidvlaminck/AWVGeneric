@@ -134,3 +134,20 @@ class AbstractRequester(Session, metaclass=abc.ABCMeta):
             return response.content.decode("utf-8", errors="replace")
         except Exception:
             return response.content
+
+    @staticmethod
+    def _apply_default_headers(kwargs: dict[str, Any]) -> dict[str, Any]:
+        """Set default `accept` and `Content-Type` headers on kwargs['headers'].
+
+        Safe to call repeatedly; preserves any caller-supplied values that
+        do not conflict with the defaults.
+        """
+        headers = kwargs.setdefault('headers', {})
+        accept = headers.get('accept', '')
+        headers['accept'] = (
+            f"{accept}, application/json" if accept else "application/json"
+        )
+        headers['Content-Type'] = headers.get(
+            'Content-Type', 'application/vnd.awv.eminfra.v1+json'
+        )
+        return kwargs

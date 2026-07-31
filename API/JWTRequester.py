@@ -64,24 +64,21 @@ class JWTRequester(AbstractRequester):
         return self.oauth_token
 
     def modify_kwargs_for_bearer_token(self, kwargs: dict) -> dict:
-        bearer_token = self.get_oauth_token()
-        if 'headers' not in kwargs:
-            kwargs['headers'] = {}
+        # 1. Reuse the shared accept + Content-Type logic
+        kwargs = self._apply_default_headers(kwargs)
 
-        for arg, headers in kwargs.items():
-            if arg == 'headers':
-                if 'accept' not in headers:
-                    headers['accept'] = ''
-                if headers['accept'] is not None:
-                    headers['accept'] = (
-                        f"{headers['accept']}, application/json"
-                        if headers['accept'] != ''
-                        else 'application/json'
-                    )
-                headers['authorization'] = f'Bearer {bearer_token}'
-                if 'Content-Type' not in headers or headers['Content-Type'] is None:
-                    headers['Content-Type'] = 'application/vnd.awv.eminfra.v1+json'
-                kwargs['headers'] = headers
+        # 2. Add JWT-specific authorization header
+        bearer_token = self.get_oauth_token()
+        headers = kwargs.setdefault('headers', {})
+        if 'accept' not in headers:
+            headers['accept'] = ''
+        if headers['accept'] is not None:
+            headers['accept'] = (
+                f"{headers['accept']}, application/json"
+                if headers['accept'] != ''
+                else 'application/json'
+            )
+        headers['authorization'] = f'Bearer {bearer_token}'
 
         return kwargs
 
@@ -125,7 +122,7 @@ class JWTRequester(AbstractRequester):
 
         return response_json['access_token'], response_json['expires_in']
 
-    def modify_kwargs_for_files(self, kwargs):
+    def modify_kwargs_for_files(self, kwargs: dict) -> dict:
         """
         If the argument "files" is available, remove Content-Type from headers.
         """
