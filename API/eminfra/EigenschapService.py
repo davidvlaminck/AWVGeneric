@@ -56,7 +56,7 @@ class EigenschapService:
 
         return [Eigenschap.from_dict(item) for item in response.json()['data']]
 
-    def update_eigenschap_by_uuid(self, asset_uuid: str, eigenschap: EigenschapValueDTO | EigenschapValueUpdateDTO, kenmerktype: KenmerkType = None) -> None:
+    def update_eigenschap_by_uuid(self, asset_uuid: str, eigenschap: EigenschapValueDTO | EigenschapValueUpdateDTO, kenmerktype: KenmerkType | None = None) -> None:
         """
         Updates an eigenschap value on an asset, handling both DTO types.
 

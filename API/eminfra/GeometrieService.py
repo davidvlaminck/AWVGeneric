@@ -1,5 +1,4 @@
 import json
-import logging
 
 from API.eminfra.EMInfraDomain import GeometrieKenmerk, GeometryNiveau, GeometryBron, GeometryNauwkeurigheid, AssetDTO
 from API.eminfra.wkt_validator import is_valid_wkt

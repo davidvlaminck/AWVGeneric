@@ -3,7 +3,6 @@ import json
 from dataclasses import dataclass
 from enum import Enum
 from json import dumps
-from typing import Optional
 
 _asdict_inner_actual = dataclasses._asdict_inner
 def _asdict_inner(obj, dict_factory):
@@ -132,10 +131,7 @@ class BaseDataclass:
         return asdict(self)
 
     def json(self):
-        """
-        get the json formatted string
-        """
-        d = self.to_dict()
+        """ Get the json formatted string """
         return dumps(self.to_dict())
 
     @classmethod
@@ -168,42 +164,11 @@ class BaseDataclass:
     def __str__(self):
         return json.dumps(self.to_dict(), indent=4, sort_keys=True)
 
-    # needs enum fix
-    # needs to call from_dict for nested classes
-
-    # def __post_init__(self):
-    #     f = dataclasses.fields(self)
-    #     for field in f:
-    #         for t in get_args(field.type):
-    #             if issubclass(t, BaseDataclass):
-    #                 print(field.name)
-    #                 attribute_value = getattr(self, field.name)
-    #                 if attribute_value is not None and isinstance(attribute_value, dict):
-    #                     new_value = t(**attribute_value)
-    #                     setattr(self, field.name, t(**attribute_value))
-    #                 pass
-    #             #setattr(self, field.name, o(**getattr(self, field.name)))
-    #         if get_origin(field.type) is UnionType:
-    #             print('UnionType')
-    #
-    #         if field.name in self.reserved_word_list:
-    #             setattr(self, field.name[:-1], getattr(self, field.name))
-    #             delattr(self, field.name)
-
 
 @dataclass
 class Link(BaseDataclass):
     rel: str
     href: str
-
-
-@dataclass
-class ResourceRefDTO(BaseDataclass):
-    uuid: str
-    links: Optional[list[Link]] | None = None
-
-    def __post_init__(self):
-        self._fix_nested_list_classes({('links', Link)})
 
 
 @dataclass
@@ -677,7 +642,7 @@ class ToezichtgroepTypeEnum(Enum):
 @dataclass
 class ResourceRefDTO(BaseDataclass):
     uuid: str
-    links: Optional[list[Link]] | None = None
+    links: list[Link] | None = None
 
     def __post_init__(self):
         self._fix_nested_list_classes({('links', Link)})
