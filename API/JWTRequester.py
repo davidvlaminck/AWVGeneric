@@ -66,18 +66,10 @@ class JWTRequester(AbstractRequester):
     def modify_kwargs_for_bearer_token(self, kwargs: dict) -> dict:
         # 1. Reuse the shared accept + Content-Type logic
         kwargs = self._apply_default_headers(kwargs)
+        headers = kwargs.setdefault('headers', {})
 
         # 2. Add JWT-specific authorization header
         bearer_token = self.get_oauth_token()
-        headers = kwargs.setdefault('headers', {})
-        if 'accept' not in headers:
-            headers['accept'] = ''
-        if headers['accept'] is not None:
-            headers['accept'] = (
-                f"{headers['accept']}, application/json"
-                if headers['accept'] != ''
-                else 'application/json'
-            )
         headers['authorization'] = f'Bearer {bearer_token}'
 
         return kwargs
