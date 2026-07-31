@@ -35,7 +35,8 @@ class LocatieService:
         """
         return self.get_locatie_by_uuid(asset_uuid=asset.uuid)
 
-    def update_locatie_by_uuid(self, bron_asset_uuid: str, doel_asset_uuid: AssetDTO = None, wkt_geometry: str = None) -> None:
+    def update_locatie_by_uuid(
+            self, bron_asset_uuid: str, doel_asset_uuid: str | None = None, wkt_geometry: str = None) -> None:
         """
         Update locatie based on a WKT-string or via an existing relation
         Call this function with parameter doelAsset to set the locatie via an existing relationship.
@@ -54,11 +55,13 @@ class LocatieService:
             raise ValueError(
                 'At least one optional parameter "doel_asset_uuid" or "wkt_geom" should be provided.'
             )
-        elif wkt_geometry:
+
+        if wkt_geometry:
             if not validate_wkt(wkt_string=wkt_geometry):
                 raise ValueError(f'WKT Geometry is invalid: {wkt_geometry}.')
             return self._update_locatie_via_wkt(asset_uuid=bron_asset_uuid, wkt_geom=wkt_geometry)
-        else:
+
+        if doel_asset_uuid:
             # to do: implement a check that the relation already exists between the bron- and doel-asset.
             return self._update_locatie_via_relatie(bron_asset_uuid=bron_asset_uuid, doel_asset_uuid=doel_asset_uuid)
 
