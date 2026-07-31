@@ -81,7 +81,7 @@ class JWTRequester(AbstractRequester):
                    'sub': self.client_id,
                    'aud': 'https://authenticatie.vlaanderen.be/op',
                    'exp': self.requested_at + datetime.timedelta(minutes=9),
-                   'jti': ''.join(choice(string.ascii_lowercase) for _ in range(20))
+                   'jti': secrets.token_urlsafe(20)
                    }
 
         with open(self.private_key_path) as private_key:
