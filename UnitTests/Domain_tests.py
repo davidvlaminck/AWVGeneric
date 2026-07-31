@@ -37,7 +37,7 @@ class NestingTestClass(BaseDataclass):
 def test_non_nested_class():
     t = TestClass(prop_str='test', prop_list_str=['test1', 'test2'], prop_int=1, prop_bool=True, prop_object=1.0,
                   test_enum=TestEnum.VALUE1)
-    d = t.asdict()
+    d = t.to_dict()
     assert d == {'prop_str': 'test', 'prop_list_str': ['test1', 'test2'], 'prop_int': 1, 'prop_bool': True,
                            'prop_object': 1.0, 'test_enum': 'value1', 'from': None}
     assert t.json() == ('{"prop_str": "test", "prop_list_str": ["test1", "test2"], "prop_int": 1, "prop_bool": true, '
@@ -49,14 +49,14 @@ def test_non_nested_class():
 
 def test_reserved_prop():
     t = TestClass(from_='test')
-    d = t.asdict()
+    d = t.to_dict()
     assert d == {'from': 'test', 'prop_str': None, 'prop_list_str': None, 'prop_int': None, 'prop_bool': None,
                            'prop_object': None, 'test_enum': None}
 
 
 def test_nested_class():
     n = NestingTestClass(nested=TestClass(prop_str='test', prop_list_str=['test1', 'test2'], prop_bool=True))
-    d = n.asdict()
+    d = n.to_dict()
     assert d == {'nested': {'from': None, 'prop_str': 'test',  'prop_list_str': ['test1', 'test2'], 'prop_int': None,
                             'prop_bool': True, 'prop_object': None, 'test_enum': None}, 'nested_list': None}
     assert n.json() == ('{"nested": {"prop_str": "test", "prop_list_str": ["test1", "test2"], "prop_int": null, '
@@ -70,7 +70,7 @@ def test_nested_class_list():
     t1 = TestClass(prop_str='test1')
     t2 = TestClass(prop_str='test2')
     n = NestingTestClass(nested_list=[t1, t2])
-    d = n.asdict()
+    d = n.to_dict()
     assert d == {'nested': None, 'nested_list': [
         {'from': None, 'prop_str': 'test1',  'prop_list_str': None, 'prop_int': None,
          'prop_bool': None, 'prop_object': None, 'test_enum': None},

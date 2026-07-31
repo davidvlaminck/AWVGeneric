@@ -70,7 +70,7 @@ class EigenschapService:
         request_body = {
             "data": [
                 {
-                    "eigenschap": eigenschap.eigenschap.asdict(),
+                    "eigenschap": eigenschap.eigenschap.to_dict(),
                     "typedValue": eigenschap.typedValue
                 }]
         }

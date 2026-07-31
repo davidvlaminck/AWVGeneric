@@ -111,7 +111,7 @@ class BestekService:
         """
         response = self.requester.put(
             url=f'core/api/assets/{asset_uuid}/kenmerken/{self.BESTEKKOPPELING_UUID}/bestekken',
-            data=json.dumps({'data': [item.asdict() for item in bestekkoppelingen]}))
+            data=json.dumps({'data': [item.to_dict() for item in bestekkoppelingen]}))
         if response.status_code != 202:
             raise ProcessLookupError(response.content.decode("utf-8"))
 

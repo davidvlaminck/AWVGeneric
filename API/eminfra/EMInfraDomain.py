@@ -128,15 +128,15 @@ class BaseDataclass:
             d[k] = v.value if isinstance(v, Enum) else v
         return d
 
-    def asdict(self):
+    def to_dict(self) -> dict:
         return asdict(self)
 
     def json(self):
         """
         get the json formatted string
         """
-        d = self.asdict()
-        return dumps(self.asdict())
+        d = self.to_dict()
+        return dumps(self.to_dict())
 
     @classmethod
     def from_dict(cls, dict_: dict):
@@ -166,7 +166,7 @@ class BaseDataclass:
 
 
     def __str__(self):
-        return json.dumps(self.asdict(), indent=4, sort_keys=True)
+        return json.dumps(self.to_dict(), indent=4, sort_keys=True)
 
     # needs enum fix
     # needs to call from_dict for nested classes
