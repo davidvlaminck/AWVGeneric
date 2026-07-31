@@ -27,9 +27,12 @@ class RequesterFactory:
                 raise ValueError("argument cookie is required for COOKIE authentication")
             return CookieRequester(cookie=cookie, first_part_url=first_part_url.replace('services.', ''))
 
-        with open(settings_path) as settings_file:
-            settings = json.load(settings_file)
-        specific_settings = settings['authentication'][auth_type.name][env.name.lower()]
+        try:
+            with open(settings_path) as settings_file:
+                settings = json.load(settings_file)
+            specific_settings = settings['authentication'][auth_type.name][env.name.lower()]
+        except:
+            raise FileNotFoundError(f'Invalid settings path: {settings_path}')
 
         if auth_type == AuthType.JWT:
             return JWTRequester(private_key_path=specific_settings['key_path'],
